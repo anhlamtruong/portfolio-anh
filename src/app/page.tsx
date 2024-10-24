@@ -1,101 +1,114 @@
-import Image from "next/image";
+"use client";
+import { ModeToggle } from "@/components/ui/theme-toggle";
+import { SnapSection } from "@/app/features/homepage/ui/homepage-section";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { debounce } from "lodash";
+import { AboutMeSection } from "@/app/features/section-1/component/about-me-section";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isProgrammaticScroll, setIsProgrammaticScroll] = useState(false); // Flag for programmatic scrolling
+  const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // Function to get the section number from the URL
+  const getSectionFromUrl = () => {
+    const sectionParam = searchParams.get("section");
+    return sectionParam && !isNaN(Number(sectionParam))
+      ? Number(sectionParam)
+      : 1;
+  };
+
+  // On initial mount, check if URL has a section query, and scroll to the relevant section
+  useEffect(() => {
+    const sectionFromUrl = getSectionFromUrl();
+    setActiveIndex(sectionFromUrl);
+
+    const section = document.getElementById(`section-${sectionFromUrl}`);
+    if (section) {
+      setIsProgrammaticScroll(true); // Set flag for programmatic scroll
+      section.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => setIsProgrammaticScroll(false), 500); // Disable the flag after scroll animation completes
+    }
+  }, []);
+
+  // Handle the scroll event of the scrollable container
+  const handleScroll = debounce(() => {
+    if (!isProgrammaticScroll && scrollRef.current) {
+      const sectionHeight = window.innerHeight;
+      const scrollTop = scrollRef.current.scrollTop;
+      const currentSection = Math.round(scrollTop / sectionHeight); // Calculate the current section based on scroll position
+
+      if (activeIndex !== currentSection + 1) {
+        setActiveIndex(currentSection + 1); // Update active section if it changes
+      }
+    }
+  }, 50);
+
+  // Scroll to the active section and update URL
+  useEffect(() => {
+    if (activeIndex !== null) {
+      const section = document.getElementById(`section-${activeIndex}`);
+      if (section) {
+        setIsProgrammaticScroll(true); // Set flag for programmatic scroll
+        section.scrollIntoView({ behavior: "smooth" });
+
+        // Update the URL query parameter with the active section index
+        const currentSectionInUrl = searchParams.get("section");
+        if (currentSectionInUrl !== `${activeIndex}`) {
+          router.replace(`/?section=${activeIndex}`, undefined);
+        }
+
+        setTimeout(() => setIsProgrammaticScroll(false), 500); // Disable the flag after scroll animation completes
+      }
+    }
+  }, [activeIndex, router, searchParams]);
+
+  return (
+    <div>
+      <main>
+        <div
+          style={{
+            backgroundImage: `url('/background-1.png')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          className="flex items-center justify-center"
+        >
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll} // Debounced scroll handler
+            className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full sm:w-full md:w-11/12 lg:w-9/12 scroll-smooth"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <SnapSection
+              id="section-1"
+              className="bg-black bg-opacity-50 snap-center transition-all flex items-start justify-start"
+            >
+              <AboutMeSection></AboutMeSection>
+            </SnapSection>
+            <SnapSection id="section-2" className="snap-center">
+              <ModeToggle />
+              <div>
+                <h1 className="text-7xl">Page2</h1>
+              </div>
+            </SnapSection>
+            <SnapSection id="section-3" className="snap-center">
+              <ModeToggle />
+              <div>
+                <h1 className="text-7xl">Page3</h1>
+              </div>
+            </SnapSection>
+            <SnapSection id="section-4" className="snap-center">
+              <ModeToggle />
+              <div>
+                <h1 className="text-7xl">Page4</h1>
+              </div>
+            </SnapSection>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
