@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import AnimatedWrapper from "../animation/animation-wrapper";
+import SpringOdometer from "./spring-odmeter";
+import { FlipWords } from "../../homepage/ui/flip-words";
 
 export const AboutMeSection = () => {
   const [value, setValue] = useState(0); // The current value of the counter
@@ -27,25 +29,39 @@ export const AboutMeSection = () => {
   }, [targetValue, duration, incrementTime]);
 
   return (
-    <div className="flex items-start justify-start">
+    <div className=" flex flex-col justify-start items-start p-8">
       <AnimatedWrapper>
-        <div>
-          <h1 className="text-8xl text-white">Page 1</h1>
-          <div className="text-center mt-20">
-            <div className="odometer-container text-center mt-20">
-              <div className="odometer text-white">
-                {String(Math.floor(value))
-                  .split("")
-                  .map((digit, index) => (
-                    <span key={index} className="odometer-digit">
-                      {digit}
-                    </span>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <h1 className="text-white md:text-8xl text-5xl">Congratulations!</h1>
       </AnimatedWrapper>
+      <div className="text-pretty flex items-start text-center mt-3 text-white gap-2 justify-end text-lg sm:text-xl md:text-2xl ">
+        <h2 className="-mr-1 mt-1">You are the</h2>
+        <div className="relative flex items-end">
+          <SpringOdometer
+            className="font-bold max-[445px]:text-4xl max-[445px]:mt-3"
+            endValue={value}
+          />
+          <span className="text-sm mb-3">th</span>
+        </div>
+        <h2 className="-ml-1 mt-1">person who visit the page 🎉</h2>
+      </div>
+      <div className="flex gap-0.5 mt-4 text-white text-2xl">
+        I am
+        <FlipWords
+          className="text-white"
+          words={[
+            "a Developer",
+            "a Software Engineer",
+            "a Creator",
+            "an Entrepreneur",
+          ]}
+        />
+      </div>
+      <embed
+        src="@/public/anh-truong-resume.pdf"
+        width="100%"
+        height="600px"
+        type="application/pdf"
+      />
     </div>
   );
 };

@@ -1,13 +1,20 @@
-import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { motion, Variants } from "framer-motion";
 import React from "react";
 
 interface AnimatedWrapperProps {
   children: React.ReactNode;
+  variants?: Variants; // Optional variants prop to customize animations
+  className?: string; // Optional className prop for styling
 }
 
-const AnimatedWrapper: React.FC<AnimatedWrapperProps> = ({ children }) => {
+const AnimatedWrapper: React.FC<AnimatedWrapperProps> = ({
+  children,
+  variants,
+  className,
+}) => {
   // Define the animation variants for sliding in from the left with opacity change
-  const variants = {
+  const defaultVariants = {
     hidden: { opacity: 0, x: -100 }, // Start hidden with opacity 0 and moved to the left
     visible: {
       opacity: 1,
@@ -27,7 +34,8 @@ const AnimatedWrapper: React.FC<AnimatedWrapperProps> = ({ children }) => {
       initial="hidden"
       animate="visible"
       exit="hidden" // Optional: Animate on unmount if used in routes
-      variants={variants}
+      variants={variants || defaultVariants}
+      className={cn(className)}
     >
       {children}
     </motion.div>

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { debounce } from "lodash";
 import { AboutMeSection } from "@/app/features/section-1/component/about-me-section";
+import { BackgroundBeamsWithCollision } from "./features/homepage/ui/background-beams-with-collision";
 
 export default function Home() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -70,43 +71,47 @@ export default function Home() {
     <div>
       <main>
         <div
-          style={{
-            backgroundImage: `url('/background-1.png')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+          style={
+            {
+              // backgroundImage: `url('/background-1.png')`,
+              // backgroundSize: "cover",
+              // backgroundPosition: "center",
+            }
+          }
           className="flex items-center justify-center"
         >
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll} // Debounced scroll handler
-            className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full sm:w-full md:w-11/12 lg:w-9/12 scroll-smooth"
-          >
-            <SnapSection
-              id="section-1"
-              className="bg-black bg-opacity-50 snap-center transition-all flex items-start justify-start"
+          <BackgroundBeamsWithCollision>
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll} // Debounced scroll handler
+              className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full sm:w-full md:w-11/12 lg:w-9/12 scroll-smooth"
             >
-              <AboutMeSection></AboutMeSection>
-            </SnapSection>
-            <SnapSection id="section-2" className="snap-center">
-              <ModeToggle />
-              <div>
-                <h1 className="text-7xl">Page2</h1>
-              </div>
-            </SnapSection>
-            <SnapSection id="section-3" className="snap-center">
-              <ModeToggle />
-              <div>
-                <h1 className="text-7xl">Page3</h1>
-              </div>
-            </SnapSection>
-            <SnapSection id="section-4" className="snap-center">
-              <ModeToggle />
-              <div>
-                <h1 className="text-7xl">Page4</h1>
-              </div>
-            </SnapSection>
-          </div>
+              <SnapSection
+                id="section-1"
+                className="bg-black bg-opacity-50 snap-center transition-all flex items-start justify-start"
+              >
+                <AboutMeSection></AboutMeSection>
+              </SnapSection>
+              <SnapSection id="section-2" className="snap-center">
+                <ModeToggle />
+                <div>
+                  <h1 className="text-7xl">Page2</h1>
+                </div>
+              </SnapSection>
+              <SnapSection id="section-3" className="snap-center">
+                <ModeToggle />
+                <div>
+                  <h1 className="text-7xl">Page3</h1>
+                </div>
+              </SnapSection>
+              <SnapSection id="section-4" className="snap-center">
+                <ModeToggle />
+                <div>
+                  <h1 className="text-7xl">Page4</h1>
+                </div>
+              </SnapSection>
+            </div>
+          </BackgroundBeamsWithCollision>
         </div>
       </main>
     </div>
