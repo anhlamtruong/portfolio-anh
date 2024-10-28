@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { debounce } from "lodash";
 import { AboutMeSection } from "@/app/features/section-1/component/about-me-section";
 import { BackgroundBeamsWithCollision } from "./features/homepage/ui/background-beams-with-collision";
+import { SkillsSection } from "./features/section-2/component/skills-section";
+import { CertificatesSection } from "./features/section-3/component/certificates-section";
 
 export default function Home() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -33,6 +35,7 @@ export default function Home() {
       section.scrollIntoView({ behavior: "smooth" });
       setTimeout(() => setIsProgrammaticScroll(false), 500); // Disable the flag after scroll animation completes
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle the scroll event of the scrollable container
@@ -70,16 +73,7 @@ export default function Home() {
   return (
     <div>
       <main>
-        <div
-          style={
-            {
-              // backgroundImage: `url('/background-1.png')`,
-              // backgroundSize: "cover",
-              // backgroundPosition: "center",
-            }
-          }
-          className="flex items-center justify-center"
-        >
+        <div className="flex items-center justify-center">
           <BackgroundBeamsWithCollision>
             <div
               ref={scrollRef}
@@ -92,17 +86,14 @@ export default function Home() {
               >
                 <AboutMeSection></AboutMeSection>
               </SnapSection>
-              <SnapSection id="section-2" className="snap-center">
-                <ModeToggle />
-                <div>
-                  <h1 className="text-7xl">Page2</h1>
-                </div>
+              <SnapSection
+                id="section-2"
+                className="bg-black bg-opacity-50 snap-center transition-all flex items-start justify-start"
+              >
+                <SkillsSection></SkillsSection>
               </SnapSection>
               <SnapSection id="section-3" className="snap-center">
-                <ModeToggle />
-                <div>
-                  <h1 className="text-7xl">Page3</h1>
-                </div>
+                <CertificatesSection></CertificatesSection>
               </SnapSection>
               <SnapSection id="section-4" className="snap-center">
                 <ModeToggle />
