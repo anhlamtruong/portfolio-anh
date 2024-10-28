@@ -1,7 +1,7 @@
 "use client";
 import { SnapSection } from "@/app/features/homepage/ui/homepage-section";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { debounce } from "lodash";
 import { AboutMeSection } from "@/app/features/section-1/component/about-me-section";
 import { BackgroundBeamsWithCollision } from "./features/homepage/ui/background-beams-with-collision";
@@ -75,36 +75,38 @@ export default function Home() {
       <main>
         <div className="flex items-center justify-center">
           <BackgroundBeamsWithCollision>
-            <div
-              ref={scrollRef}
-              onScroll={handleScroll} // Debounced scroll handler
-              className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full sm:w-full md:w-11/12 lg:w-9/12 scroll-smooth"
-            >
-              <SnapSection
-                id="section-1"
-                className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
+            <Suspense fallback={<div>Loading...</div>}>
+              <div
+                ref={scrollRef}
+                onScroll={handleScroll} // Debounced scroll handler
+                className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full sm:w-full md:w-11/12 lg:w-9/12 scroll-smooth"
               >
-                <AboutMeSection></AboutMeSection>
-              </SnapSection>
-              <SnapSection
-                id="section-2"
-                className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
-              >
-                <SkillsSection></SkillsSection>
-              </SnapSection>
-              <SnapSection
-                id="section-3"
-                className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
-              >
-                <CertificatesSection></CertificatesSection>
-              </SnapSection>
-              <SnapSection
-                id="section-4"
-                className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
-              >
-                <ExperiencesSection></ExperiencesSection>
-              </SnapSection>
-            </div>
+                <SnapSection
+                  id="section-1"
+                  className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
+                >
+                  <AboutMeSection></AboutMeSection>
+                </SnapSection>
+                <SnapSection
+                  id="section-2"
+                  className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
+                >
+                  <SkillsSection></SkillsSection>
+                </SnapSection>
+                <SnapSection
+                  id="section-3"
+                  className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
+                >
+                  <CertificatesSection></CertificatesSection>
+                </SnapSection>
+                <SnapSection
+                  id="section-4"
+                  className="bg-black bg-opacity-60 snap-center transition-all flex items-start justify-start"
+                >
+                  <ExperiencesSection></ExperiencesSection>
+                </SnapSection>
+              </div>
+            </Suspense>
           </BackgroundBeamsWithCollision>
         </div>
       </main>
