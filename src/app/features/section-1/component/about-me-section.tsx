@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import AnimatedWrapper from "../animation/animation-wrapper";
 import SpringOdometer from "./spring-odmeter";
 import { FlipWords } from "../../homepage/ui/flip-words";
-import Image from "next/image";
+import Image from "next/legacy/image";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";

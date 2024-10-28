@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import React from "react";
 import { toast } from "sonner";
-import Image from "next/image";
+import Image from "next/legacy/image";
 
 // Define skill icons
 const skillIcons = [
