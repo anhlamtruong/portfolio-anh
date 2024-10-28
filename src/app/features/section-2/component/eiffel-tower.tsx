@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import React from "react";
 import { toast } from "sonner";
-import Image from "next/legacy/image";
+import Image from "next/image";
 
 // Define skill icons
 const skillIcons = [
@@ -113,8 +113,11 @@ const WiggleBlock = ({ icon }: { icon: { path: string; name: string } }) => {
         width={32}
         height={32}
         className=" w-auto object-contain"
-        style={{ width: "auto", height: "auto" }}
-        layout="intrinsic"
+        style={{
+          width: "auto",
+          height: "auto",
+          maxWidth: "100%",
+        }}
       />
     </motion.div>
   );

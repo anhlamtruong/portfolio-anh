@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import AnimatedWrapper from "../animation/animation-wrapper";
 import SpringOdometer from "./spring-odmeter";
 import { FlipWords } from "../../homepage/ui/flip-words";
-import Image from "next/legacy/image";
+import Image from "next/image";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -111,9 +111,12 @@ export const AboutMeSection = () => {
           <Image
             src="/assets/img/anh-truong-resume.webp"
             alt="Anh Truong's Resume"
-            width={800}
-            height={1100}
-            className="hidden md:block w-full h-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl origin-top-left transform"
+            width={500}
+            height={800}
+            className="hidden md:block h-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl origin-top-left transform"
+            style={{
+              height: "auto",
+            }}
           />
         </div>
       </div>
