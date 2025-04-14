@@ -93,7 +93,7 @@ const DoodleMemeCarousal: React.FC<DoodleMemeCarousalProps> = ({
       velocity: { x: number; y: number };
     }
   ) => {
-    console.log("Drag ended", info.offset, info.velocity);
+    // console.log("Drag ended", info.offset, info.velocity);
 
     if (!enableSwipe) return;
     // Determine dominant drag axis.

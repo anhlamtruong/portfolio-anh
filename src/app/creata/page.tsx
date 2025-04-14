@@ -27,14 +27,14 @@ const cards = [
     ),
   },
   {
-    id: "2",
-    cardTitle: "Doodle-Meme-Video",
-    cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
+    id: "Ll5hGGaqIBGja9tg30h2",
+    cardTitle: "Award Winning 2024",
+    cardDescription: "🤷‍♂️",
     cardFooter: "Author Creata",
     cardContent: (
       <VideoDisplay
         key={"1"}
-        src={"/videos/creata-doodle-meme-video/vid1.mp4"}
+        src={"/videos/creata-doodle-meme-video/vid2.mp4"}
         title={""}
       />
     ),
