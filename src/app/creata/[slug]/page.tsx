@@ -1,5 +1,5 @@
 import { FirebaseCreataClient } from "../(features)/_service/firebaseCreataClient";
-import ComponentsMapping from "../(features)/_utils/components-mapping";
+import ComponentsRegistry from "../(features)/_utils/components-registry";
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -26,8 +26,11 @@ export default async function Repo({
     return <div>Component not found</div>;
   }
   console.log("Component lookup key:", metadata.props.link);
-  console.log("ComponentsMapping keys:", Object.keys(ComponentsMapping));
-  const Component = ComponentsMapping[metadata.props.link ?? ""];
+  console.log("ComponentsMapping keys:", Object.keys(ComponentsRegistry));
+  const Component =
+    ComponentsRegistry[
+      metadata.key ?? metadata.slug ?? metadata.props.link ?? ""
+    ];
   if (!Component) {
     return (
       <div>Component for key {metadata.props.link} not found in mapping</div>

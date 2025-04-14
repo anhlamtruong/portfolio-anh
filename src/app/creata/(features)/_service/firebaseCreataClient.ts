@@ -4,6 +4,7 @@ import { firestore } from "@/services/firebase/firebase-admin";
 export interface ComponentMetadata {
   id: string;
   name: string;
+  key?: string;
   slug?: string;
   props: Record<string, any>;
 }
