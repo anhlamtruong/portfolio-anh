@@ -4,9 +4,9 @@
 import React, { useEffect, useState } from "react";
 import { defaultCarouselConfig } from "./doodle-meme-carousel-config";
 import DoodleMemeCarousal from "./doodle-meme-carousel";
-import ErrorFallback from "./error-fall-back";
-import { VideoDisplay } from "./videos-display";
-import Loading from "../../loading";
+import ErrorFallback from "../../../_component/error-fall-back";
+import { VideoDisplay } from "../../../_component/videos-display";
+import Loading from "../../../(homepage)/loading";
 import { useDoddleMemeVideos } from "./hooks/use-doodle-meme-videos";
 
 interface DoodleMemeComponentProps {

@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { VideoDisplay } from "./(features)/_components/videos-display";
+import { VideoDisplay } from "../_component/videos-display";
 import { useRouter } from "next/navigation";
 
 const cards = [

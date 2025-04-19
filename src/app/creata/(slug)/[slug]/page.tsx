@@ -1,5 +1,5 @@
-import { FirebaseCreataClient } from "../(features)/_service/firebaseCreataClient";
-import ComponentsRegistry from "../(features)/_utils/components-registry";
+import { FirebaseCreataClient } from "../../_service/firebaseCreataClient";
+import ComponentsRegistry from "../../_utils/components-registry";
 
 export const revalidate = 60;
 export const dynamicParams = true;

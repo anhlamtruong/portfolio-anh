@@ -1,13 +1,15 @@
 "use client";
-import { SnapSection } from "@/app/(features)/homepage/ui/homepage-section";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { debounce } from "lodash";
-import { AboutMeSection } from "@/app/(features)/section-1/component/about-me-section";
+
 // import { BackgroundBeamsWithCollision } from "./(features)/homepage/ui/background-beams-with-collision";
-import { SkillsSection } from "../(features)/section-2/component/skills-section";
-import { CertificatesSection } from "../(features)/section-3/component/certificates-section";
-import { ExperiencesSection } from "../(features)/section-4/experiences-section";
+import { CertificatesSection } from "./_components/section-3/certificates-section";
+import { SnapSection } from "./_components/homepage/homepage-section";
+import { AboutMeSection } from "./_components/section-1/about-me-section";
+import { SkillsSection } from "./_components/section-2/skills-section";
+import { ExperiencesSection } from "./_components/section-4/experiences-section";
 
 export default function Home() {
   return (

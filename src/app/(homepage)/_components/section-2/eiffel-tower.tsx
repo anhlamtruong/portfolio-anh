@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import React from "react";
 import { toast } from "sonner";
 import Image from "next/image";
-import { useCompaniesLogos } from "@/services/image-loader.ts/hooks/use-get-companies-logos";
+import { useCompaniesLogos } from "../../_services/logo-loader/hooks/use-get-companies-logos";
 
 const skillIcons = [
   { path: "/assets/logos/javascript.svg", name: "JavaScript" },

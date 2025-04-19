@@ -3,8 +3,9 @@
 import Image from "next/image";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useOutsideClick } from "../hooks/use-outside-click";
+
 import { Check } from "lucide-react";
+import { useOutsideClick } from "./hooks/use-outside-click";
 
 export function ExpandableCard() {
   const [active, setActive] = useState<(typeof cards)[number] | boolean | null>(

@@ -1,4 +1,4 @@
-import { syncLogosToFirestore } from "@/services/image-loader.ts/actions/sync-logos-to-db";
+import { syncLogosToFirestore } from "../../_services/logo-loader/actions/sync-logos-to-db";
 
 export const SyncLogosButton = () => {
   const handleSync = async () => {

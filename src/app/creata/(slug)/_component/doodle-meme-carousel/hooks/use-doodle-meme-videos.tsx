@@ -1,5 +1,7 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
-import { getDoddleMemeVideosFromStorage } from "../_service/doodle-meme-videos";
+import { getDoddleMemeVideosFromStorage } from "../service/doodle-meme-videos";
 
 export const useDoddleMemeVideos = () => {
   return useQuery({

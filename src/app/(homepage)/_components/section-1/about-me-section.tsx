@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import AnimatedWrapper from "../animation/animation-wrapper";
-import SpringOdometer from "./spring-odmeter";
-import { FlipWords } from "../../homepage/ui/flip-words";
+import AnimatedWrapper from "./animation/animation-wrapper";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FlipWords } from "../homepage/flip-words";
+import SpringOdometer from "./spring-odmeter";
 
 export const AboutMeSection = () => {
   const [value, setValue] = useState(0); // The current value of the counter
