@@ -18,10 +18,7 @@ function makeQueryClient() {
     },
   });
 }
-
 let browserQueryClient: QueryClient | undefined = undefined;
-
-// Create the QueryClient outside the component to persist across renders
 
 function getQueryClient() {
   if (isServer) {
@@ -36,6 +33,9 @@ function getQueryClient() {
     return browserQueryClient;
   }
 }
+
+// Create the QueryClient outside the component to persist across renders
+// const queryClientCreata = new QueryClient();
 
 export function CreataQueryProviders({
   children,

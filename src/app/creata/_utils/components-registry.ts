@@ -8,6 +8,12 @@ const ComponentsRegistry: Record<string, React.ComponentType<any>> = {
     () =>
       import("../(slug)/_component/doodle-meme-carousel/doodle-meme-component")
   ),
+  "award-winning-2024": dynamic(
+    () =>
+      import(
+        "../(slug)/_component/award-winning-2024/award-winning-2024-component"
+      )
+  ),
 };
 
 export default ComponentsRegistry;
