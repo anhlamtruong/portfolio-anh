@@ -26,7 +26,7 @@ export default async function Repo({
     return <div>Component not found</div>;
   }
   console.log("Component lookup key:", metadata.props.link);
-  console.log("ComponentsMapping keys:", Object.keys(ComponentsRegistry));
+  console.log("Components Mapping keys:", Object.keys(ComponentsRegistry));
   const Component =
     ComponentsRegistry[
       metadata.key ?? metadata.slug ?? metadata.props.link ?? ""
