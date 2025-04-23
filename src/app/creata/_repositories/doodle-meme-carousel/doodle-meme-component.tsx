@@ -6,7 +6,7 @@ import { defaultCarouselConfig } from "./doodle-meme-carousel-config";
 import DoodleMemeCarousal from "./doodle-meme-carousel";
 
 import { getQueryClient, HydrateClient, trpc } from "../../_trpc/server";
-import Loading from "../../_component/loading";
+import { Loading } from "../../_component/loading";
 
 interface DoodleMemeComponentProps {
   component_id: string;

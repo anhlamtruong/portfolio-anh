@@ -1,7 +1,9 @@
+"use client";
+
 import React from "react";
 import { motion } from "framer-motion";
 
-const Loading: React.FC = () => {
+export const Loading: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <motion.div
@@ -12,5 +14,3 @@ const Loading: React.FC = () => {
     </div>
   );
 };
-
-export default Loading;
