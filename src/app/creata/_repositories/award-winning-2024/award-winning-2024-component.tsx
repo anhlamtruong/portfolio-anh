@@ -1,4 +1,4 @@
-import { getQueryClient, trpc } from "@/trpc/server";
+import { getQueryClient, trpc } from "../../_trpc/server";
 
 const AwardWinning2024Component = async () => {
   const queryClient = getQueryClient();

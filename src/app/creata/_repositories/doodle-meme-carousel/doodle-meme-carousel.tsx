@@ -10,9 +10,11 @@ import {
   carouselVariants,
   defaultCarouselConfig,
 } from "./doodle-meme-carousel-config";
+import { useTRPC } from "../../_trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { VideoDisplay } from "../../_component/videos-display";
 
 interface DoodleMemeCarousalProps {
-  children: React.ReactNode[];
   className?: string;
   enableSwipe?: boolean;
   enableKeyboard?: boolean;
@@ -36,13 +38,17 @@ const SWIPE_THRESHOLD = 100;
  * - For backward navigation (swipe up or left, negative values), next index = (current index - 1 + total) mod total.
  */
 const DoodleMemeCarousal: React.FC<DoodleMemeCarousalProps> = ({
-  children,
   className,
   enableSwipe = true,
   enableKeyboard = true,
   enableButtons = true,
   config = defaultCarouselConfig,
 }) => {
+  const trpc = useTRPC();
+  const { data } = useSuspenseQuery(
+    trpc.doodle_meme_videos.getMany.queryOptions()
+  );
+
   const [state, setState] = useState<TransitionState>({
     index: 0,
     axis: "y", // default axis for the animation
@@ -52,13 +58,13 @@ const DoodleMemeCarousal: React.FC<DoodleMemeCarousalProps> = ({
   const triggerTransition = useCallback(
     (axis: "x" | "y", direction: number) => {
       setState((prev) => {
-        const n = children.length;
+        const n = data?.length || 0; // total number of videos
         const nextIndex =
           direction > 0 ? (prev.index + 1) % n : (prev.index - 1 + n) % n;
         return { index: nextIndex, axis, direction };
       });
     },
-    [children.length]
+    [data?.length]
   );
 
   // We'll use ArrowDown/ArrowRight for forward and ArrowUp/ArrowLeft for backward.
@@ -113,6 +119,9 @@ const DoodleMemeCarousal: React.FC<DoodleMemeCarousalProps> = ({
       }
     }
   };
+  if (!data || data.length === 0) {
+    return <div className="text-center">No videos found.</div>;
+  }
 
   return (
     <>
@@ -149,7 +158,18 @@ const DoodleMemeCarousal: React.FC<DoodleMemeCarousalProps> = ({
             onDragEnd={handleDragEnd}
             className="absolute w-full pointer-events-auto"
           >
-            {children[state.index]}
+            {data.length === 0 ? (
+              <div className="text-center">No videos found.</div>
+            ) : (
+              <VideoDisplay
+                key={data[state.index].name}
+                title={data[state.index].name}
+                src={data[state.index].path}
+                loop={true}
+                autoPlay={true}
+                muted={true}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
         {enableButtons && (

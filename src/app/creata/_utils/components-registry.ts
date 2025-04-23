@@ -5,14 +5,11 @@ import dynamic from "next/dynamic";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ComponentsRegistry: Record<string, React.ComponentType<any>> = {
   "doodle-meme-carousel": dynamic(
-    () =>
-      import("../(slug)/_component/doodle-meme-carousel/doodle-meme-component")
+    () => import("../_repositories/doodle-meme-carousel/doodle-meme-component")
   ),
   "award-winning-2024": dynamic(
     () =>
-      import(
-        "../(slug)/_component/award-winning-2024/award-winning-2024-component"
-      )
+      import("../_repositories/award-winning-2024/award-winning-2024-component")
   ),
 };
 

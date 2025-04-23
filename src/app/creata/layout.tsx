@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { CreataQueryProviders } from "./_provider/query-provider";
-import { TRPCReactProvider } from "@/trpc/client";
+import { TRPCReactProvider } from "./_trpc/client";
 
 export default function CreataDashboardLayout({
   children,
