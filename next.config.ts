@@ -10,8 +10,11 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/demos/**",
       },
+      {
+        protocol: "https",
+        hostname: "lottie.host",
+      },
     ],
   },
 };
-
 export default nextConfig;

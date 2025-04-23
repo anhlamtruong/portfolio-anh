@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* customBlue */
+  .text-custom-blue-50 {
+    color: #dfdff0;
+  }
+  .text-custom-blue-75 {
+    color: #dfdff2;
+  }
+  .text-custom-blue-100 {
+    color: #f0f2fa;
+  }
+  .text-custom-blue-200 {
+    color: #010101;
+  }
+  .text-custom-blue-300 {
+    color: #4fb7dd;
+  }
+
+  .bg-custom-blue-50 {
+    background-color: #dfdff0;
+  }
+  .bg-custom-blue-75 {
+    background-color: #dfdff2;
+  }
+  .bg-custom-blue-100 {
+    background-color: #f0f2fa;
+  }
+  .bg-custom-blue-200 {
+    background-color: #010101;
+  }
+  .bg-custom-blue-300 {
+    background-color: #4fb7dd;
+  }
+
+  /* customViolet */
+  .text-custom-violet-300 {
+    color: #5724ff;
+  }
+  .bg-custom-violet-300 {
+    background-color: #5724ff;
+  }
+
+  /* customYellow */
+  .text-custom-yellow-100 {
+    color: #8e983f;
+  }
+  .text-custom-yellow-300 {
+    color: #edff66;
+  }
+
+  .bg-custom-yellow-100 {
+    background-color: #8e983f;
+  }
+  .bg-custom-yellow-300 {
+    background-color: #edff66;
+  }
+
+  /* borders */
+  .border-custom-blue-300 {
+    border-color: #4fb7dd;
+  }
+  .border-custom-violet-300 {
+    border-color: #5724ff;
+  }
+  .border-custom-yellow-100 {
+    border-color: #8e983f;
+  }
+  .border-custom-yellow-300 {
+    border-color: #edff66;
+  }
+
+  /* hover examples */
+  .hover-bg-custom-blue-100:hover {
+    background-color: #f0f2fa;
+  }
+  .hover-bg-custom-yellow-300:hover {
+    background-color: #edff66;
+  }
+
+  .mask-clip-path {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .absolute-center {
+    @apply absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%];
+  }
+}

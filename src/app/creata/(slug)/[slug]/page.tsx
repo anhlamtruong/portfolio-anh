@@ -39,8 +39,8 @@ export default async function Repo({
   const { props } = metadata;
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold">Dynamic Component Page</h1>
+    <div>
+      <h1 className="text-xl font-bold">{metadata.name}</h1>
       <Component {...props} />
     </div>
   );

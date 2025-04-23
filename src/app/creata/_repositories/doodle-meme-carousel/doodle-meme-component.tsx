@@ -6,7 +6,7 @@ import { defaultCarouselConfig } from "./doodle-meme-carousel-config";
 import DoodleMemeCarousal from "./doodle-meme-carousel";
 
 import { getQueryClient, HydrateClient, trpc } from "../../_trpc/server";
-import { Loading } from "../../_component/loading";
+import { CreataLoadingComponent } from "../../_component/loading";
 
 interface DoodleMemeComponentProps {
   component_id: string;
@@ -35,7 +35,7 @@ const DoodleMemeComponent: React.FC<DoodleMemeComponentProps> = async ({
       <h2 className="text-lg font-semibold">{title}</h2>
       <div className="container p-8 aspect-video mx-auto">
         <HydrateClient>
-          <Suspense fallback={<Loading />}>
+          <Suspense fallback={<CreataLoadingComponent />}>
             <DoodleMemeCarousal config={mergedConfig}></DoodleMemeCarousal>
           </Suspense>
         </HydrateClient>

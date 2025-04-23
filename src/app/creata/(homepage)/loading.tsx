@@ -1,3 +1,5 @@
+import { CreataLoadingComponent } from "../_component/loading";
+
 export default function Loading() {
-  return <div> Loading ... </div>;
+  return <CreataLoadingComponent />;
 }

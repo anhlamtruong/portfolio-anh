@@ -1,16 +1,12 @@
-"use client";
-
 import React from "react";
-import { motion } from "framer-motion";
 
-export const Loading: React.FC = () => {
+export const CreataLoadingComponent: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <motion.div
-        className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full"
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-      />
+      <iframe
+        className="w-dvw h-dvh"
+        src="https://lottie.host/embed/dc8e6f14-ed79-4181-bc75-883ec4a61770/SHF7aoFSXD.lottie"
+      ></iframe>
     </div>
   );
 };

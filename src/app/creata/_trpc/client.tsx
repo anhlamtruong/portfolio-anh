@@ -29,7 +29,8 @@ function getUrl() {
       return `${process.env.NEXT_PUBLIC_APP_URL}`;
     return "http://localhost:3000";
   })();
-  return `${base}creata/api/trpc`;
+
+  return `${base.replace(/\/$/, "")}creata/api/trpc`;
 }
 export function TRPCReactProvider(
   props: Readonly<{
