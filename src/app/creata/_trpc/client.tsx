@@ -1,4 +1,5 @@
 "use client";
+
 // ^-- to make sure we can mount the Provider from a server component
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -30,7 +31,7 @@ function getUrl() {
     return "http://localhost:3000";
   })();
 
-  return `${base.replace(/\/$/, "")}creata/api/trpc`;
+  return `${base.replace(/\/$/, "")}/creata/api/trpc`;
 }
 export function TRPCReactProvider(
   props: Readonly<{
