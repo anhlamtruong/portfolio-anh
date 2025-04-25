@@ -16,6 +16,6 @@ export const getVideoUrls = async () => {
     return videoUrls;
   } catch (error) {
     console.error("GET ERROR: Error fetching video URLs:", error);
-    return {error: "Error fetching video URLs"};
+    return [];
   }
 };
