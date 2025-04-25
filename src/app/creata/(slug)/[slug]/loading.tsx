@@ -1,5 +1,5 @@
-import { CreataLoadingComponent } from "../../_component/loading";
+import { PageLoading } from "@/components/ui/loading";
 
 export default function Loading() {
-  return <CreataLoadingComponent />;
+  return <PageLoading />;
 }
