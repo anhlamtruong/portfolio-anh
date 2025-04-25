@@ -29,7 +29,7 @@ export const AwardWinning2024Router = createTRPCRouter({
   }),
   getHeroVideos: baseProcedure.query(async () => {
     // Fetch video URLs dynamically
-    const videos = await getVideoUrls(h);
+    const videos = await getVideoUrls();
 
     return videos;
   }),
