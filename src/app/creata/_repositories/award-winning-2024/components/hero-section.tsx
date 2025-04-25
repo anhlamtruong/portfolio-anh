@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "../styles/index.css";
 import { useTRPC } from "@/app/creata/_trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -10,14 +10,35 @@ const HeroSection = () => {
   const { data } = useSuspenseQuery(
     trpc.award_winning_2024.getHeroVideos.queryOptions()
   );
+  const totalVideos = data.length;
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [videoBlobs, setVideoBlobs] = useState<string[]>([]);
   const [hasClicked, setHasClicked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadedVideos, setLoadedVideos] = useState(0);
-
-  const totalVideos = data.length;
-  const nextVideoRef = useRef(null);
+  // const nextVideoRef = useRef(null);
+  // Preload all videos as blobs on mount
+  useEffect(() => {
+    let isMounted = true;
+    const preloadVideos = async () => {
+      const blobs = await Promise.all(
+        data.map(async (video) => {
+          const res = await fetch(video.url);
+          const blob = await res.blob();
+          return URL.createObjectURL(blob);
+        })
+      );
+      if (isMounted) setVideoBlobs(blobs);
+    };
+    preloadVideos();
+    return () => {
+      isMounted = false;
+      // Clean up blob URLs
+      videoBlobs.forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line
+  }, [data]);
 
   const upcomingVideoIndex = (currentIndex + 1) % totalVideos;
 
@@ -61,33 +82,20 @@ const HeroSection = () => {
                 autoPlay
                 muted
                 loop
+                preload="auto"
                 className=" size-64 origin-center scale-150 object-cover object-center"
                 onLoadedData={handleVideoLoad}
               >
                 <source
                   src={getVideoSource(upcomingVideoIndex)}
-                  ref={nextVideoRef}
-                />
-              </video>
-              {/* Preload Next Video */}
-              <video
-                ref={nextVideoRef}
-                style={{ display: "none" }} // Hidden video for preloading
-              >
-                <source src={getVideoSource(upcomingVideoIndex)} />
-              </video>
-              <video
-                ref={nextVideoRef}
-                style={{ display: "none" }} // Hidden video for preloading
-              >
-                <source
-                  src={getVideoSource((upcomingVideoIndex + 1) % totalVideos)}
+                  // ref={videoBlobs[upcomingVideoIndex]}
                 />
               </video>
             </div>
           </div>
-          <video key={currentIndex}>
-            <source ref={nextVideoRef} src={getVideoSource(currentIndex)} />
+          <video preload="auto" key={videoBlobs[currentIndex]}>
+            {/* <source ref={nextVideoRef} src={videoBlobs[currentIndex]} /> */}
+            <source src={videoBlobs[currentIndex]} />
           </video>
         </div>
       </div>
