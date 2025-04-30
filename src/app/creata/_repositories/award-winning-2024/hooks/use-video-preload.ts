@@ -1,43 +1,47 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
-interface VideoCache {
-  [key: string]: string;
-}
-
-export const useVideoPreload = (videoUrls: string[]) => {
-  const videoCache = useRef<VideoCache>({});
+import { useEffect, useState } from "react";
+// Custom hook for preloading video URLs
+// Ensures smooth transitions between videos by preloading them in advance
+export const useVideoPreloader = (
+  videoUrls: string[],
+  currentIndex: number
+) => {
+  const [videoCache, setVideoCache] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
-    const preloadVideos = async () => {
-      try {
-        // Create blob URLs for each video and store in cache
-        await Promise.all(
-          videoUrls.map(async (url) => {
-            if (!videoCache.current[url]) {
-              const response = await fetch(url);
-              const blob = await response.blob();
-              videoCache.current[url] = URL.createObjectURL(blob);
-            }
-          })
-        );
-      } catch (error) {
-        console.error("Error preloading videos:", error);
+    if (!videoUrls || videoUrls.length === 0) return;
+
+    const preloadVideo = async (index: number) => {
+      if (!videoCache[index] && videoUrls[index]) {
+        const res = await fetch(videoUrls[index]);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setVideoCache((prev) => ({ ...prev, [index]: blobUrl }));
       }
     };
 
-    preloadVideos();
+    preloadVideo(currentIndex);
+    preloadVideo((currentIndex + 1) % videoUrls.length);
+    preloadVideo((currentIndex + 2) % videoUrls.length);
 
-    // Cleanup blob URLs on unmount
     return () => {
-      Object.values(videoCache.current).forEach((blobUrl) => {
-        URL.revokeObjectURL(blobUrl);
-      });
+      const unusedIndex =
+        (currentIndex - 1 + videoUrls.length) % videoUrls.length;
+      if (videoCache[unusedIndex]) {
+        URL.revokeObjectURL(videoCache[unusedIndex]);
+        setVideoCache((prev) => {
+          const updated = { ...prev };
+          delete updated[unusedIndex];
+          return updated;
+        });
+      }
     };
-  }, [videoUrls]);
+  }, [currentIndex, videoUrls, videoCache]);
 
-  const getVideoBlobUrl = (url: string) => videoCache.current[url] || url;
+  const getVideoSource = (index: number) => {
+    return videoCache[index] || undefined;
+  };
 
-  return { getVideoBlobUrl };
+  return { getVideoSource };
 };

@@ -2,6 +2,8 @@ import { baseProcedure, createTRPCRouter } from "@/app/creata/_trpc/init";
 import { award_winning_2024_config } from "../config";
 import { getFontUrls } from "../service/get-font-url";
 import { getVideoUrls } from "../service/get-videos-url";
+// tRPC procedures for the Award-Winning 2024 page
+// Handles fetching video URLs and font styles dynamically
 
 export const AwardWinning2024Router = createTRPCRouter({
   //Contain the business logic for the AwardWinning2024Router
@@ -27,6 +29,7 @@ export const AwardWinning2024Router = createTRPCRouter({
 
     return fontFaceStyles;
   }),
+  // Fetches video URLs for the Hero Section
   getHeroVideos: baseProcedure.query(async () => {
     // Fetch video URLs dynamically
     const videos = await getVideoUrls();
