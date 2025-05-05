@@ -88,4 +88,18 @@
   .absolute-center {
     @apply absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%];
   }
+
+  .hero-heading {
+    @apply uppercase invert text-3xl sm:right-6 sm:text-5xl md:text-7xl lg:text-[8rem];
+    font-family: "zentry-regular";
+  }
+
+  .font-robert-regular {
+    font-family: "robert-regular";
+  }
+
+  .special-font b {
+    font-family: "zentry-regular";
+    font-feature-settings: "ss01" on;
+  }
 }

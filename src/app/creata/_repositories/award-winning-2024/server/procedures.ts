@@ -32,7 +32,13 @@ export const AwardWinning2024Router = createTRPCRouter({
   // Fetches video URLs for the Hero Section
   getHeroVideos: baseProcedure.query(async () => {
     // Fetch video URLs dynamically
-    const videos = await getVideoUrls();
+    const urls = await getVideoUrls();
+    const videos = award_winning_2024_config.heroSectionVideo.map(
+      (video, index) => ({
+        ...video,
+        url: urls[index] || "", // fallback empty string if fetch failed
+      })
+    );
 
     return videos;
   }),

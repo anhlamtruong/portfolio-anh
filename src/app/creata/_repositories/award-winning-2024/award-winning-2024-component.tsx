@@ -22,7 +22,7 @@ const AwardWinning2024Component = async () => {
         style={{ fontFamily: "circularweb-book, sans-serif" }}
       >
         <HydrateClient>
-          <Suspense fallback={<ComponentLoading />}>
+          <Suspense fallback={<ComponentLoading loading={true} />}>
             <HeroSection></HeroSection>
           </Suspense>
         </HydrateClient>

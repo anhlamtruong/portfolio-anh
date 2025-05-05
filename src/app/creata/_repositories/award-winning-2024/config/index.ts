@@ -5,11 +5,35 @@ export const award_winning_2024_config = {
   apiUrl: "https://api.example.com/award-winning-2024", // API endpoint for fetching data
   storagePath: "creata/award-winning-2024", // Path for storing assets
   heroSectionVideo: [
-    { id: "hero-1", path: "videos/hero-1.mp4", title: "Hero Video 1" },
-    { id: "hero-2", path: "videos/hero-2.mp4", title: "Hero Video 2" },
-    { id: "hero-3", path: "videos/hero-3.mp4", title: "Hero Video 3" },
-    { id: "hero-4", path: "videos/hero-4.mp4", title: "Hero Video 4" },
-  ], // Metadata for Hero Section videos
+    {
+      id: "hero-1",
+      path: "videos/hero-1.mp4",
+      title: "Welcome to Nexus",
+      second_title: "The Gateway Begins",
+      description: ["Explore infinite worlds", "Own your journey"],
+    },
+    {
+      id: "hero-2",
+      path: "videos/hero-2.mp4",
+      title: "Forge Your Path",
+      second_title: "Evolve Through Battle",
+      description: ["Earn through skill", "Dominate the play economy"],
+    },
+    {
+      id: "hero-3",
+      path: "videos/hero-3.mp4",
+      title: "Realms of Valor",
+      second_title: "Conquer or Perish",
+      description: ["Claim rare assets", "Build your legend"],
+    },
+    {
+      id: "hero-4",
+      path: "videos/hero-4.mp4",
+      title: "MetaCore Awakens",
+      second_title: "Your Identity. Reinvented.",
+      description: ["Shape the metagame", "Be who you were meant to be"],
+    },
+  ],
   fontPath: [
     "fonts/circularweb-book.woff2",
     "fonts/general.woff2",

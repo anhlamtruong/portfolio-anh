@@ -1,6 +1,6 @@
 "use client";
-
-import React, { useEffect } from "react";
+//TODO: Create a lazy loading component for the image for the thumbnail and using this for only the doodle meme carousel.
+import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -46,24 +46,3 @@ export const VideoDisplay: React.FC<VideoProps> = ({
     </motion.div>
   );
 };
-
-interface PreloadVideoProps {
-  src: string;
-}
-
-export const PreloadVideo: React.FC<PreloadVideoProps> = ({ src }) => {
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "preload";
-    link.as = "video";
-    link.href = src;
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, [src]);
-
-  return null;
-};
-
-

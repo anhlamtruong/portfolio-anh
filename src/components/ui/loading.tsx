@@ -1,6 +1,9 @@
+import { cn } from "@/lib/utils";
 import React from "react";
+import { ClimbingBoxLoader } from "react-spinners";
 
 const Loader = () => (
+  //TODO: NEED TO FIX, the animation is not really expected
   <div className="min-h-screen bg-[#F5F9FF] flex items-center justify-center space-x-4">
     {/* Circle Loader */}
     <div className="relative w-11 h-11">
@@ -58,4 +61,16 @@ const Loader = () => (
 );
 
 export const PageLoading = () => <Loader></Loader>;
-export const ComponentLoading = () => <Loader></Loader>;
+export const ComponentLoading = ({
+  loading,
+  className,
+}: {
+  loading: boolean;
+  className?: string;
+}) => (
+  <ClimbingBoxLoader
+    className={cn("invert", className)}
+    loading={loading}
+    speedMultiplier={2}
+  />
+);

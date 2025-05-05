@@ -39,7 +39,7 @@ export default async function Repo({
   const { props } = metadata;
 
   return (
-    <div>
+    <div className="relative">
       <h1 className="text-xl font-bold">{metadata.name}</h1>
       <Component {...props} />
     </div>
