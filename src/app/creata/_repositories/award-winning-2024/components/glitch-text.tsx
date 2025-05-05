@@ -5,12 +5,6 @@ import { useEffect, useState } from "react";
 
 const characters = "█▓▒░<>/|\\=+-!?@#$%&*";
 
-const randomize = (length: number) =>
-  Array.from(
-    { length },
-    () => characters[Math.floor(Math.random() * characters.length)]
-  ).join("");
-
 export const GlitchText = ({
   text,
   duration = 2000,

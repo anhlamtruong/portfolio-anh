@@ -15,6 +15,7 @@ import { ComponentLoading } from "@/components/ui/loading";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { GlitchText } from "./glitch-text";
+import FadeInOutWrapper from "./fade-in-out-wrapper";
 // Main Hero Section component
 const HeroSection = () => {
   const trpc = useTRPC();
@@ -30,12 +31,22 @@ const HeroSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0); // Tracks the current video index
   const { isPrefetchingDone } = usePrefetchVideoBlobsOnMount(videoUrls);
   const nextVideoRef = useRef<HTMLVideoElement>(null); // Ref for the next video
+  const videoFrameRef = useRef<HTMLDivElement>(null); // Ref for the video frame
   const upcomingVideoIndex = (currentIndex + 1) % totalVideos;
   const previousVideoIndex = (currentIndex - 1 + totalVideos) % totalVideos;
 
+  useGSAP(() => {
+    if (videoFrameRef.current) {
+      gsap.set(videoFrameRef.current, {
+        clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
+        borderRadius: "0% 0% 40% 10%",
+      });
+    }
+  });
+
   useGSAP(
     () => {
-      if (hasClicked) {
+      if (hasClicked && nextVideoRef.current) {
         gsap.set("#next-video", { visibility: "visible" });
         gsap.to("#next-video", {
           transformOrigin: "center center",
@@ -63,6 +74,7 @@ const HeroSection = () => {
       revertOnUpdate: true,
     }
   );
+
   const { data: previousBlob } = useQuery({
     queryKey: ["videoBlob", videoUrls[previousVideoIndex]],
     queryFn: () => fetchVideoBlob(videoUrls[previousVideoIndex]),
@@ -110,6 +122,7 @@ const HeroSection = () => {
   return (
     <section className=" relative h-dvh w-screen">
       <div
+        ref={videoFrameRef}
         id="video-frame"
         className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
       >
@@ -167,35 +180,32 @@ const HeroSection = () => {
         <h1 className="flex hero-heading special-font absolute bottom-5 right-5 z-40">
           <GlitchText
             text={data[currentIndex].title.slice(0, 1)}
-            duration={500}
+            duration={100}
           />
-          <GlitchText
-            text={data[currentIndex].title.slice(1, 2)}
-            duration={1000}
-          />
-          <GlitchText
-            text={data[currentIndex].title.slice(2)}
-            duration={2000}
-          />
-          {/* {data[currentIndex].title.slice(0, 1)}
-          <b>{data[currentIndex].title.slice(1, 2)}</b>
-          {data[currentIndex].title.slice(2)} */}
+          <b>
+            <GlitchText
+              text={data[currentIndex].title.slice(1, 2)}
+              duration={200}
+            />
+          </b>
+          <GlitchText text={data[currentIndex].title.slice(2)} duration={300} />
         </h1>
         <div className=" absolute left-0 top-0 z-40 size-full">
           <div className="mt-24 px-5 sm:px-10">
             <h1 className="hero-heading special-font">
-              {data[currentIndex].second_title.slice(0, 1)}
-              <b>{data[currentIndex].second_title.slice(1, 2)}</b>
-              {data[currentIndex].second_title.slice(2)}
+              <FadeInOutWrapper show key={currentIndex}>
+                {data[currentIndex].second_title.slice(0, 1)}
+                <b>{data[currentIndex].second_title.slice(1, 2)}</b>
+                {data[currentIndex].second_title.slice(2)}
+              </FadeInOutWrapper>
             </h1>
             <div className="flex flex-col gap-2">
               {data[currentIndex].description.map((desc, index) => (
-                <p
-                  key={index}
-                  className="text-xl text-white max-w-72 font-robert-regular"
-                >
-                  {desc}
-                </p>
+                <FadeInOutWrapper show key={`${currentIndex}-${index}`}>
+                  <p className="text-xl text-white max-w-72 font-robert-regular">
+                    {desc}
+                  </p>
+                </FadeInOutWrapper>
               ))}
             </div>
           </div>
