@@ -1,28 +1,44 @@
 "use client";
 
-// This component renders the Hero Section of the Award-Winning 2024 page.
-// It fetches video data from the server using tRPC and preloads the current and next videos.
-// Users can click to transition to the next video, and the component ensures smooth playback.
+// =======================
+// Imports
+// =======================
 
+// React & Hooks
 import React, { useRef, useState } from "react";
+
+// Data fetching & State
 import { useTRPC } from "@/app/creata/_trpc/client";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
-import "../styles/index.css";
-import { usePrefetchVideoBlobsOnMount } from "../hooks/use-perfetch-video-blobs-on-mount";
-import { fetchVideoBlob } from "../hooks/use-prefetch-video-blob";
-import { ComponentLoading } from "@/components/ui/loading";
+// Animation
+import { ScrollTrigger } from "gsap/all";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+
+// Custom hooks & utils
+import { usePrefetchVideoBlobsOnMount } from "../hooks/use-prefetch-video-blobs-on-mount";
+import { fetchVideoBlob } from "../hooks/use-prefetch-video-blob";
+
+// UI Components
+import { ComponentLoading } from "@/components/ui/loading";
 import { GlitchText } from "./glitch-text";
 import FadeInOutWrapper from "./fade-in-out-wrapper";
-// Main Hero Section component
-const HeroSection = () => {
-  const trpc = useTRPC();
 
+// Styles
+import "../styles/index.css";
+
+// =======================
+// Main Hero Section Component
+// =======================
+const HeroSection = () => {
+  // ====== Data Fetching ======
+  const trpc = useTRPC();
   const { data } = useSuspenseQuery(
     trpc.award_winning_2024.getHeroVideos.queryOptions()
   ); // Fetch video data from the server
+
+  // ====== State & Refs ======
   const totalVideos = data.length;
   const videoUrls = data.map((video) => video.url);
   const [hasClicked, setHasClicked] = useState(false); // Tracks if the user has clicked
@@ -31,19 +47,81 @@ const HeroSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0); // Tracks the current video index
   const { isPrefetchingDone } = usePrefetchVideoBlobsOnMount(videoUrls);
   const nextVideoRef = useRef<HTMLVideoElement>(null); // Ref for the next video
-  const videoFrameRef = useRef<HTMLDivElement>(null); // Ref for the video frame
+  const videoFrameRef = useRef<HTMLDivElement | null>(null); // Ref for the video frame
+
+  // Calculate indices for next and previous videos
   const upcomingVideoIndex = (currentIndex + 1) % totalVideos;
   const previousVideoIndex = (currentIndex - 1 + totalVideos) % totalVideos;
 
-  useGSAP(() => {
-    if (videoFrameRef.current) {
-      gsap.set(videoFrameRef.current, {
+  // ====== Video Blob Prefetching ======
+  // Loading the video blobs for the current, next, and previous videos
+  const { data: previousBlob } = useQuery({
+    queryKey: ["videoBlob", videoUrls[previousVideoIndex]],
+    queryFn: () => fetchVideoBlob(videoUrls[previousVideoIndex]),
+    enabled: isPrefetchingDone,
+    staleTime: Infinity,
+  });
+
+  const { data: currentBlob } = useQuery({
+    queryKey: ["videoBlob", videoUrls[currentIndex]],
+    queryFn: () => fetchVideoBlob(videoUrls[currentIndex]),
+    enabled: isPrefetchingDone,
+    staleTime: Infinity,
+  });
+
+  const { data: nextBlob } = useQuery({
+    queryKey: ["videoBlob", videoUrls[upcomingVideoIndex]],
+    queryFn: () => fetchVideoBlob(videoUrls[upcomingVideoIndex]),
+    enabled: isPrefetchingDone,
+    staleTime: Infinity,
+  });
+
+  // ====== GSAP Animations ======
+  gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.defaults({
+    markers: true,
+  });
+
+  // Animation for video frame entrance
+  useGSAP(
+    () => {
+      if (
+        !isPrefetchingDone ||
+        !currentBlob ||
+        !nextBlob ||
+        !videoFrameRef.current
+      ) {
+        return;
+      }
+      const el = videoFrameRef.current;
+
+      gsap.set(el, {
         clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
         borderRadius: "0% 0% 40% 10%",
       });
+      gsap.from(el, {
+        clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+        borderRadius: "0% 0% 0% 0%",
+        ease: "power1.inOut",
+        // scrollTrigger: {
+        //   trigger: el,
+        //   start: "center center",
+        //   end: "bottom center",
+        //   scrub: true,
+        // },
+      });
+    },
+    {
+      dependencies: [
+        videoFrameRef.current,
+        isPrefetchingDone,
+        currentBlob,
+        nextBlob,
+      ],
     }
-  });
+  );
 
+  // Animation for transitioning to next video
   useGSAP(
     () => {
       if (hasClicked && nextVideoRef.current) {
@@ -75,26 +153,7 @@ const HeroSection = () => {
     }
   );
 
-  const { data: previousBlob } = useQuery({
-    queryKey: ["videoBlob", videoUrls[previousVideoIndex]],
-    queryFn: () => fetchVideoBlob(videoUrls[previousVideoIndex]),
-    enabled: isPrefetchingDone,
-    staleTime: Infinity,
-  });
-
-  const { data: currentBlob } = useQuery({
-    queryKey: ["videoBlob", videoUrls[currentIndex]],
-    queryFn: () => fetchVideoBlob(videoUrls[currentIndex]),
-    enabled: isPrefetchingDone,
-    staleTime: Infinity,
-  });
-
-  const { data: nextBlob } = useQuery({
-    queryKey: ["videoBlob", videoUrls[upcomingVideoIndex]],
-    queryFn: () => fetchVideoBlob(videoUrls[upcomingVideoIndex]),
-    enabled: isPrefetchingDone,
-    staleTime: Infinity,
-  });
+  // ====== Handlers ======
   // Handles the click event to transition to the next video
   const handleMiniVideoClick = () => {
     setHasClicked(true);
@@ -106,11 +165,13 @@ const HeroSection = () => {
     setLoadedVideos((prev) => (prev + 1) % totalVideos);
   };
 
+  // ====== Render Logic ======
   // Renders a fallback message if no videos are available
   if (!data || data.length === 0) {
     return <div>No videos available</div>;
   }
 
+  // Show loading spinner while prefetching
   if (!isPrefetchingDone || !currentBlob || !nextBlob) {
     return (
       <div className=" w-screen h-screen inset-0 flex items-center pointer-events-auto justify-center invert z-20">
@@ -119,11 +180,11 @@ const HeroSection = () => {
     );
   }
 
+  // ====== Main Render ======
   return (
     <section className=" relative h-dvh w-screen">
       <div
         ref={videoFrameRef}
-        id="video-frame"
         className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
       >
         <div>
@@ -177,22 +238,10 @@ const HeroSection = () => {
           </video>
         </div>
         {/* Text Overlay for the video */}
-        <h1 className="flex hero-heading special-font absolute bottom-5 right-5 z-40">
-          <GlitchText
-            text={data[currentIndex].title.slice(0, 1)}
-            duration={100}
-          />
-          <b>
-            <GlitchText
-              text={data[currentIndex].title.slice(1, 2)}
-              duration={200}
-            />
-          </b>
-          <GlitchText text={data[currentIndex].title.slice(2)} duration={300} />
-        </h1>
+
         <div className=" absolute left-0 top-0 z-40 size-full">
           <div className="mt-24 px-5 sm:px-10">
-            <h1 className="hero-heading special-font">
+            <h1 className="hero-heading special-font ">
               <FadeInOutWrapper show key={currentIndex}>
                 {data[currentIndex].second_title.slice(0, 1)}
                 <b>{data[currentIndex].second_title.slice(1, 2)}</b>
@@ -211,6 +260,25 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
+      <h1 className="flex hero-heading special-font absolute bottom-5 right-5 z-50 pointer-events-none">
+        <GlitchText
+          text={data[currentIndex].title.slice(0, 1)}
+          duration={100}
+        />
+        <b>
+          <GlitchText
+            text={data[currentIndex].title.slice(1, 2)}
+            duration={200}
+          />
+        </b>
+        <GlitchText text={data[currentIndex].title.slice(2)} duration={300} />
+      </h1>
+      {/* Spacer divs for scroll testing */}
+      <div className=" h-96"></div>
+      <div className=" h-96"></div>
+      <div className=" h-96"></div>
+      <div className=" h-96"></div>
+      <div className=" h-96"></div>
     </section>
   );
 };
