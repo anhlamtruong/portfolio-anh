@@ -28,17 +28,20 @@ const config: Config = {
           "100%": { strokeDashoffset: "256" },
         },
         loaderDotCircle: {
+          "0%": { transform: "translate(-18px, -18px)" },
           "25%": { transform: "translate(0, 0)" },
           "50%": { transform: "translate(18px, -18px)" },
           "75%": { transform: "translate(0, -36px)" },
           "100%": { transform: "translate(-18px, -18px)" },
         },
         loaderDotTriangle: {
+          "0%": { transform: "translate(-10px, -18px)" },
           "33%": { transform: "translate(0, 0)" },
           "66%": { transform: "translate(10px, -18px)" },
           "100%": { transform: "translate(-10px, -18px)" },
         },
         loaderDotRect: {
+          "0%": { transform: "translate(-18px, -18px)" },
           "25%": { transform: "translate(0, 0)" },
           "50%": { transform: "translate(18px, -18px)" },
           "75%": { transform: "translate(0, -36px)" },

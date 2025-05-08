@@ -12,7 +12,6 @@ import { useTRPC } from "@/app/creata/_trpc/client";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 // Animation
-import { ScrollTrigger } from "gsap/all";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
@@ -42,8 +41,6 @@ const HeroSection = () => {
   const totalVideos = data.length;
   const videoUrls = data.map((video) => video.url);
   const [hasClicked, setHasClicked] = useState(false); // Tracks if the user has clicked
-  const [isLoading, setIsLoading] = useState(true); // Tracks loading state
-  const [loadedVideos, setLoadedVideos] = useState(0); // Tracks the number of loaded videos
   const [currentIndex, setCurrentIndex] = useState(0); // Tracks the current video index
   const { isPrefetchingDone } = usePrefetchVideoBlobsOnMount(videoUrls);
   const nextVideoRef = useRef<HTMLVideoElement>(null); // Ref for the next video
@@ -75,51 +72,6 @@ const HeroSection = () => {
     enabled: isPrefetchingDone,
     staleTime: Infinity,
   });
-
-  // ====== GSAP Animations ======
-  gsap.registerPlugin(ScrollTrigger);
-  ScrollTrigger.defaults({
-    markers: true,
-  });
-
-  // Animation for video frame entrance
-  useGSAP(
-    () => {
-      if (
-        !isPrefetchingDone ||
-        !currentBlob ||
-        !nextBlob ||
-        !videoFrameRef.current
-      ) {
-        return;
-      }
-      const el = videoFrameRef.current;
-
-      gsap.set(el, {
-        clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
-        borderRadius: "0% 0% 40% 10%",
-      });
-      gsap.from(el, {
-        clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
-        borderRadius: "0% 0% 0% 0%",
-        ease: "power1.inOut",
-        scrollTrigger: {
-          trigger: el,
-          start: "center center",
-          end: "bottom center",
-          scrub: true,
-        },
-      });
-    },
-    {
-      dependencies: [
-        videoFrameRef.current,
-        isPrefetchingDone,
-        currentBlob,
-        nextBlob,
-      ],
-    }
-  );
 
   // Animation for transitioning to next video
   useGSAP(
@@ -160,11 +112,6 @@ const HeroSection = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % totalVideos);
   };
 
-  // Handles the video load event
-  const handleVideoLoad = () => {
-    setLoadedVideos((prev) => (prev + 1) % totalVideos);
-  };
-
   // ====== Render Logic ======
   // Renders a fallback message if no videos are available
   if (!data || data.length === 0) {
@@ -183,13 +130,14 @@ const HeroSection = () => {
   // ====== Main Render ======
   return (
     <section className=" relative h-dvh w-screen">
-      <ScrollClipWrapper
-      // ref={videoFrameRef}
-      // className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
+      <div
+        ref={videoFrameRef}
+        className="relative z-10 h-dvh w-screen overflow-hidden  bg-custom-blue-75"
       >
         <div>
           {/* Mini video for transitioning */}
-          <div className="mask-clip-path absolute-center absolute-center z-50 size-64 cursor-pointer overflow-hidden rounded-lg">
+
+          <div className="mask-clip-path absolute-center absolute z-50 size-64 cursor-pointer overflow-hidden rounded-lg">
             <div
               onClick={handleMiniVideoClick}
               className="origin-center scale-50 opacity-0 transition-all duration-500 ease-in hover:scale-100 hover:opacity-100"
@@ -203,12 +151,12 @@ const HeroSection = () => {
                 preload="auto"
                 loop
                 className=" size-64 origin-center scale-150 object-cover object-center"
-                onLoadedData={handleVideoLoad}
               >
                 <source src={nextBlob} />
               </video>
             </div>
           </div>
+
           {/* Main video */}
           <video
             className="absolute-center invisible absolute z-20 size-64 object-cover object-center"
@@ -219,7 +167,6 @@ const HeroSection = () => {
             autoPlay
             muted
             loop
-            onLoadedData={handleVideoLoad}
           >
             <source src={currentBlob} />
           </video>
@@ -232,7 +179,6 @@ const HeroSection = () => {
             autoPlay
             muted
             loop
-            onLoadedData={handleVideoLoad}
           >
             <source src={previousBlob} />
           </video>
@@ -259,7 +205,7 @@ const HeroSection = () => {
             </div>
           </div>
         </div>
-      </ScrollClipWrapper>
+      </div>
       <h1 className="flex hero-heading special-font absolute bottom-5 right-5 z-50 pointer-events-none">
         <GlitchText
           text={data[currentIndex].title.slice(0, 1)}
@@ -273,50 +219,8 @@ const HeroSection = () => {
         </b>
         <GlitchText text={data[currentIndex].title.slice(2)} duration={300} />
       </h1>
-      {/* Spacer divs for scroll testing */}
-      <div className=" h-96"></div>
-      <div className=" h-96"></div>
-      <div className=" h-96"></div>
-      <div className=" h-96"></div>
-      <div className=" h-96"></div>
     </section>
   );
 };
 
 export default HeroSection;
-
-gsap.registerPlugin(ScrollTrigger);
-const ScrollClipWrapper = ({ children }: { children: React.ReactNode }) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  useGSAP(() => {
-    if (!ref.current) return;
-
-    gsap.set(ref.current, {
-      clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
-      borderRadius: "0% 0% 40% 10%",
-    });
-
-    gsap.from(ref.current, {
-      clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
-      borderRadius: "0% 0% 0% 0%",
-      ease: "power1.inOut",
-      scrollTrigger: {
-        trigger: ref.current,
-        start: "center center",
-        end: "bottom center",
-        scrub: true,
-        markers: true, // remove in prod
-      },
-    });
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
-    >
-      {children}
-    </div>
-  );
-};
