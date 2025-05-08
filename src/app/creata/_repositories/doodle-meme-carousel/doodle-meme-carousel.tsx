@@ -12,7 +12,7 @@ import {
 } from "./doodle-meme-carousel-config";
 import { useTRPC } from "../../_trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { VideoDisplay } from "../../_component/videos-display";
+import { VideoDisplay } from "./components/videos-display";
 
 interface DoodleMemeCarousalProps {
   className?: string;
@@ -32,10 +32,39 @@ export interface TransitionState {
 const SWIPE_THRESHOLD = 100;
 
 /**
- * triggerTransition:
- * For dynamic slides, we use a simple approach:
- * - For forward navigation (swipe down or right, positive values), next index = (current index + 1) mod total.
- * - For backward navigation (swipe up or left, negative values), next index = (current index - 1 + total) mod total.
+ * DoodleMemeCarousel Component
+ * A carousel component for displaying doodle/meme videos with touch, keyboard and button controls.
+ *
+ * Features:
+ * - Touch/swipe gestures support (horizontal and vertical)
+ * - Keyboard arrow key navigation
+ * - Navigation buttons (up/down/left/right)
+ * - Configurable animations and transitions
+ * - Responsive design
+ *
+ * Props:
+ * @prop {string} className - Additional CSS classes
+ * @prop {boolean} enableSwipe - Enable/disable swipe gestures (default: true)
+ * @prop {boolean} enableKeyboard - Enable/disable keyboard controls (default: true)
+ * @prop {boolean} enableButtons - Enable/disable navigation buttons (default: true)
+ * @prop {CarouselConfig} config - Animation and behavior configuration
+ *
+ * State:
+ * - index: Current video index
+ * - axis: Current animation axis ('x' or 'y')
+ * - direction: Animation direction (+1 or -1)
+ *
+ * Navigation Logic:
+ * - Forward (swipe down/right): index = (current + 1) % total
+ * - Backward (swipe up/left): index = (current - 1 + total) % total
+ *
+ * Keyboard Controls:
+ * - ArrowDown/ArrowRight: Forward navigation
+ * - ArrowUp/ArrowLeft: Backward navigation
+ *
+ * Swipe Gesture:
+ * - Uses SWIPE_THRESHOLD (100px) to determine valid swipes
+ * - Determines dominant axis (x/y) for direction
  */
 const DoodleMemeCarousal: React.FC<DoodleMemeCarousalProps> = ({
   className,

@@ -4,8 +4,6 @@ import { ClimbingBoxLoader } from "react-spinners";
 import { Progress } from "./progress";
 
 export const Loader = () => (
-  //TODO: NEED TO FIX, the animation is not really expected
-
   <div className="flex items-center justify-center space-x-4">
     {/* Circle Loader */}
     <div className="relative w-11 h-11">

@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ComponentLoading } from "@/components/ui/loading";
 import { motion } from "framer-motion";
+import { Thumbnail } from "../_component/thumbnail";
 
 const cards = [
   {
@@ -21,7 +22,8 @@ const cards = [
     cardTitle: "Doodle-Meme-Video",
     cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
     cardFooter: "Author Creata",
-    cardThumbnail: "",
+    cardThumbnail:
+      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Fdoodle-meme-videos%2Fthumbnail%2Fdoodle-meme-carousel-thumbnail.jpg?alt=media&token=9f272ced-831d-43f8-a283-84d6350f5ccc",
     cardContent: (
       <VideoDisplay
         key={"1"}
@@ -35,6 +37,8 @@ const cards = [
     cardTitle: "Award Winning 2024",
     cardDescription: "🤷‍♂️",
     cardFooter: "Author Creata",
+    cardThumbnail:
+      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Faward-winning-2024%2Fthumbnail%2Faward-winning-2024-thumbnail.png?alt=media&token=fe3ba479-67d1-4d64-9691-52cb9e648ae2",
     cardContent: (
       <VideoDisplay
         key={"1"}
@@ -48,6 +52,8 @@ const cards = [
     cardTitle: "Doodle-Meme-Video",
     cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
     cardFooter: "Author Creata",
+    cardThumbnail:
+      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Fdoodle-meme-videos%2Fthumbnail%2Fdoodle-meme-carousel-thumbnail.jpg?alt=media&token=9f272ced-831d-43f8-a283-84d6350f5ccc",
     cardContent: (
       <VideoDisplay
         key={"1"}
@@ -61,6 +67,8 @@ const cards = [
     cardTitle: "Doodle-Meme-Video",
     cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
     cardFooter: "Author Creata",
+    cardThumbnail:
+      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Faward-winning-2024%2Fthumbnail%2Faward-winning-2024-thumbnail.png?alt=media&token=fe3ba479-67d1-4d64-9691-52cb9e648ae2",
     cardContent: (
       <VideoDisplay
         key={"1"}
@@ -74,6 +82,8 @@ const cards = [
     cardTitle: "Doodle-Meme-Video",
     cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
     cardFooter: "Author Creata",
+    cardThumbnail:
+      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Fdoodle-meme-videos%2Fthumbnail%2Fdoodle-meme-carousel-thumbnail.jpg?alt=media&token=9f272ced-831d-43f8-a283-84d6350f5ccc",
     cardContent: (
       <VideoDisplay
         key={"1"}
@@ -139,7 +149,9 @@ export default function CreataDashboardLayout() {
                   <CardTitle>{card.cardTitle}</CardTitle>
                   <CardDescription>{card.cardDescription}</CardDescription>
                 </CardHeader>
-                <CardContent>{card.cardContent}</CardContent>
+                <CardContent>
+                  <Thumbnail src={card.cardThumbnail} alt={card.cardTitle} />
+                </CardContent>
                 <CardFooter>
                   <p className=" text-sm font-extralight">{card.cardFooter}</p>
                 </CardFooter>
