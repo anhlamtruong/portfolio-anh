@@ -20,7 +20,7 @@ import { usePrefetchVideoBlobsOnMount } from "../hooks/use-prefetch-video-blobs-
 import { fetchVideoBlob } from "../hooks/use-prefetch-video-blob";
 
 // UI Components
-import { ComponentLoading } from "@/components/ui/loading";
+import { PageContentLoading } from "@/components/ui/loading";
 import { GlitchText } from "./glitch-text";
 import FadeInOutWrapper from "./fade-in-out-wrapper";
 
@@ -122,7 +122,7 @@ const HeroSection = () => {
   if (!isPrefetchingDone || !currentBlob || !nextBlob) {
     return (
       <div className=" w-screen h-screen inset-0 flex items-center pointer-events-auto justify-center invert z-20">
-        <ComponentLoading className="invert" loading={true}></ComponentLoading>
+        <PageContentLoading className="invert"></PageContentLoading>
       </div>
     );
   }
