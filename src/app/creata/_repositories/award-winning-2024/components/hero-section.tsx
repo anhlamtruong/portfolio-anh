@@ -47,7 +47,7 @@ const HeroSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0); // Tracks the current video index
   const { isPrefetchingDone } = usePrefetchVideoBlobsOnMount(videoUrls);
   const nextVideoRef = useRef<HTMLVideoElement>(null); // Ref for the next video
-  const videoFrameRef = useRef<HTMLDivElement | null>(null); // Ref for the video frame
+  const videoFrameRef = useRef(null); // Ref for the video frame
 
   // Calculate indices for next and previous videos
   const upcomingVideoIndex = (currentIndex + 1) % totalVideos;
@@ -103,12 +103,12 @@ const HeroSection = () => {
         clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
         borderRadius: "0% 0% 0% 0%",
         ease: "power1.inOut",
-        // scrollTrigger: {
-        //   trigger: el,
-        //   start: "center center",
-        //   end: "bottom center",
-        //   scrub: true,
-        // },
+        scrollTrigger: {
+          trigger: el,
+          start: "center center",
+          end: "bottom center",
+          scrub: true,
+        },
       });
     },
     {
@@ -183,9 +183,9 @@ const HeroSection = () => {
   // ====== Main Render ======
   return (
     <section className=" relative h-dvh w-screen">
-      <div
-        ref={videoFrameRef}
-        className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
+      <ScrollClipWrapper
+      // ref={videoFrameRef}
+      // className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
       >
         <div>
           {/* Mini video for transitioning */}
@@ -259,7 +259,7 @@ const HeroSection = () => {
             </div>
           </div>
         </div>
-      </div>
+      </ScrollClipWrapper>
       <h1 className="flex hero-heading special-font absolute bottom-5 right-5 z-50 pointer-events-none">
         <GlitchText
           text={data[currentIndex].title.slice(0, 1)}
@@ -284,3 +284,39 @@ const HeroSection = () => {
 };
 
 export default HeroSection;
+
+gsap.registerPlugin(ScrollTrigger);
+const ScrollClipWrapper = ({ children }: { children: React.ReactNode }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useGSAP(() => {
+    if (!ref.current) return;
+
+    gsap.set(ref.current, {
+      clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
+      borderRadius: "0% 0% 40% 10%",
+    });
+
+    gsap.from(ref.current, {
+      clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+      borderRadius: "0% 0% 0% 0%",
+      ease: "power1.inOut",
+      scrollTrigger: {
+        trigger: ref.current,
+        start: "center center",
+        end: "bottom center",
+        scrub: true,
+        markers: true, // remove in prod
+      },
+    });
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-custom-blue-75"
+    >
+      {children}
+    </div>
+  );
+};
