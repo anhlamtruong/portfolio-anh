@@ -8,94 +8,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { VideoDisplay } from "../_component/videos-display";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ComponentLoading } from "@/components/ui/loading";
 import { motion } from "framer-motion";
 import { Thumbnail } from "../_component/thumbnail";
-
-const cards = [
-  {
-    id: "k6I8MYN8fV0bSVYQN3A9",
-    cardTitle: "Doodle-Meme-Video",
-    cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
-    cardFooter: "Author Creata",
-    cardThumbnail:
-      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Fdoodle-meme-videos%2Fthumbnail%2Fdoodle-meme-carousel-thumbnail.jpg?alt=media&token=9f272ced-831d-43f8-a283-84d6350f5ccc",
-    cardContent: (
-      <VideoDisplay
-        key={"1"}
-        src={"/videos/creata-doodle-meme-video/vid1.mp4"}
-        title={""}
-      />
-    ),
-  },
-  {
-    id: "Ll5hGGaqIBGja9tg30h2",
-    cardTitle: "Award Winning 2024",
-    cardDescription: "🤷‍♂️",
-    cardFooter: "Author Creata",
-    cardThumbnail:
-      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Faward-winning-2024%2Fthumbnail%2Faward-winning-2024-thumbnail.png?alt=media&token=fe3ba479-67d1-4d64-9691-52cb9e648ae2",
-    cardContent: (
-      <VideoDisplay
-        key={"1"}
-        src={"/videos/creata-doodle-meme-video/vid2.mp4"}
-        title={""}
-      />
-    ),
-  },
-  {
-    id: "3",
-    cardTitle: "Doodle-Meme-Video",
-    cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
-    cardFooter: "Author Creata",
-    cardThumbnail:
-      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Fdoodle-meme-videos%2Fthumbnail%2Fdoodle-meme-carousel-thumbnail.jpg?alt=media&token=9f272ced-831d-43f8-a283-84d6350f5ccc",
-    cardContent: (
-      <VideoDisplay
-        key={"1"}
-        src={"/videos/creata-doodle-meme-video/vid1.mp4"}
-        title={""}
-      />
-    ),
-  },
-  {
-    id: "4",
-    cardTitle: "Doodle-Meme-Video",
-    cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
-    cardFooter: "Author Creata",
-    cardThumbnail:
-      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Faward-winning-2024%2Fthumbnail%2Faward-winning-2024-thumbnail.png?alt=media&token=fe3ba479-67d1-4d64-9691-52cb9e648ae2",
-    cardContent: (
-      <VideoDisplay
-        key={"1"}
-        src={"/videos/creata-doodle-meme-video/vid1.mp4"}
-        title={""}
-      />
-    ),
-  },
-  {
-    id: "5",
-    cardTitle: "Doodle-Meme-Video",
-    cardDescription: "ヾ(≧▽≦*)o     (●'◡'●)    ヾ(•ω•`)o",
-    cardFooter: "Author Creata",
-    cardThumbnail:
-      "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/creata%2Fdoodle-meme-videos%2Fthumbnail%2Fdoodle-meme-carousel-thumbnail.jpg?alt=media&token=9f272ced-831d-43f8-a283-84d6350f5ccc",
-    cardContent: (
-      <VideoDisplay
-        key={"1"}
-        src={"/videos/creata-doodle-meme-video/vid1.mp4"}
-        title={""}
-      />
-    ),
-  },
-];
+import { useTRPC } from "../_trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import HomeIconComponent from "../(slug)/_component/home-icon";
+import StepBackIconComponent from "../(slug)/_component/step-back-icon";
 
 export default function CreataDashboardLayout() {
+  // ====== Data Fetching ======
+  const trpc = useTRPC();
+  const { data: cards } = useSuspenseQuery(
+    trpc.creata.getComponentsMetaData.queryOptions()
+  ); // Fetch video data from the server
+
   const router = useRouter();
+
   const [clickedCardId, setClickedCardId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const handleCardClick = (id: string) => {
@@ -112,7 +45,16 @@ export default function CreataDashboardLayout() {
   }, []);
 
   return (
-    <div className="h-screen p-8 overflow-auto">
+    <div className="relative group h-screen p-8 overflow-auto">
+      <div className="flex md:justify-between justify-around items-center top-0 left-0 transform md:-translate-y-full group-hover:translate-y-0 duration-500 group-hover:opacity-100 md:pointer-events-auto pointer-events-none absolute z-50 text-white p-4 w-full bg-black bg-opacity-15 md:opacity-0 hover:opacity-100 transition-all ">
+        <h1 className="text-xl md:text-xl font-bold text-center md:text-left">
+          {"Logo"}
+        </h1>
+        <div className="mr-4 flex items-center justify-center md:justify-end gap-6">
+          <HomeIconComponent />
+          <StepBackIconComponent />
+        </div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {cards.map((card) => {
           const isDisabled =
@@ -146,14 +88,17 @@ export default function CreataDashboardLayout() {
                 )}
               >
                 <CardHeader>
-                  <CardTitle>{card.cardTitle}</CardTitle>
-                  <CardDescription>{card.cardDescription}</CardDescription>
+                  <CardTitle>{card.props.title}</CardTitle>
+                  <CardDescription>{card.props.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Thumbnail src={card.cardThumbnail} alt={card.cardTitle} />
+                  <Thumbnail
+                    src={card.props.thumbnails}
+                    alt={card.props.title}
+                  />
                 </CardContent>
                 <CardFooter>
-                  <p className=" text-sm font-extralight">{card.cardFooter}</p>
+                  <p className=" text-sm font-extralight">{`created by ${card.props.author}`}</p>
                 </CardFooter>
               </Card>
             </motion.div>

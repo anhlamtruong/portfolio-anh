@@ -9,7 +9,6 @@ const HomeIconComponent = () => {
     <HomeIcon
       onClick={() => {
         const baseUrl = window.location.origin;
-
         router.push(`${baseUrl}/creata`);
       }}
       className="hover:scale-110 transition-all focus:scale-95"

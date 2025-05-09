@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import React from "react";
+import { cn } from "@/lib/utils";
 
 export const Thumbnail = ({
   src,
@@ -22,10 +23,10 @@ export const Thumbnail = ({
       <Image
         src={src}
         alt={alt}
-        className={className}
-        width={1280}
-        height={720}
-        loading="lazy"
+        width={700}
+        height={700}
+        priority
+        className={cn(className, "aspect-square object-contain rounded-md")}
         decoding="async"
         style={{ objectFit: "cover", width: "100%", height: "auto" }}
       />
