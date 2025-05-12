@@ -19,6 +19,7 @@ import { useTRPC } from "../_trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import HomeIconComponent from "../(slug)/_component/home-icon";
 import StepBackIconComponent from "../(slug)/_component/step-back-icon";
+import Logo from "../_component/logo";
 
 export default function CreataDashboardLayout() {
   // ====== Data Fetching ======
@@ -45,11 +46,9 @@ export default function CreataDashboardLayout() {
   }, []);
 
   return (
-    <div className="relative group h-screen p-8 overflow-auto">
-      <div className="flex md:justify-between justify-around items-center top-0 left-0 transform md:-translate-y-full group-hover:translate-y-0 duration-500 group-hover:opacity-100 md:pointer-events-auto pointer-events-none absolute z-50 text-white p-4 w-full bg-black bg-opacity-15 md:opacity-0 hover:opacity-100 transition-all ">
-        <h1 className="text-xl md:text-xl font-bold text-center md:text-left">
-          {"Logo"}
-        </h1>
+    <div className="relative group h-screen px-8 py-24 overflow-auto">
+      <div className="flex md:justify-between justify-around items-center top-0 left-0 transform md:-translate-y-full group-hover:translate-y-0 duration-500 group-hover:opacity-100 md:pointer-events-auto pointer-events-none absolute z-50 text-white p-4 w-full bg-black bg-opacity-50 md:opacity-0 hover:opacity-100 transition-all ">
+        <Logo className="invert " />
         <div className="mr-4 flex items-center justify-center md:justify-end gap-6">
           <HomeIconComponent />
           <StepBackIconComponent />

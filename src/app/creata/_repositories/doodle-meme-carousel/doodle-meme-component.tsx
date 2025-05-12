@@ -18,7 +18,7 @@ interface DoodleMemeComponentProps {
 }
 
 const DoodleMemeComponent: React.FC<DoodleMemeComponentProps> = async ({
-  title,
+  // title,
   config,
 }) => {
   const mergedConfig = {
@@ -32,7 +32,6 @@ const DoodleMemeComponent: React.FC<DoodleMemeComponentProps> = async ({
 
   return (
     <main className="p-5 w-screen h-screen">
-      <h2 className="text-lg font-semibold">{title}</h2>
       <div className="container p-8 aspect-video mx-auto">
         <HydrateClient>
           <Suspense fallback={<CreataLoadingComponent />}>
