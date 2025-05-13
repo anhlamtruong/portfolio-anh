@@ -1,15 +1,16 @@
 // Imports
 // ========================================================
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-
+import authConfig from "@/auth.config";
+import NextAuth from "next-auth";
+const { auth } = NextAuth(authConfig);
 import {
   DEFAULT_LOGIN_REDIRECT,
   apiAuthPrefix,
   authRoutes,
   publicRoutes,
   apiPublicPrefix,
-} from "./routes";
+} from "@/routes";
 
 const corsOptions: {
   allowedMethods: string[];
@@ -27,8 +28,7 @@ const corsOptions: {
   credentials: process.env?.CREDENTIALS == "true",
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default auth((req: any) => {
+export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
 
@@ -38,10 +38,10 @@ export default auth((req: any) => {
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
   if (isPublicRoutes) {
-    return null;
+    return;
   }
   if (isApiAuthRoute) {
-    return null;
+    return;
   }
   if (isApiPublicPrefix) {
     // Response
@@ -83,7 +83,7 @@ export default auth((req: any) => {
     if (isLoggedIn) {
       return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
     }
-    return null;
+    return;
   }
   if (!isLoggedIn && !isPublicRoutes) {
     let callbackUrl = nextUrl.pathname;
@@ -96,7 +96,7 @@ export default auth((req: any) => {
       new URL(`/auth/login?callbackUrl=${encodedCallbackUrl}`, nextUrl)
     );
   }
-  return null;
+  return;
 });
 
 // Optionally, don't invoke Middleware on some paths
