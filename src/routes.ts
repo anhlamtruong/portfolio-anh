@@ -29,10 +29,10 @@ export const apiAuthPrefix = "/api/auth";
  * Routes that start with this prefix are used for API publics
  * @type {string}
  */
-export const apiPublicPrefix = "/api/user_store";
+export const apiPublicPrefix = "/api/public";
 
 /**
  * The default redirect path after logging in
  * @type {string}
  */
-export const DEFAULT_LOGIN_REDIRECT = "/store_admin";
+export const DEFAULT_LOGIN_REDIRECT = "/";

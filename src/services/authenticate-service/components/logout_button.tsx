@@ -4,6 +4,7 @@ import { logout } from "../actions/logout";
 import { useTransition } from "react";
 import { BeatLoader } from "react-spinners";
 import { Button } from "./ui/button";
+import { usePathname } from "next/navigation";
 
 interface LogoutButtonProps {
   children: React.ReactNode;
@@ -12,12 +13,13 @@ interface LogoutButtonProps {
 const LogoutButton: React.FC<LogoutButtonProps> = ({ children }) => {
   const [isPending, startTransition] = useTransition();
 
+  const pathname = usePathname();
   const onClick = () => {
     startTransition(async () => {
       try {
-        await logout();
+        await logout(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     });
   };

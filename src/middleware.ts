@@ -91,7 +91,7 @@ export default auth((req) => {
       callbackUrl += nextUrl.search;
     }
     const encodedCallbackUrl = encodeURIComponent(callbackUrl);
-
+    console.log("TEST CALLED MIDDLEWARE: ", encodedCallbackUrl);
     return Response.redirect(
       new URL(`/auth/login?callbackUrl=${encodedCallbackUrl}`, nextUrl)
     );

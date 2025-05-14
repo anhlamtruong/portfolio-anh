@@ -20,6 +20,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import HomeIconComponent from "../(slug)/_component/home-icon";
 import StepBackIconComponent from "../(slug)/_component/step-back-icon";
 import Logo from "../_component/logo";
+import { UserButton } from "@/services/authenticate-service/components/user_button";
 
 export default function CreataDashboardLayout() {
   // ====== Data Fetching ======
@@ -52,6 +53,7 @@ export default function CreataDashboardLayout() {
         <div className="mr-4 flex items-center justify-center md:justify-end gap-6">
           <HomeIconComponent />
           <StepBackIconComponent />
+          <UserButton></UserButton>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">

@@ -32,8 +32,9 @@ export const {
   callbacks: {
     async signIn({ user, account }) {
       // Allow OAuth without email verification
-
+      console.log(account?.provider);
       if (account?.provider !== "credentials") {
+        console.log("Error: OAuth provider is not credentials");
         const existingUser = await getUserById(user.id ?? "");
         try {
           const userDocRef = doc(db, "users", existingUser?.id ?? "");
@@ -126,5 +127,6 @@ export const {
   adapter: PrismaAdapter(prismaAuthenticate),
   session: { strategy: "jwt" },
   ...authConfig,
+  secret: process.env.AUTH_SECRET,
 });
 export const update = unstable_update;

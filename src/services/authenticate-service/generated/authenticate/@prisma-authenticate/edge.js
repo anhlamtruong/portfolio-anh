@@ -199,12 +199,11 @@ const config = {
     "db"
   ],
   "activeProvider": "mongodb",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL_AUTHENTICATE",
-        "value": null
+        "value": "mongodb+srv://creata:5LJ6ClkUpGLySi5t@creata-authentication.pdsk9ds.mongodb.net/Creata-Authentication?retryWrites=true&w=majority"
       }
     }
   },
