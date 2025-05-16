@@ -33,7 +33,6 @@ import { FormError } from "@/services/authenticate-service/components/ui/form_er
 import { FormSuccess } from "@/services/authenticate-service/components/ui/form_success";
 import { ClockLoader } from "react-spinners";
 import { UserRole } from "@/services/authenticate-service/generated/authenticate/@prisma-authenticate";
-import { RoleGate } from "@/services/authenticate-service/components/role_gate";
 
 export const UserSettingsForm = () => {
   const user = useCurrentUser();
@@ -153,7 +152,6 @@ export const UserSettingsForm = () => {
           <FormField
             control={form.control}
             name="role"
-            // disabled={user.role === UserRole.USER}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
@@ -170,9 +168,7 @@ export const UserSettingsForm = () => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <RoleGate allowedRole={[UserRole.ADMIN]}>
-                      <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
-                    </RoleGate>
+                    <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
                     <SelectItem value={UserRole.USER}>User</SelectItem>
                   </SelectContent>
                 </Select>

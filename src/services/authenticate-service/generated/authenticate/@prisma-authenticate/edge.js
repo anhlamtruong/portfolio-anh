@@ -171,7 +171,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\portfolio-anh\\src\\services\\authenticate-service\\generated\\authenticate\\@prisma-authenticate",
+      "value": "C:\\Users\\BAURegistrar\\Downloads\\Code\\portfolio-anh\\src\\services\\authenticate-service\\generated\\authenticate\\@prisma-authenticate",
       "fromEnvVar": null
     },
     "config": {
@@ -185,7 +185,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\portfolio-anh\\src\\services\\authenticate-service\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\BAURegistrar\\Downloads\\Code\\portfolio-anh\\src\\services\\authenticate-service\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -199,11 +199,12 @@ const config = {
     "db"
   ],
   "activeProvider": "mongodb",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL_AUTHENTICATE",
-        "value": "mongodb+srv://creata:5LJ6ClkUpGLySi5t@creata-authentication.pdsk9ds.mongodb.net/Creata-Authentication?retryWrites=true&w=majority"
+        "value": null
       }
     }
   },
