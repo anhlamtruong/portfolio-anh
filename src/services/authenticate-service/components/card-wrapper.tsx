@@ -5,6 +5,7 @@ import { BackButton } from "./back_button";
 import { Footer } from "./footer";
 import { Header } from "./header";
 import { Social } from "./social";
+import { MESSAGES } from "../config/message";
 
 interface CardWrapperProps {
   children: React.ReactNode;
@@ -38,7 +39,7 @@ export const CardWrapper = ({
             label={backButtonLabel}
             href={backButtonHref}
           ></BackButton>
-          <Footer label={""}></Footer>
+          <Footer label={MESSAGES.ui.footer_label}></Footer>
         </CardFooter>
       </Card>
     </div>

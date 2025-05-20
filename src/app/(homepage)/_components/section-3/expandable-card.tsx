@@ -76,11 +76,12 @@ export function ExpandableCard() {
               <motion.div className="" layoutId={`image-${active.title}-${id}`}>
                 <Image
                   priority
-                  width={100}
-                  height={100}
+                  width={40}
+                  height={40}
                   src={active.src}
                   alt={active.title}
-                  className="w-full h-80 lg:h-80 sm:rounded-tr-lg sm:rounded-tl-lg object-contain object-top p-6"
+                  className="w-full h-24 lg:h-24 sm:rounded-tr-lg sm:rounded-tl-lg object-contain object-top p-6"
+                  style={{ width: "auto" }}
                 />
               </motion.div>
 
@@ -143,7 +144,8 @@ export function ExpandableCard() {
                   height={100}
                   src={card.src}
                   alt={card.title}
-                  className="h-40 w-40 md:h-14 md:w-14 rounded-lg object-contain "
+                  className="h-40 w-40 md:h-14 md:w-14 rounded-lg object-contain"
+                  style={{ width: "auto" }}
                 />
               </motion.div>
               <div className="">

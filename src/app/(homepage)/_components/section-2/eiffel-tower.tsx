@@ -1,10 +1,12 @@
 "use client";
-import { cn } from "@/lib/utils";
+
 import { motion } from "framer-motion";
 import React from "react";
 import { toast } from "sonner";
 import Image from "next/image";
-import { useCompaniesLogos } from "../../_services/logo-loader/hooks/use-get-companies-logos";
+import { useTRPC } from "../../_trpc/client";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { HomePageGetLogosOutput } from "../../_types/init";
 
 const skillIcons = [
   { path: "/assets/logos/javascript.svg", name: "JavaScript" },
@@ -12,11 +14,13 @@ const skillIcons = [
 ];
 
 const EiffelTower = () => {
-  const { data: logos, isLoading, isError } = useCompaniesLogos();
+  const trpc = useTRPC();
+  const { data: logos } = useSuspenseQuery(
+    trpc.homepage.getLogos.queryOptions()
+  ); // Fetch video data from the server
+
   const levels = [1, 2, 3, 3, 4, 5, 6, 7, 8, 10];
   let iconIndex = 0;
-  if (isLoading) return <div>Loading ... </div>;
-  if (isError) return <div>Error loading logos</div>;
 
   return (
     <div className="flex justify-center items-center h-screen w-full">
@@ -33,11 +37,7 @@ const EiffelTower = () => {
   );
 };
 
-const TowerLevel = ({
-  icons,
-}: {
-  icons?: { path: string; name: string }[];
-}) => {
+const TowerLevel = ({ icons }: { icons?: HomePageGetLogosOutput }) => {
   return (
     <motion.div
       className={`flex justify-center items-center space-x-5 mb-5 transition-all`}
@@ -45,9 +45,7 @@ const TowerLevel = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100, damping: 8 }}
     >
-      {icons?.map((icon, index) => (
-        <WiggleBlock key={index} icon={icon} />
-      ))}
+      {icons?.map((icon, index) => <WiggleBlock key={index} icon={icon} />)}
     </motion.div>
   );
 };
@@ -56,9 +54,7 @@ const TowerLevel = ({
 const WiggleBlock = ({ icon }: { icon: { path: string; name: string } }) => {
   return (
     <motion.div
-      className={cn(
-        `h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-md cursor-pointer flex items-center justify-center` // Adjust size to fit more blocks
-      )}
+      className="overflow-auto h-8 w-auto sm:h-9 sm:w-auto md:h-10 md:w-auto rounded-md cursor-pointer flex items-center justify-center"
       whileHover={{ scale: 1.2, rotate: 90 }}
       whileTap={{
         scale: 0.8,
@@ -72,10 +68,7 @@ const WiggleBlock = ({ icon }: { icon: { path: string; name: string } }) => {
         alt={icon.name}
         width={32}
         height={32}
-        style={{
-          width: "auto", // Fixed width
-          height: "auto", // Maintain aspect ratio
-        }}
+        className="h-8 w-auto sm:h-9 sm:w-auto md:h-10 md:w-auto"
       />
     </motion.div>
   );

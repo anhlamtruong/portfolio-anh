@@ -1,5 +1,6 @@
 import * as React from "react";
 import { BarLoader } from "react-spinners";
+import { MESSAGES } from "../config/message";
 
 interface EmailTemplateProps {
   // firstName: string;
@@ -11,7 +12,7 @@ export const EmailTwoFactorTemplate: React.FC<EmailTemplateProps> = ({
 }) => (
   <div className=" flex flex-col gap-4">
     <BarLoader></BarLoader>
-    <p>{`This is your 2FA Code: ${token}`}</p>
+    <p>{`${MESSAGES.email.two_factor_body} ${token}`}</p>
   </div>
 );
 export default EmailTwoFactorTemplate;

@@ -22,6 +22,7 @@ import { Icons } from "./ui/icons";
 import { useSearchParams } from "next/navigation";
 import { newPassword } from "../actions/new_password";
 import { ClimbingBoxLoader } from "react-spinners";
+import { MESSAGES } from "../config/message";
 
 export const NewPasswordForm = () => {
   const [isPending, startTransition] = useTransition();
@@ -51,9 +52,9 @@ export const NewPasswordForm = () => {
 
   return (
     <CardWrapper
-      headerLabel="Enter a new password"
+      headerLabel={MESSAGES.ui.new_password_header}
       backButtonHref="/auth/login"
-      backButtonLabel="Back to Login"
+      backButtonLabel={MESSAGES.ui.new_password_back_to_login}
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className=" space-y-6">
@@ -63,12 +64,12 @@ export const NewPasswordForm = () => {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{MESSAGES.ui.password_label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       disabled={isPending}
-                      placeholder="your new password"
+                      placeholder={MESSAGES.ui.new_password_placeholder}
                       type="password"
                     ></Input>
                   </FormControl>
@@ -89,7 +90,7 @@ export const NewPasswordForm = () => {
             {isPending && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Reset Password
+            {MESSAGES.ui.reset_button}
           </Button>
         </form>
       </Form>

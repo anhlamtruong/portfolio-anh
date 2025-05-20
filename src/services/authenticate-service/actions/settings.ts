@@ -10,16 +10,18 @@ import { update } from "@/auth";
 import { SettingsSchema } from "../schemas";
 import { generateVerificationToken } from "../lib/tokens";
 import { sendVerificationEmail } from "../lib/mail";
+import { MESSAGES } from "../config/message";
+
 export const settings = async (values: z.infer<typeof SettingsSchema>) => {
   const user = await currentUser();
 
-  if (!user) {
-    return { error: "Unauthorized" };
+  if (!user || !user?.id) {
+    return { error: MESSAGES.actions.settings.error_unauthorized };
   }
 
   const dbUser = await getUserById(user.id);
   if (!dbUser) {
-    return { error: "Unauthorized" };
+    return { error: MESSAGES.actions.settings.error_unauthorized };
   }
   if (user.isOAuth) {
     values.email = undefined;
@@ -32,7 +34,7 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     const existingUser = await getUserByEmail(values.email);
 
     if (existingUser && existingUser.id !== user.id) {
-      return { error: "Email already in use!" };
+      return { error: MESSAGES.actions.settings.error_email_taken };
     }
 
     const verificationToken = await generateVerificationToken(values.email);
@@ -41,7 +43,7 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
       verificationToken.token
     );
 
-    return { success: "Verification email sent!" };
+    return { success: MESSAGES.actions.verification.success };
   }
   if (values.password && values.newPassword && dbUser.password) {
     const passwordsMatch = await bcrypt.compare(
@@ -50,7 +52,7 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     );
 
     if (!passwordsMatch) {
-      return { error: "Incorrect password!" };
+      return { error: MESSAGES.actions.settings.error_incorrect_password };
     }
 
     const hashedPassword = await bcrypt.hash(values.newPassword, 10);
@@ -74,5 +76,5 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     },
   });
 
-  return { success: "Settings Updated!" };
+  return { success: MESSAGES.actions.settings.success };
 };

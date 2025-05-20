@@ -21,12 +21,13 @@ import { FormSuccess } from "./ui/form_success";
 import { login } from "../actions/login";
 import { Icons } from "./ui/icons";
 import Link from "next/link";
+import { MESSAGES } from "../config/message";
 export const LoginForm = () => {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const urlError =
     searchParams.get("error") === "OAuthAccountNotLinked"
-      ? "Email already in use with different provider!"
+      ? MESSAGES.ui.oauth_account_not_linked
       : "";
 
   const [isPending, startTransition] = useTransition();
@@ -70,9 +71,9 @@ export const LoginForm = () => {
 
   return (
     <CardWrapper
-      headerLabel="Welcome back"
+      headerLabel={MESSAGES.ui.login_header}
       backButtonHref="/auth/register"
-      backButtonLabel="Don't have an account?"
+      backButtonLabel={MESSAGES.ui.login_back_to_register}
       showSocial
     >
       <Form {...form}>
@@ -85,12 +86,12 @@ export const LoginForm = () => {
                   name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Two Factor Code</FormLabel>
+                      <FormLabel>{MESSAGES.ui.login_two_factor_label}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           disabled={isPending}
-                          placeholder="123456"
+                          placeholder={MESSAGES.ui.login_two_factor_placeholder}
                         ></Input>
                       </FormControl>
                       <FormMessage></FormMessage>
@@ -106,12 +107,12 @@ export const LoginForm = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{MESSAGES.ui.email_label}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           disabled={isPending}
-                          placeholder="sassy-authy@example.com"
+                          placeholder={MESSAGES.ui.email_placeholder}
                           type="email"
                         ></Input>
                       </FormControl>
@@ -124,12 +125,12 @@ export const LoginForm = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{MESSAGES.ui.password_label}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           disabled={isPending}
-                          placeholder="********"
+                          placeholder={MESSAGES.ui.password_placeholder}
                           type="password"
                         ></Input>
                       </FormControl>
@@ -139,7 +140,7 @@ export const LoginForm = () => {
                         asChild
                         className="px-0 font-normal"
                       >
-                        <Link href="/auth/reset">Forgot password?</Link>
+                        <Link href="/auth/reset">{MESSAGES.ui.forgot_password}</Link>
                       </Button>
                       <FormMessage></FormMessage>
                     </FormItem>
@@ -152,14 +153,19 @@ export const LoginForm = () => {
           <FormSuccess message={success}></FormSuccess>
           {!!success && (
             <p>
-              Go to your mail box: <a href="https://mail.google.com/">here</a>
+              {MESSAGES.ui.go_to_mailbox}{" "}
+              <a href="https://mail.google.com/">
+                {MESSAGES.ui.mailbox_here}
+              </a>
             </p>
           )}
           <Button disabled={isPending} type="submit" className=" w-full">
             {isPending && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
-            {showTwoFactor ? "Confirm" : "Login"}
+            {showTwoFactor
+              ? MESSAGES.ui.confirm_button
+              : MESSAGES.ui.login_button}
           </Button>
         </form>
       </Form>

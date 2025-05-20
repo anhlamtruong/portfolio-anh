@@ -1,16 +1,16 @@
-import type { ReactNode } from "react";
-import { QueryProviders } from "./_services/logo-loader/provider/image-query-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { Suspense, type ReactNode } from "react";
+import { HydrateClient, prefetch, trpc } from "./_trpc/server";
+import { PageContentLoading } from "@/components/ui/loading";
 
-export default function CreataDashboardLayout({
+export default function HomePageDashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  prefetch(trpc.homepage.getLogos.queryOptions()); // Prefetch the components metadata
   return (
-    <QueryProviders>
-      <main>{children}</main>;
-      <Toaster />
-    </QueryProviders>
+    <HydrateClient>
+      <Suspense fallback={<PageContentLoading />}>{children}</Suspense>
+    </HydrateClient>
   );
 }

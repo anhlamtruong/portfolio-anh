@@ -114,6 +114,7 @@ export const AboutMeSection = () => {
             alt="Anh Truong's Resume"
             width={500}
             height={800}
+            priority
             className="hidden md:block h-auto max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl origin-top-left transform"
             style={{
               height: "auto",

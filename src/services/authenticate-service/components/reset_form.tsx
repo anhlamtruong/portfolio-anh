@@ -19,6 +19,7 @@ import { FormError } from "./ui/form_error";
 import { FormSuccess } from "./ui/form_success";
 import { reset } from "../actions/reset";
 import { Icons } from "./ui/icons";
+import { MESSAGES } from "../config/message";
 
 export const ResetForm = () => {
   const [isPending, startTransition] = useTransition();
@@ -45,9 +46,9 @@ export const ResetForm = () => {
 
   return (
     <CardWrapper
-      headerLabel="Forgot your password?"
+      headerLabel={MESSAGES.ui.reset_header}
       backButtonHref="/auth/login"
-      backButtonLabel="Back to Login"
+      backButtonLabel={MESSAGES.ui.reset_back_to_login}
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className=" space-y-6">
@@ -57,12 +58,12 @@ export const ResetForm = () => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{MESSAGES.ui.email_label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       disabled={isPending}
-                      placeholder="sassy-authy@example.com"
+                      placeholder={MESSAGES.ui.email_placeholder}
                       type="email"
                     ></Input>
                   </FormControl>
@@ -78,7 +79,7 @@ export const ResetForm = () => {
             {isPending && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Send reset email
+            {MESSAGES.ui.reset_button}
           </Button>
         </form>
       </Form>

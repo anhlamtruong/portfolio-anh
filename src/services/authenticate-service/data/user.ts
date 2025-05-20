@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import prismaAuthenticate from "../lib/authenticate_db";
+import { MESSAGES } from "../config/message";
 
 export const getUserByEmail = async (email: string) => {
   try {
@@ -8,7 +9,7 @@ export const getUserByEmail = async (email: string) => {
     });
     return user;
   } catch (error: any) {
-    console.error(`[DATA_USER_EMAIL]: ${error.message}`);
+    console.error(`${MESSAGES.data.user_error}: ${error.message}`);
     return null;
   }
 };
@@ -19,7 +20,7 @@ export const getUserById = async (id: string) => {
     });
     return user;
   } catch (error: any) {
-    console.error(`[DATA_USER_ID]: ${error.message}`);
+    console.error(`${MESSAGES.data.user_error}: ${error.message}`);
     return null;
   }
 };

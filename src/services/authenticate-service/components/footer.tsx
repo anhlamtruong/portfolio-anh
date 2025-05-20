@@ -18,7 +18,7 @@ export const Footer = ({ label }: FooterProps) => {
     <div className="w-full flex flex-col gap-y-4 items-start justify-center h-full">
       <h1 className={(cn(" text-6xl font-semibold"), reenie_beanie.className)}>
         <span className={cn(" text-xs", font.className)}>Power by {"  "}</span>
-        Sassy Authy
+        {label}
       </h1>
     </div>
   );

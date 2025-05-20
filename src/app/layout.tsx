@@ -3,6 +3,9 @@ import localFont from "next/font/local";
 import "@/app/globals.css";
 import { auth } from "@/auth";
 import { SessionProvider } from "next-auth/react";
+import { HomePageQueryProviders } from "./(homepage)/_provider/query-provider";
+import { TRPCReactProvider } from "./(homepage)/_trpc/client";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistMonoVF.woff",
@@ -27,14 +30,19 @@ export default async function RootLayout({
 }) {
   const session = await auth();
   return (
-    <SessionProvider session={session}>
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased  overflow-hidden no-scrollbar h-screen`}
-        >
-          {children}
-        </body>
-      </html>
-    </SessionProvider>
+    <HomePageQueryProviders>
+      <TRPCReactProvider>
+        <SessionProvider session={session}>
+          <html lang="en">
+            <body
+              className={`${geistSans.variable} ${geistMono.variable} antialiased  overflow-hidden no-scrollbar h-screen`}
+            >
+              {children}
+              <Toaster />
+            </body>
+          </html>
+        </SessionProvider>
+      </TRPCReactProvider>
+    </HomePageQueryProviders>
   );
 }

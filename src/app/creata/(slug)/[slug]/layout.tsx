@@ -5,5 +5,5 @@ export default function CreataDashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  return <>{children}</>;
+  return <div className="relative group">{children};</div>;
 }

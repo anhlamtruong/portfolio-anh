@@ -5,18 +5,20 @@ import { ResetSchema } from "../schemas";
 import { getUserByEmail } from "../data/user";
 import { sendResetPasswordEmail } from "../lib/mail";
 import { generatePasswordResetToken } from "../lib/tokens";
+import { MESSAGES } from "../config/message";
+
 export const reset = async (values: z.infer<typeof ResetSchema>) => {
   const validatedFields = ResetSchema.safeParse(values);
 
   if (!validatedFields.success) {
-    return { error: "Invalid Emails" };
+    return { error: MESSAGES.actions.reset_password.error_invalid_fields };
   }
 
   const { email } = validatedFields.data;
 
   const existingUser = await getUserByEmail(email);
   if (!existingUser) {
-    return { error: "Email not found!" };
+    return { error: MESSAGES.actions.reset_password.error_email_not_found };
   }
   const passwordResetToken = await generatePasswordResetToken(email);
   await sendResetPasswordEmail(
@@ -24,5 +26,5 @@ export const reset = async (values: z.infer<typeof ResetSchema>) => {
     passwordResetToken.token
   );
 
-  return { success: "Reset Password sent to your email" };
+  return { success: MESSAGES.actions.reset_password.success };
 };

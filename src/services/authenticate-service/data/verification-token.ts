@@ -1,4 +1,5 @@
 import prismaAuthenticate from "../lib/authenticate_db";
+import { MESSAGES } from "../config/message";
 
 export const getVerificationTokenByEmail = async (email: string) => {
   try {
@@ -8,7 +9,7 @@ export const getVerificationTokenByEmail = async (email: string) => {
       });
     return verificationToken;
   } catch (error) {
-    console.error(`[DATA_VERIFICATION_TOKEN_EMAIL]: ${error}`);
+    console.error(`${MESSAGES.data.verification_token_error}: ${error}`);
     return null;
   }
 };
@@ -21,7 +22,7 @@ export const getVerificationTokenByToken = async (token: string) => {
 
     return verificationToken;
   } catch (error) {
-    console.error(`[DATA_VERIFICATION_TOKEN_TOKEN]: ${error}`);
+    console.error(`${MESSAGES.data.verification_token_error}: ${error}`);
     return null;
   }
 };

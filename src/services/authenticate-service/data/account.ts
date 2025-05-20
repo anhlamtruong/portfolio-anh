@@ -1,4 +1,5 @@
 import prismaAuthenticate from "../lib/authenticate_db";
+import { MESSAGES } from "../config/message";
 
 export const getAccountByUserId = async (userId: string) => {
   try {
@@ -7,7 +8,8 @@ export const getAccountByUserId = async (userId: string) => {
     });
 
     return account;
-  } catch {
-    return null;
+  } catch(error){
+    console.error(MESSAGES.data.account_not_found);
+    return {error: error};
   }
 };

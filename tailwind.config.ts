@@ -6,10 +6,15 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/services/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       keyframes: {
+        animStar: {
+          "0%": { transform: "translateY(0)" },
+          "100%": { transform: "translateY(-2000px)" },
+        },
         loaderPathCircle: {
           "25%": { strokeDashoffset: "125" },
           "50%": { strokeDashoffset: "175" },
@@ -61,6 +66,9 @@ const config: Config = {
           "loaderDotTriangle 3s cubic-bezier(0.785, 0.135, 0.15, 0.86) infinite",
         loaderDotRect:
           "loaderDotRect 3s cubic-bezier(0.785, 0.135, 0.15, 0.86) infinite",
+        "star-sm": "animStar 50s linear infinite",
+        "star-md": "animStar 100s linear infinite",
+        "star-lg": "animStar 150s linear infinite",
       },
 
       colors: {

@@ -1,4 +1,5 @@
 import prismaAuthenticate from "../lib/authenticate_db";
+import { MESSAGES } from "../config/message";
 
 export const getTwoFactorConfirmationByUserId = async (userId: string) => {
   try {
@@ -8,7 +9,7 @@ export const getTwoFactorConfirmationByUserId = async (userId: string) => {
       });
     return twoFactorConfirmation;
   } catch (error) {
-    console.error("Error fetching two factor confirmation by userId:", error);
+    console.error(MESSAGES.data.two_factor_confirmation_error, error);
     return null;
   }
 };

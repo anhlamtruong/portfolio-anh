@@ -13,6 +13,7 @@ import { getTwoFactorConfirmationByUserId } from "../data/two_factor_confirmatio
 import prismaAuthenticate from "../lib/authenticate_db";
 import { LoginSchema } from "../schemas";
 import { getUserByEmail } from "../data/user";
+import { MESSAGES } from "../config";
 
 export const login = async (
   values: z.infer<typeof LoginSchema>,
@@ -21,14 +22,14 @@ export const login = async (
   const validatedFields = LoginSchema.safeParse(values);
 
   if (!validatedFields.success) {
-    return { error: "Invalid fields!" };
+    return { error: MESSAGES.actions.login.error_invalid_fields };
   }
 
   const { email, password, code } = validatedFields.data;
   const existingUser = await getUserByEmail(email);
 
   if (!existingUser || !existingUser.email || !existingUser.password) {
-    return { error: "Email does not exist!" };
+    return { error: MESSAGES.actions.login.error_email_not_exist };
   }
   if (!existingUser.emailVerified) {
     const verificationToken = await generateVerificationToken(
@@ -38,21 +39,21 @@ export const login = async (
       verificationToken.email,
       verificationToken.token
     );
-    return { success: "Confirmation email sent !" };
+    return { success: MESSAGES.actions.login.success_email_sent };
   }
   if (existingUser.isTwoFactorEnabled && existingUser.email) {
     if (code) {
       const twoFactorToken = await getTwoFactorTokenByEmail(existingUser.email);
 
       if (!twoFactorToken) {
-        return { error: "Invalid Code!" };
+        return { error: MESSAGES.actions.login.error_invalid_code };
       }
       if (twoFactorToken.token !== code) {
-        return { error: "Not the right code ╰（‵□′）╯" };
+        return { error: MESSAGES.actions.login.error_wrong_code };
       }
       const hasExpired = new Date(twoFactorToken.expires) < new Date();
       if (hasExpired) {
-        return { error: "Code Expired (っ °Д °;)っ" };
+        return { error: MESSAGES.actions.login.error_wrong_code };
       }
       await prismaAuthenticate.twoFactorToken.delete({
         where: { id: twoFactorToken.id },

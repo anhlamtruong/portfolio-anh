@@ -16,8 +16,10 @@ import { Button } from "@/components/ui/button";
 import { FaUser } from "react-icons/fa";
 import { useCurrentUser } from "../hooks/use_current_user";
 import LogoutButton from "./logout_button";
-import { UserSettingsForm } from "@/app/(protected)/sassy_authy/settings/_components/setting_form";
-import { RouterComboBox } from "@/app/(protected)/sassy_authy/settings/_components/router_combo_box";
+
+import { MESSAGES } from "../config/message";
+import { UserSettingsForm } from "./setting_form";
+// import { RouterComboBox } from "./router_combo_box";
 
 export const UserButton = () => {
   const user = useCurrentUser();
@@ -36,9 +38,9 @@ export const UserButton = () => {
       <DrawerContent>
         <div className=" items-start justify-center flex flex-col mx-auto w-full max-w-sm">
           <DrawerHeader>
-            <DrawerTitle>User Setting</DrawerTitle>
+            <DrawerTitle>{MESSAGES.ui.user_settings_title}</DrawerTitle>
             <DrawerDescription>
-              This is your account setting model.
+              {MESSAGES.ui.user_settings_description}
             </DrawerDescription>
           </DrawerHeader>
 
@@ -50,12 +52,11 @@ export const UserButton = () => {
                 <span>Logout</span>
               </div>
             </LogoutButton>
-            <RouterComboBox></RouterComboBox>
           </div>
 
           <DrawerFooter>
             <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
+              <Button variant="outline">{MESSAGES.ui.close_button}</Button>
             </DrawerClose>
           </DrawerFooter>
         </div>

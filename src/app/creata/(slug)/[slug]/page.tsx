@@ -1,8 +1,9 @@
 import { FirebaseCreataClient } from "../../_service/firebaseCreataClient";
 import ComponentsRegistry from "../../_utils/components-registry";
-import StepBackIconComponent from "../_component/step-back-icon";
-import HomeIconComponent from "../_component/home-icon";
-import Logo from "../../_component/logo";
+
+import { getQueryClient, trpc } from "../../_trpc/server";
+import ComponentCanva from "../_component/component-canva";
+import NavigationBar from "../../_component/navigation-bar";
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -22,8 +23,15 @@ export default async function Repo({
   params: Promise<{ slug: string }>;
 }) {
   const id = (await params).slug;
-  const firebaseClient = new FirebaseCreataClient();
-  const metadata = await firebaseClient.getComponentConfigBySlug(id);
+
+  if (id === "new") {
+    return <ComponentCanva />;
+  }
+
+  const queryClient = getQueryClient();
+  const metadata = await queryClient.fetchQuery(
+    trpc.creata.getComponentMetaDataById.queryOptions({ id })
+  );
 
   if (!metadata) {
     return <div>Component not found</div>;
@@ -40,22 +48,15 @@ export default async function Repo({
     );
   }
   const { props } = metadata;
-
+  const componentTitle = (
+    <h1 className="text-xl md:text-xl font-bold text-center md:text-left">
+      {metadata.name}
+    </h1>
+  );
   return (
-    <div className="relative group">
-      <div className="flex md:justify-between justify-around items-center top-0 left-0 transform md:-translate-y-full group-hover:translate-y-0 duration-500 group-hover:opacity-100 md:pointer-events-auto pointer-events-none absolute z-50 text-white p-4 w-full bg-black bg-opacity-15 md:opacity-0 hover:opacity-100 transition-all ">
-        <div className="flex items-center gap-2">
-          <Logo className=" invert " />
-          <h1 className="text-xl md:text-xl font-bold text-center md:text-left">
-            {metadata.name}
-          </h1>
-        </div>
-        <div className="mr-4 flex items-center justify-center md:justify-end gap-6">
-          <HomeIconComponent />
-          <StepBackIconComponent />
-        </div>
-      </div>
+    <>
+      <NavigationBar childrenLeft={componentTitle} />
       <Component {...props} />
-    </div>
+    </>
   );
 }

@@ -7,6 +7,7 @@ import { CardWrapper } from "./card-wrapper";
 import { FormError } from "./ui/form_error";
 import { FormSuccess } from "./ui/form_success";
 import { useRouter } from "next/navigation";
+import { MESSAGES } from "../config/message";
 
 const NewVerificationForm = () => {
   const [error, setError] = useState<string | undefined>();
@@ -51,9 +52,9 @@ const NewVerificationForm = () => {
   return (
     <>
       <CardWrapper
-        headerLabel="Confirm your verification"
+        headerLabel={MESSAGES.ui.verification_header}
         backButtonHref="/auth/login"
-        backButtonLabel="Back to Login"
+        backButtonLabel={MESSAGES.ui.verification_back_to_login}
       >
         <div className=" flex flex-col items-center w-full justify-center">
           {!success && !error && (
@@ -62,7 +63,7 @@ const NewVerificationForm = () => {
           {isLoading && (
             <>
               <BeatLoader></BeatLoader>
-              <p>Verifying your Token</p>
+              <p>{MESSAGES.ui.verifying_token}</p>
             </>
           )}
           <FormSuccess message={success}></FormSuccess>

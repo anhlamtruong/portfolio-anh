@@ -20,6 +20,8 @@ import { FormSuccess } from "./ui/form_success";
 import { register } from "../actions/register";
 import { Icons } from "./ui/icons";
 import Link from "next/link";
+import { MailCheck } from "lucide-react";
+import { MESSAGES } from "../config/message";
 
 export const RegisterForm = () => {
   const [isPending, startTransition] = useTransition();
@@ -47,9 +49,9 @@ export const RegisterForm = () => {
 
   return (
     <CardWrapper
-      headerLabel="Create an account"
+      headerLabel={MESSAGES.ui.register_header}
       backButtonHref="/auth/login"
-      backButtonLabel="Already have an account? "
+      backButtonLabel={MESSAGES.ui.register_back_to_login}
       showSocial
     >
       <Form {...form}>
@@ -60,12 +62,12 @@ export const RegisterForm = () => {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{MESSAGES.ui.name_label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       disabled={isPending}
-                      placeholder="Sassy Authy"
+                      placeholder={MESSAGES.ui.name_placeholder}
                     ></Input>
                   </FormControl>
                   <FormMessage></FormMessage>
@@ -77,12 +79,12 @@ export const RegisterForm = () => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{MESSAGES.ui.email_label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       disabled={isPending}
-                      placeholder="sassy-authy@example.com"
+                      placeholder={MESSAGES.ui.email_placeholder}
                       type="email"
                     ></Input>
                   </FormControl>
@@ -95,12 +97,12 @@ export const RegisterForm = () => {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{MESSAGES.ui.password_label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       disabled={isPending}
-                      placeholder="********"
+                      placeholder={MESSAGES.ui.password_placeholder}
                       type="password"
                     ></Input>
                   </FormControl>
@@ -112,22 +114,25 @@ export const RegisterForm = () => {
           <FormError message={error}></FormError>
           <FormSuccess message={success}></FormSuccess>
           {!!success && (
-            <p>
-              Go to your mail box:{" "}
-              <Link
-                className=" hover:underline text-blue-600"
-                target="_blank"
-                href="https://mail.google.com/"
-              >
-                here
-              </Link>
-            </p>
+            <div className="ml-4 rounded-md flex items-center gap-x-2 text-sm">
+              <MailCheck className="h-4 w-4" />
+              <p>
+                {MESSAGES.ui.go_to_mailbox}
+                <Link
+                  className=" hover:underline text-blue-600"
+                  target="_blank"
+                  href="https://mail.google.com/"
+                >
+                  {MESSAGES.ui.mailbox_here}
+                </Link>
+              </p>
+            </div>
           )}
           <Button disabled={isPending} type="submit" className=" w-full">
             {isPending && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Create an account
+            {MESSAGES.ui.register_button}
           </Button>
         </form>
       </Form>

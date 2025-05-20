@@ -5,6 +5,7 @@ import { FormError } from "./ui/form_error";
 import { UserRole } from "../generated/authenticate/@prisma-authenticate";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import { MESSAGES } from "../config/message";
 
 interface RoleGateProps {
   children: React.ReactNode;
@@ -21,8 +22,8 @@ export const RoleGate = ({
   if (!allowedRole.includes(role)) {
     return (
       <>
-        <FormError message="You do not have permission to view this content!" />
-        <Button onClick={() => router.back()}>GO BACK</Button>
+        <FormError message={MESSAGES.ui.no_permission} />
+        <Button onClick={() => router.back()}>{MESSAGES.ui.go_back}</Button>
       </>
     );
   }

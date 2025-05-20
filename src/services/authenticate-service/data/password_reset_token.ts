@@ -1,4 +1,5 @@
 import prismaAuthenticate from "../lib/authenticate_db";
+import { MESSAGES } from "../config/message";
 
 export const getPasswordResetTokenByEmail = async (email: string) => {
   try {
@@ -8,7 +9,7 @@ export const getPasswordResetTokenByEmail = async (email: string) => {
       });
     return passwordResetToken;
   } catch (error) {
-    console.error("Error fetching password reset token by email:", error);
+    console.error(MESSAGES.data.password_reset_token_error, error);
     return null;
   }
 };
@@ -21,7 +22,7 @@ export const getPasswordResetTokenByToken = async (token: string) => {
 
     return passwordResetToken;
   } catch (error) {
-    console.error("Error fetching password reset token :", error);
+    console.error(MESSAGES.data.password_reset_token_error, error);
     return null;
   }
 };

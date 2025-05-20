@@ -1,4 +1,5 @@
 import prismaAuthenticate from "../lib/authenticate_db";
+import { MESSAGES } from "../config/message";
 
 export const getTwoFactorTokenByEmail = async (email: string) => {
   try {
@@ -7,7 +8,7 @@ export const getTwoFactorTokenByEmail = async (email: string) => {
     });
     return twoFactorToken;
   } catch (error) {
-    console.error("Error fetching two factor token by email:", error);
+    console.error(MESSAGES.data.two_factor_token_error, error);
     return null;
   }
 };
@@ -19,7 +20,7 @@ export const getTwoFactorTokenByToken = async (token: string) => {
 
     return twoFactorToken;
   } catch (error) {
-    console.error("Error fetching two factor token :", error);
+    console.error(MESSAGES.data.two_factor_token_error, error);
     return null;
   }
 };
