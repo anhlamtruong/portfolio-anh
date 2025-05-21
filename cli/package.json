@@ -1,0 +1,34 @@
+{
+  "name": "creata",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Using the CLI to upload and download components to and from the cloud",
+  "main": "dist/index.js",
+  "bin": {
+    "creata": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src/templates"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "cre": "npm run dev -- cre"
+  },
+  "author": "Lam Anh Truong",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22.14.1",
+    "@types/react": "^19.1.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "minimist": "^1.2.8",
+    "react": "^19.1.0"
+  }
+}
