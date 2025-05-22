@@ -10,7 +10,7 @@ export const Thumbnail = ({
   alt,
   className,
 }: {
-  src: string;
+  src?: string;
   alt: string;
   className?: string;
 }) => {
@@ -21,7 +21,7 @@ export const Thumbnail = ({
       transition={{ duration: 0.3 }}
     >
       <Image
-        src={src}
+        src={src ?? "/logo/logo-transparent-background.svg"}
         alt={alt}
         width={700}
         height={700}

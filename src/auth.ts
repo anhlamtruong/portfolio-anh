@@ -6,10 +6,9 @@ import { getUserById } from "@/services/authenticate-service/data/user";
 import { getTwoFactorConfirmationByUserId } from "@/services/authenticate-service/data/two_factor_confirmation";
 import { getAccountByUserId } from "@/services/authenticate-service/data/account";
 import { UserRole } from "@/services/authenticate-service/generated/authenticate/@prisma-authenticate";
+import { ensureFirestoreUserDoc } from "@/services/firebase/utils/firestore-utils";
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "./services/firebase/service-provider";
-
+// Export NextAuth handlers and helpers
 export const {
   handlers: { GET, POST },
   auth,
@@ -17,11 +16,14 @@ export const {
   signOut,
   unstable_update,
 } = NextAuth({
+  // Custom pages for sign in and error
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
   },
+  // Event hooks for NextAuth
   events: {
+    // When an account is linked, update emailVerified in the database
     async linkAccount({ user }) {
       await prismaAuthenticate.user.update({
         where: { id: user.id },
@@ -30,38 +32,25 @@ export const {
     },
   },
   callbacks: {
+    // Callback for sign in attempts
     async signIn({ user, account }) {
-      // Allow OAuth without email verification
-      console.log(account?.provider);
+      // OAuth or credential-based sign-in
+      const existing = await getUserById(user.id!);
+      if (!existing) return false;
+
       if (account?.provider !== "credentials") {
-        console.log("Error: OAuth provider is not credentials");
-        const existingUser = await getUserById(user.id ?? "");
-        try {
-          const userDocRef = doc(db, "users", existingUser?.id ?? "");
-
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (!userDocSnap.exists()) {
-            await setDoc(userDocRef, {
-              ingredients: [],
-            });
-            console.info("User document created in Firebase"); // For debugging
-          }
-        } catch (error) {
-          console.error("Error checking or creating Firebase document:", error);
-        }
+        // On OAuth, fire-and-forget Firestore sync
+        ensureFirestoreUserDoc(existing).catch(console.error);
         return true;
       }
 
-      const existingUser = await getUserById(user.id ?? "");
-      // Prevent sign in without email verification
-      if (!existingUser?.emailVerified) {
-        return false;
-      }
+      // Credential sign-in: enforce email verification
+      if (!existing.emailVerified) return false;
 
-      if (existingUser.isTwoFactorEnabled) {
+      // Handle two-factor authentication
+      if (existing.isTwoFactorEnabled) {
         const twoFactorConfirmation = await getTwoFactorConfirmationByUserId(
-          existingUser.id
+          existing.id
         );
         if (!twoFactorConfirmation) return false;
 
@@ -70,36 +59,20 @@ export const {
           where: { id: twoFactorConfirmation.id },
         });
       }
-      try {
-        const userDocRef = doc(db, "users", existingUser.id);
-
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (!userDocSnap.exists()) {
-          await setDoc(userDocRef, {
-            ingredients: [],
-          });
-          console.info("User document created in Firebase"); // For debugging
-        }
-      } catch (error) {
-        console.error("Error checking or creating Firebase document:", error);
-      }
-
+      await ensureFirestoreUserDoc(existing);
       return true;
     },
+    // Callback to augment session object
     async session({ token, session }) {
-      // if (token.sub && session.user) {
-      //   session.user.id = token.sub;
-      // }
+      if (token.sub && session.user) {
+        session.user.id = token.sub;
+      }
       if (token.role && session.user) {
         session.user.role = token.role as UserRole;
       }
       if (token.isTwoFactorEnabled && session.user) {
         session.user.isTwoFactorEnabled = token.isTwoFactorEnabled as boolean;
       }
-      // if (token.cookitStore && session.user) {
-      //   session.user.storeIds = token.storeIds as String[];
-      // }
       if (session.user) {
         session.user.name = token.name;
         session.user.email = token.email ?? "";
@@ -108,25 +81,31 @@ export const {
 
       return session;
     },
+    // Callback to augment JWT token
     async jwt({ token }) {
       if (!token.sub) return token;
 
-      const existingUser = await getUserById(token.sub);
-      if (!existingUser) return token;
-      const existingAccount = await getAccountByUserId(existingUser.id);
+      const existing = await getUserById(token.sub);
+      if (!existing) return token;
+      const existingAccount = await getAccountByUserId(existing.id);
 
       token.isOAuth = !!existingAccount;
-      token.name = existingUser.name;
-      token.email = existingUser.email;
-      token.role = existingUser.role;
-      token.isTwoFactorEnabled = existingUser.isTwoFactorEnabled;
+      token.name = existing.name;
+      token.email = existing.email;
+      token.role = existing.role;
+      token.isTwoFactorEnabled = existing.isTwoFactorEnabled;
 
       return token;
     },
   },
+  // Use Prisma adapter for NextAuth
   adapter: PrismaAdapter(prismaAuthenticate),
+  // Use JWT session strategy
   session: { strategy: "jwt" },
+  // Spread in additional auth config
   ...authConfig,
+  // Auth secret from environment
   secret: process.env.AUTH_SECRET,
 });
+// Export update function for session
 export const update = unstable_update;

@@ -1,23 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { firestore } from "@/services/firebase/firebase-admin";
 
-export interface ComponentMetadata {
+export interface MetadataProps {
   id: string;
   name: string;
-  key?: string;
-  slug?: string;
-  props: Record<string, any>;
+  key: string;
+  description?: string;
+  version: string | "0.1.0";
+  author?: string;
+  thumbnails?: string;
+  propsSchema: Record<string, any>;
+  config: Record<string, any>;
 }
 
 export class FirebaseCreataClient {
-  async getAllComponentConfigs(): Promise<ComponentMetadata[]> {
+  async getAllComponentConfigs(): Promise<MetadataProps[]> {
     try {
       const snapshot = await firestore
         .collection("creata-component-metadata")
         .get();
 
       return snapshot.docs.map((doc) => {
-        return { id: doc.id, ...doc.data() } as ComponentMetadata;
+        return { id: doc.id, ...doc.data() } as MetadataProps;
       });
     } catch (error) {
       console.error(`FIREBASE_SERVICE_COMPONENT_GET_ALL_COMPONENTS: ${error}`);
@@ -25,13 +29,9 @@ export class FirebaseCreataClient {
     }
   }
 
-  async getComponentConfigBySlug(
-    slug: string
-  ): Promise<ComponentMetadata | null> {
+  async getComponentConfigById(id: string): Promise<MetadataProps | null> {
     try {
-      const docRef = firestore
-        .collection("creata-component-metadata")
-        .doc(slug);
+      const docRef = firestore.collection("creata-component-metadata").doc(id);
       const docSnap = await docRef.get();
 
       if (!docSnap.exists) {
@@ -39,11 +39,9 @@ export class FirebaseCreataClient {
         return null;
       }
 
-      return { id: docSnap.id, ...docSnap.data() } as ComponentMetadata;
+      return { id: docSnap.id, ...docSnap.data() } as MetadataProps;
     } catch (error) {
-      console.error(
-        `FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_SLUG: ${error}`
-      );
+      console.error(`FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_ID: ${error}`);
       return null;
     }
   }

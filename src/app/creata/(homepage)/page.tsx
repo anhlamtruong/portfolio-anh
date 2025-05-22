@@ -82,17 +82,14 @@ export default function CreataDashboardLayout() {
                 )}
               >
                 <CardHeader>
-                  <CardTitle>{card.props.title}</CardTitle>
-                  <CardDescription>{card.props.description}</CardDescription>
+                  <CardTitle>{card.name}</CardTitle>
+                  <CardDescription>{card.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Thumbnail
-                    src={card.props.thumbnails}
-                    alt={card.props.title}
-                  />
+                  <Thumbnail src={card.thumbnails} alt={card.name} />
                 </CardContent>
                 <CardFooter>
-                  <p className=" text-sm font-extralight">{`created by ${card.props.author}`}</p>
+                  <p className=" text-sm font-extralight">{`created by ${card.author}`}</p>
                 </CardFooter>
               </Card>
             </motion.div>

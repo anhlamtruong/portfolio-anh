@@ -17,7 +17,7 @@ export const CreataRouter = createTRPCRouter({
     .query(async (opts) => {
       // Fetch component metadata from Firebase or any other source
       const client = new FirebaseCreataClient();
-      const metadata = await client.getComponentConfigBySlug(opts.input.id);
+      const metadata = await client.getComponentConfigById(opts.input.id);
       return metadata;
     }),
 });

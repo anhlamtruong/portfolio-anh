@@ -270,8 +270,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 6.7.0
-   * Query Engine version: 3cff47a7f5d65c3ea74883f1d736e41d68ce91ed
+   * Prisma Client JS version: 6.8.2
+   * Query Engine version: 2060c79ba17c6bb9f5823312b6f6b7f4a845738e
    */
   export type PrismaVersion = {
     client: string
@@ -1366,7 +1366,6 @@ export namespace Prisma {
     password: number
     role: number
     isTwoFactorEnabled: number
-    storeIds: number
     _all: number
   }
 
@@ -1402,7 +1401,6 @@ export namespace Prisma {
     password?: true
     role?: true
     isTwoFactorEnabled?: true
-    storeIds?: true
     _all?: true
   }
 
@@ -1487,7 +1485,6 @@ export namespace Prisma {
     password: string | null
     role: $Enums.UserRole
     isTwoFactorEnabled: boolean
-    storeIds: string[]
     _count: UserCountAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
@@ -1516,7 +1513,6 @@ export namespace Prisma {
     password?: boolean
     role?: boolean
     isTwoFactorEnabled?: boolean
-    storeIds?: boolean
     accounts?: boolean | User$accountsArgs<ExtArgs>
     twoFactorConfirmation?: boolean | User$twoFactorConfirmationArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1533,10 +1529,9 @@ export namespace Prisma {
     password?: boolean
     role?: boolean
     isTwoFactorEnabled?: boolean
-    storeIds?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "password" | "role" | "isTwoFactorEnabled" | "storeIds", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "password" | "role" | "isTwoFactorEnabled", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     accounts?: boolean | User$accountsArgs<ExtArgs>
     twoFactorConfirmation?: boolean | User$twoFactorConfirmationArgs<ExtArgs>
@@ -1558,7 +1553,6 @@ export namespace Prisma {
       password: string | null
       role: $Enums.UserRole
       isTwoFactorEnabled: boolean
-      storeIds: string[]
     }, ExtArgs["result"]["user"]>
     composites: {}
   }
@@ -1961,7 +1955,6 @@ export namespace Prisma {
     readonly password: FieldRef<"User", 'String'>
     readonly role: FieldRef<"User", 'UserRole'>
     readonly isTwoFactorEnabled: FieldRef<"User", 'Boolean'>
-    readonly storeIds: FieldRef<"User", 'String[]'>
   }
     
 
@@ -7242,8 +7235,7 @@ export namespace Prisma {
     image: 'image',
     password: 'password',
     role: 'role',
-    isTwoFactorEnabled: 'isTwoFactorEnabled',
-    storeIds: 'storeIds'
+    isTwoFactorEnabled: 'isTwoFactorEnabled'
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -7418,7 +7410,6 @@ export namespace Prisma {
     password?: StringNullableFilter<"User"> | string | null
     role?: EnumUserRoleFilter<"User"> | $Enums.UserRole
     isTwoFactorEnabled?: BoolFilter<"User"> | boolean
-    storeIds?: StringNullableListFilter<"User">
     accounts?: AccountListRelationFilter
     twoFactorConfirmation?: XOR<TwoFactorConfirmationNullableScalarRelationFilter, TwoFactorConfirmationWhereInput> | null
   }
@@ -7432,7 +7423,6 @@ export namespace Prisma {
     password?: SortOrder
     role?: SortOrder
     isTwoFactorEnabled?: SortOrder
-    storeIds?: SortOrder
     accounts?: AccountOrderByRelationAggregateInput
     twoFactorConfirmation?: TwoFactorConfirmationOrderByWithRelationInput
   }
@@ -7449,7 +7439,6 @@ export namespace Prisma {
     password?: StringNullableFilter<"User"> | string | null
     role?: EnumUserRoleFilter<"User"> | $Enums.UserRole
     isTwoFactorEnabled?: BoolFilter<"User"> | boolean
-    storeIds?: StringNullableListFilter<"User">
     accounts?: AccountListRelationFilter
     twoFactorConfirmation?: XOR<TwoFactorConfirmationNullableScalarRelationFilter, TwoFactorConfirmationWhereInput> | null
   }, "id" | "email">
@@ -7463,7 +7452,6 @@ export namespace Prisma {
     password?: SortOrder
     role?: SortOrder
     isTwoFactorEnabled?: SortOrder
-    storeIds?: SortOrder
     _count?: UserCountOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
     _min?: UserMinOrderByAggregateInput
@@ -7481,7 +7469,6 @@ export namespace Prisma {
     password?: StringNullableWithAggregatesFilter<"User"> | string | null
     role?: EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
     isTwoFactorEnabled?: BoolWithAggregatesFilter<"User"> | boolean
-    storeIds?: StringNullableListFilter<"User">
   }
 
   export type AccountWhereInput = {
@@ -7770,7 +7757,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
     accounts?: AccountCreateNestedManyWithoutUserInput
     twoFactorConfirmation?: TwoFactorConfirmationCreateNestedOneWithoutUserInput
   }
@@ -7784,7 +7770,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     twoFactorConfirmation?: TwoFactorConfirmationUncheckedCreateNestedOneWithoutUserInput
   }
@@ -7797,7 +7782,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
     accounts?: AccountUpdateManyWithoutUserNestedInput
     twoFactorConfirmation?: TwoFactorConfirmationUpdateOneWithoutUserNestedInput
   }
@@ -7810,7 +7794,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     twoFactorConfirmation?: TwoFactorConfirmationUncheckedUpdateOneWithoutUserNestedInput
   }
@@ -7824,7 +7807,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
   }
 
   export type UserUpdateManyMutationInput = {
@@ -7835,7 +7817,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
   }
 
   export type UserUncheckedUpdateManyInput = {
@@ -7846,7 +7827,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
   }
 
   export type AccountCreateInput = {
@@ -8170,14 +8150,6 @@ export namespace Prisma {
     not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
-  export type StringNullableListFilter<$PrismaModel = never> = {
-    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    has?: string | StringFieldRefInput<$PrismaModel> | null
-    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
-    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
-    isEmpty?: boolean
-  }
-
   export type AccountListRelationFilter = {
     every?: AccountWhereInput
     some?: AccountWhereInput
@@ -8202,7 +8174,6 @@ export namespace Prisma {
     password?: SortOrder
     role?: SortOrder
     isTwoFactorEnabled?: SortOrder
-    storeIds?: SortOrder
   }
 
   export type UserMaxOrderByAggregateInput = {
@@ -8507,10 +8478,6 @@ export namespace Prisma {
     userId?: SortOrder
   }
 
-  export type UserCreatestoreIdsInput = {
-    set: string[]
-  }
-
   export type AccountCreateNestedManyWithoutUserInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -8553,11 +8520,6 @@ export namespace Prisma {
 
   export type BoolFieldUpdateOperationsInput = {
     set?: boolean
-  }
-
-  export type UserUpdatestoreIdsInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type AccountUpdateManyWithoutUserNestedInput = {
@@ -8967,7 +8929,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
     twoFactorConfirmation?: TwoFactorConfirmationCreateNestedOneWithoutUserInput
   }
 
@@ -8980,7 +8941,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
     twoFactorConfirmation?: TwoFactorConfirmationUncheckedCreateNestedOneWithoutUserInput
   }
 
@@ -9008,7 +8968,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
     twoFactorConfirmation?: TwoFactorConfirmationUpdateOneWithoutUserNestedInput
   }
 
@@ -9020,7 +8979,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
     twoFactorConfirmation?: TwoFactorConfirmationUncheckedUpdateOneWithoutUserNestedInput
   }
 
@@ -9033,7 +8991,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
     accounts?: AccountCreateNestedManyWithoutUserInput
   }
 
@@ -9046,7 +9003,6 @@ export namespace Prisma {
     password?: string | null
     role?: $Enums.UserRole
     isTwoFactorEnabled?: boolean
-    storeIds?: UserCreatestoreIdsInput | string[]
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -9074,7 +9030,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
     accounts?: AccountUpdateManyWithoutUserNestedInput
   }
 
@@ -9086,7 +9041,6 @@ export namespace Prisma {
     password?: NullableStringFieldUpdateOperationsInput | string | null
     role?: EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
     isTwoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
-    storeIds?: UserUpdatestoreIdsInput | string[]
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
   }
 
