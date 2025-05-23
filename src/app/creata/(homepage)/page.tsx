@@ -21,7 +21,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { CreateButton } from "../_component/create-button";
 import NavigationBar from "../_component/navigation-bar";
 
-export default function CreataDashboardLayout() {
+export default function CreataDashboardPage() {
   // ====== Data Fetching ======
   const trpc = useTRPC();
   const { data: cards } = useSuspenseQuery(
@@ -36,7 +36,7 @@ export default function CreataDashboardLayout() {
     setClickedCardId(id);
     setIsLoading(true);
     setTimeout(() => {
-      router.push(`/creata/${id}`);
+      router.push(`/creata/comp/${id}`);
     }, 150);
   };
 

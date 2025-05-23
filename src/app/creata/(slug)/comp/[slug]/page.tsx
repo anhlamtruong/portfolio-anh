@@ -5,6 +5,7 @@ import { getQueryClient, trpc } from "@/app/creata/_trpc/server";
 import ComponentCanva from "../../_component/component-canva";
 import ComponentsRegistry from "@/app/creata/_utils/components-registry";
 import NavigationBar from "@/app/creata/_component/navigation-bar";
+// import { FirebaseCreataClient } from "@/app/creata/_service/firebaseCreataClient";
 
 // export async function generateStaticParams() {
 //   const firebaseClient = new FirebaseCreataClient();

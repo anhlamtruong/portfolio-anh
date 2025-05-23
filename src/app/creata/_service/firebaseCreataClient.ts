@@ -6,11 +6,33 @@ export interface MetadataProps {
   name: string;
   key: string;
   description?: string;
-  version: string | "0.1.0";
+  version: string;
   author?: string;
+  //!ERROR: Timestamp type is not supported with TRPC
+  createdAt?: string;
+  updatedAt?: string;
   thumbnails?: string;
+  tags?: string[];
+  userId: string;
   propsSchema: Record<string, any>;
   config: Record<string, any>;
+}
+
+function timestampToString(ts: any): string | undefined {
+  if (!ts) return undefined;
+  // Firestore admin Timestamp
+  if (typeof ts.toDate === "function") {
+    return ts.toDate().toISOString();
+  }
+  // already a Date
+  if (ts instanceof Date) {
+    return ts.toISOString();
+  }
+  // already a number
+  if (typeof ts === "number") {
+    return new Date(ts).toISOString();
+  }
+  return undefined;
 }
 
 export class FirebaseCreataClient {
@@ -21,7 +43,12 @@ export class FirebaseCreataClient {
         .get();
 
       return snapshot.docs.map((doc) => {
-        return { id: doc.id, ...doc.data() } as MetadataProps;
+        return {
+          id: doc.id,
+          createdAt: timestampToString(doc.data().createdAt),
+          updatedAt: timestampToString(doc.data().updatedAt),
+          ...doc.data(),
+        } as MetadataProps;
       });
     } catch (error) {
       console.error(`FIREBASE_SERVICE_COMPONENT_GET_ALL_COMPONENTS: ${error}`);
