@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { firestore } from "@/services/firebase/firebase-admin";
+import { Timestamp } from "firebase/firestore";
 
 export interface MetadataProps {
   id: string;
@@ -8,9 +9,8 @@ export interface MetadataProps {
   description?: string;
   version: string;
   author?: string;
-  //!ERROR: Timestamp type is not supported with TRPC
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
   thumbnails?: string;
   tags?: string[];
   userId: string;
@@ -18,21 +18,17 @@ export interface MetadataProps {
   config: Record<string, any>;
 }
 
-function timestampToString(ts: any): string | undefined {
+function timestampToDate(ts?: Timestamp | Date | number): Date | undefined {
   if (!ts) return undefined;
-  // Firestore admin Timestamp
-  if (typeof ts.toDate === "function") {
-    return ts.toDate().toISOString();
+  if (typeof (ts as any).toDate === "function") {
+    // Firestore Timestamp
+    return (ts as Timestamp).toDate();
   }
-  // already a Date
   if (ts instanceof Date) {
-    return ts.toISOString();
+    return ts;
   }
-  // already a number
-  if (typeof ts === "number") {
-    return new Date(ts).toISOString();
-  }
-  return undefined;
+  // numeric milliseconds since epoch
+  return new Date(ts as number);
 }
 
 export class FirebaseCreataClient {
@@ -43,11 +39,12 @@ export class FirebaseCreataClient {
         .get();
 
       return snapshot.docs.map((doc) => {
+        const data = doc.data();
         return {
+          ...data,
           id: doc.id,
-          createdAt: timestampToString(doc.data().createdAt),
-          updatedAt: timestampToString(doc.data().updatedAt),
-          ...doc.data(),
+          createdAt: timestampToDate(data.createdAt),
+          updatedAt: timestampToDate(data.updatedAt),
         } as MetadataProps;
       });
     } catch (error) {
@@ -66,7 +63,12 @@ export class FirebaseCreataClient {
         return null;
       }
 
-      return { id: docSnap.id, ...docSnap.data() } as MetadataProps;
+      return {
+        ...docSnap.data(),
+        id: docSnap.id,
+        createdAt: timestampToDate(docSnap.data()?.createdAt),
+        updatedAt: timestampToDate(docSnap.data()?.updatedAt),
+      } as MetadataProps;
     } catch (error) {
       console.error(`FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_ID: ${error}`);
       return null;
