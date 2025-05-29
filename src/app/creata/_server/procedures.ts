@@ -6,11 +6,10 @@ import { z } from "zod";
 // Handles fetching component metadata
 
 export const CreataRouter = createTRPCRouter({
-  getComponentsMetaData: baseProcedure.query(async () => {
+  getComponentsMetaData: baseProcedure.query(async ({}) => {
     // Fetch component metadata from Firebase or any other source
     const client = new FirebaseCreataClient();
     const metadata = await client.getAllComponentConfigs();
-    console.log(metadata);
     return metadata;
   }),
   getComponentMetaDataById: baseProcedure

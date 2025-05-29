@@ -1,8 +1,8 @@
-import { UserButton } from "@/services/authenticate-service/components/user_button";
 import HomeIconComponent from "../(slug)/_component/home-icon";
 
 import Logo from "./logo";
 import { cn } from "@/lib/utils";
+import UserAvatar from "../(user)/[userId]/_component/user-avatar";
 
 interface NavigationBarProps {
   className?: string;
@@ -32,7 +32,7 @@ const NavigationBar = ({
       <div className="mr-4 flex items-center justify-center md:justify-end gap-6">
         {childrenRight}
         <HomeIconComponent />
-        <UserButton />
+        <UserAvatar />
       </div>
     </div>
   );
