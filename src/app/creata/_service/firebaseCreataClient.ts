@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { firestore } from "@/services/firebase/firebase-admin";
-import { Timestamp } from "firebase/firestore";
+
+import { timestampToDate } from "./utils";
 
 export interface MetadataProps {
   id: string;
@@ -16,19 +17,6 @@ export interface MetadataProps {
   userId: string;
   propsSchema: Record<string, any>;
   config: Record<string, any>;
-}
-
-function timestampToDate(ts?: Timestamp | Date | number): Date | undefined {
-  if (!ts) return undefined;
-  if (typeof (ts as any).toDate === "function") {
-    // Firestore Timestamp
-    return (ts as Timestamp).toDate();
-  }
-  if (ts instanceof Date) {
-    return ts;
-  }
-  // numeric milliseconds since epoch
-  return new Date(ts as number);
 }
 
 export class FirebaseCreataClient {

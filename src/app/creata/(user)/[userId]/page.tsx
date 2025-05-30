@@ -1,13 +1,18 @@
+import { UserButton } from "@/services/authenticate-service/components/user_button";
+import NavigationBar from "../../_component/navigation-bar";
+
 export default async function UserProfilePage({
   params,
 }: {
-  params: Promise<{ usedId: string }>;
+  params: Promise<{ userId: string }>;
 }) {
-  const { usedId } = await params;
+  const { userId } = await params;
 
   return (
-    <>
-      <div>{usedId}</div>
-    </>
+    <div className="relative group h-screen px-8 py-24 overflow-auto">
+      <NavigationBar />
+      <UserButton></UserButton>
+      <div>{userId}</div>
+    </div>
   );
 }

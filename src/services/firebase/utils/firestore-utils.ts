@@ -18,9 +18,9 @@ export async function ensureFirestoreUserDoc(user: FirestoreUserPayload) {
   if (!snap.exists()) {
     const now = new Date();
     await setDoc(ref, {
-      displayName: user.name,
+      name: user.name,
       email: user.email,
-      photoURL: user.image,
+      avatarURL: user.image,
       role: user.role,
       username: null,
       createdAt: now,
