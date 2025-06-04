@@ -1,4 +1,4 @@
-import { baseProcedure, createTRPCRouter } from "@/app/creata/_trpc/init";
+import { publicProcedure, createTRPCRouter } from "@/app/creata/_trpc/init";
 import { award_winning_2024_config } from "../config";
 import { getFontUrls } from "../service/get-font-url";
 import { getVideoUrls } from "../service/get-videos-url";
@@ -8,7 +8,7 @@ import { getVideoUrls } from "../service/get-videos-url";
 export const AwardWinning2024Router = createTRPCRouter({
   //Contain the business logic for the AwardWinning2024Router
   // This is where you can add your database queries, API calls, etc.
-  getFonts: baseProcedure.query(async () => {
+  getFonts: publicProcedure.query(async () => {
     // Fetch font URLs dynamically
     const fontDictionary = await getFontUrls(
       award_winning_2024_config.fontPath,
@@ -30,7 +30,7 @@ export const AwardWinning2024Router = createTRPCRouter({
     return fontFaceStyles;
   }),
   // Fetches video URLs for the Hero Section
-  getHeroVideos: baseProcedure.query(async () => {
+  getHeroVideos: publicProcedure.query(async () => {
     // Fetch video URLs dynamically
     const urls = await getVideoUrls();
     const videos = award_winning_2024_config.heroSectionVideo.map(
