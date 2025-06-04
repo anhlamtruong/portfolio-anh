@@ -42,6 +42,6 @@ export const PrivateCreataRouter = createTRPCRouter({
         throw new Error("Private Firebase service is not initialized.");
       }
       const user = await client.getUserById(input.id);
-      return user;
+      return user ?? null; // Return null if user not found
     }),
 });

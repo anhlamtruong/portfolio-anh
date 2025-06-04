@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import { cache } from "react";
 import superjson from "superjson";
 import { ExtendedUser } from "@/next-auth.d";
@@ -48,6 +48,11 @@ export const publicProcedure = t.procedure;
  * Protected procedure
  */
 export const authedProcedure = t.procedure.use(async (opts) => {
+  // Check if the user is authenticated
+  if (!opts.ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
   return opts.next({
     ctx: {
       user: opts.ctx.user,

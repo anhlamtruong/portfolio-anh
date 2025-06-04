@@ -15,7 +15,7 @@ export interface UserProps {
 
 export class FirebasePrivateCreataClient {
   private user_collection = firestore.collection("users");
-  async getUserById(id: string): Promise<UserProps | undefined> {
+  async getUserById(id: string): Promise<UserProps | null> {
     try {
       const snapshot = await this.user_collection.doc(id).get();
       if (!snapshot.exists)
@@ -30,6 +30,7 @@ export class FirebasePrivateCreataClient {
       };
     } catch (error) {
       console.error(`FIREBASE_USER_SERVICE_GET_USER_BY_ID: ${error}`);
+      return null;
     }
   }
 }
