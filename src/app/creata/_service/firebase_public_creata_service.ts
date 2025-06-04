@@ -19,7 +19,7 @@ export interface MetadataProps {
   config: Record<string, any>;
 }
 
-export class FirebaseCreataClient {
+export class FirebasePublicCreataClient {
   async getAllComponentConfigs(): Promise<MetadataProps[]> {
     try {
       const snapshot = await firestore

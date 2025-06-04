@@ -3,30 +3,45 @@ import {
   authedProcedure,
   createTRPCRouter,
 } from "@/app/creata/_trpc/init";
-import { FirebaseCreataClient } from "../_service/firebaseCreataClient";
 import { z } from "zod";
 
 // tRPC procedures for Creata
 // Handles fetching component metadata
 
-export const CreataRouter = createTRPCRouter({
-  getComponentsMetaData: publicProcedure.query(async ({}) => {
+/**
+ * Unprotected procedures
+ */
+export const PublicCreataRouter = createTRPCRouter({
+  getComponentsMetaData: publicProcedure.query(async ({ ctx }) => {
     // Fetch component metadata from Firebase or any other source
-    const client = new FirebaseCreataClient();
+    const client = ctx.public_firebase_service;
     const metadata = await client.getAllComponentConfigs();
     return metadata;
   }),
   getComponentMetaDataById: publicProcedure
     .input(z.object({ id: z.string() }))
-    .query(async (opts) => {
+    .query(async ({ ctx, input }) => {
       // Fetch component metadata from Firebase or any other source
-      const client = new FirebaseCreataClient();
-      const metadata = await client.getComponentConfigById(opts.input.id);
+      const client = ctx.public_firebase_service;
+      const metadata = await client.getComponentConfigById(input.id);
       return metadata;
     }),
 });
 
-export const userRouter = createTRPCRouter({
+/**
+ * Protected procedures
+ */
+export const PrivateCreataRouter = createTRPCRouter({
   getCurrentUser: authedProcedure.query(({ ctx }) => ctx.user),
-  // you can add update, list, delete…
+  getUserById: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // Fetch user data by ID from Firebase or any other source
+      const client = ctx.private_firebase_service;
+      if (!client) {
+        throw new Error("Private Firebase service is not initialized.");
+      }
+      const user = await client.getUserById(input.id);
+      return user;
+    }),
 });

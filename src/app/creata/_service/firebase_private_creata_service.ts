@@ -13,12 +13,8 @@ export interface UserProps {
   updatedAt?: Date;
 }
 
-export class FirebaseCreataUserClientService {
+export class FirebasePrivateCreataClient {
   private user_collection = firestore.collection("users");
-  userId: string;
-  constructor(userId: string) {
-    this.userId = userId;
-  }
   async getUserById(id: string): Promise<UserProps | undefined> {
     try {
       const snapshot = await this.user_collection.doc(id).get();
