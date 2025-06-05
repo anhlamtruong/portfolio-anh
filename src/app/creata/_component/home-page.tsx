@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   Card,
@@ -7,43 +7,43 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/card"
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-import { ComponentLoading } from "@/components/ui/loading";
-import { motion } from "framer-motion";
-import { Thumbnail } from "../_component/thumbnail";
-import { useTRPC } from "../_trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
+import { ComponentLoading } from "@/components/ui/loading"
+import { motion } from "framer-motion"
+import { Thumbnail } from "../_component/thumbnail"
+import { useTRPC } from "../_trpc/client"
+import { useSuspenseQuery } from "@tanstack/react-query"
 
-import { CreateButton } from "../_component/create-button";
-import NavigationBar from "../_component/navigation-bar";
+import { CreateButton } from "../_component/create-button"
+import NavigationBar from "../_component/navigation-bar"
 
 export default function HomePageComponent() {
   // ====== Data Fetching ======
-  const trpc = useTRPC();
+  const trpc = useTRPC()
   const { data: cards } = useSuspenseQuery(
     trpc.creata.getComponentsMetaData.queryOptions()
-  ); // Fetch video data from the server
+  ) // Fetch video data from the server
 
-  const router = useRouter();
+  const router = useRouter()
 
-  const [clickedCardId, setClickedCardId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [clickedCardId, setClickedCardId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const handleCardClick = (id: string) => {
-    setClickedCardId(id);
-    setIsLoading(true);
+    setClickedCardId(id)
+    setIsLoading(true)
     setTimeout(() => {
-      router.push(`/creata/comp/${id}`);
-    }, 150);
-  };
+      router.push(`/creata/comp/${id}`)
+    }, 150)
+  }
 
   useEffect(() => {
-    setClickedCardId(null);
-    setIsLoading(false);
-  }, []);
+    setClickedCardId(null)
+    setIsLoading(false)
+  }, [])
 
   return (
     <div className="relative group h-screen px-8 py-24 overflow-auto">
@@ -51,8 +51,7 @@ export default function HomePageComponent() {
       <CreateButton />
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {cards.map((card) => {
-          const isDisabled =
-            clickedCardId !== card.id && clickedCardId !== null;
+          const isDisabled = clickedCardId !== card.id && clickedCardId !== null
 
           return (
             <motion.div
@@ -93,9 +92,9 @@ export default function HomePageComponent() {
                 </CardFooter>
               </Card>
             </motion.div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }

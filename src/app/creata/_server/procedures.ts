@@ -32,7 +32,18 @@ export const PublicCreataRouter = createTRPCRouter({
  * Protected procedures
  */
 export const PrivateCreataRouter = createTRPCRouter({
-  getCurrentUser: authedProcedure.query(({ ctx }) => ctx.user),
+  getCurrentUser: authedProcedure.query(async ({ ctx }) => ctx.user),
+  getCurrentUserAccount: authedProcedure.query(async ({ ctx }) => {
+    const client = ctx.private_firebase_service;
+    if (!ctx.user.id) {
+      throw new Error("User is not authenticated.");
+    }
+    if (!client) {
+      throw new Error("Private Firebase service is not initialized.");
+    }
+    const user = await client.getUserById(ctx.user.id);
+    return user ?? null; // Return null if user not found
+  }),
   getUserById: authedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {

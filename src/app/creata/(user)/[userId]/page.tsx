@@ -1,17 +1,17 @@
-import { UserButton } from "@/services/authenticate-service/components/user_button";
-import NavigationBar from "../../_component/navigation-bar";
-import UserProfileComponent from "./_component/user-profile-component";
-import { HydrateClient, prefetch, trpc } from "../../_trpc/server";
-import { CreataQueryProviders } from "../../_provider/query-provider";
-import { TRPCReactProvider } from "../../_trpc/client";
+import { UserButton } from "@/services/authenticate-service/components/user_button"
+import NavigationBar from "../../_component/navigation-bar"
+import UserProfileComponent from "./_component/user-profile-component"
+import { HydrateClient, prefetch, trpc } from "../../_trpc/server"
+import { CreataQueryProviders } from "../../_provider/query-provider"
+import { TRPCReactProvider } from "../../_trpc/client"
 export default async function UserProfilePage({
   params,
 }: {
-  params: Promise<{ userId: string }>;
+  params: Promise<{ userId: string }>
 }) {
-  const { userId } = await params;
-  prefetch(trpc.private_creata.getUserById.queryOptions({ id: userId }));
-  prefetch(trpc.private_creata.getCurrentUser.queryOptions());
+  const { userId } = await params
+  prefetch(trpc.private_creata.getUserById.queryOptions({ id: userId }))
+  prefetch(trpc.private_creata.getCurrentUser.queryOptions())
 
   /**
    * TRPC server app usage
@@ -33,5 +33,5 @@ export default async function UserProfilePage({
         </HydrateClient>
       </TRPCReactProvider>
     </CreataQueryProviders>
-  );
+  )
 }

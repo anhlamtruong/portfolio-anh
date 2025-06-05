@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from "react"
 
 export default function UserDashboardLayout({
   children,
 }: {
-  children: ReactNode;
+  children: ReactNode
 }) {
-  return <main>{children}</main>;
+  return <main>{children}</main>
 }

@@ -1,5 +1,5 @@
-import { baseProcedure, createTRPCRouter } from "@/app/creata/_trpc/init";
 import { getLogosFromStorage } from "../_services/logo-loader/actions/get-logos-storage";
+import { baseProcedure, createTRPCRouter } from "../_trpc/init";
 
 // tRPC procedures for the Home page
 // Handles fetching video URLs and font styles dynamically
