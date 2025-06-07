@@ -4,6 +4,7 @@ import {
   createTRPCRouter,
 } from "@/app/creata/_trpc/init";
 import { z } from "zod";
+import { updateAccountSchema } from "../_types";
 
 // tRPC procedures for Creata
 // Handles fetching component metadata
@@ -54,5 +55,23 @@ export const PrivateCreataRouter = createTRPCRouter({
       }
       const user = await client.getUserById(input.id);
       return user ?? null; // Return null if user not found
+    }),
+  updateAccount: authedProcedure
+    .input(updateAccountSchema)
+    .mutation(async ({ ctx, input }) => {
+      // Update user data in Firebase or any other source
+      const client = ctx.private_firebase_service;
+      if (!client) {
+        throw new Error("Private Firebase service is not initialized.");
+      }
+      if (!ctx.user.id) {
+        throw new Error("User is not authenticated.");
+      }
+      const updateData = {
+        ...input,
+        id: ctx.user.id,
+      };
+      const result = await client.updateAccountService(updateData);
+      return result; // Return the result of the update operation
     }),
 });

@@ -1,15 +1,9 @@
-"use client"
+"use client";
 
-import * as z from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useTransition, useState } from "react"
-import { useSession } from "next-auth/react"
-
-import { Switch } from "@/services/authenticate-service/components/ui/switch"
-
-import { Button } from "@/services/authenticate-service/components/ui/button"
-import { settings } from "@/services/authenticate-service/actions/settings"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useTransition, useState } from "react";
+import { Button } from "@/services/authenticate-service/components/ui/button";
 import {
   Form,
   FormField,
@@ -18,43 +12,37 @@ import {
   FormLabel,
   FormDescription,
   FormMessage,
-} from "@/services/authenticate-service/components/ui/form"
-import { Input } from "@/services/authenticate-service/components/ui/input"
-import { FormError } from "@/services/authenticate-service/components/ui/form_error"
-import { FormSuccess } from "@/services/authenticate-service/components/ui/form_success"
-import { ClockLoader } from "react-spinners"
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { useTRPC } from "@/app/creata/_trpc/client"
-
-const SettingsSchema = z.object({
-  name: z.optional(z.string()),
-  username: z.optional(
-    z
-      .string()
-      .min(6)
-      .max(30)
-      .trim()
-      .regex(/^[a-z0-9]+$/)
-  ),
-  avatarURL: z.optional(z.string()),
-  email: z.optional(z.string().email()),
-})
+} from "@/services/authenticate-service/components/ui/form";
+import { Input } from "@/services/authenticate-service/components/ui/input";
+import { FormError } from "@/services/authenticate-service/components/ui/form_error";
+import { FormSuccess } from "@/services/authenticate-service/components/ui/form_success";
+import { ClockLoader } from "react-spinners";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/app/creata/_trpc/client";
+import {
+  CreataAccountUpdateInput,
+  updateAccountSchema,
+} from "@/app/creata/_types";
 
 const AccountEditSetting = () => {
-  const trpc = useTRPC()
+  const trpc = useTRPC();
   const { data: userAccount } = useSuspenseQuery(
     trpc.private_creata.getCurrentUserAccount.queryOptions()
-  )
+  );
   const { data: user } = useSuspenseQuery(
     trpc.private_creata.getCurrentUser.queryOptions()
-  )
-  const [error, setError] = useState<string | undefined>()
-  const [success, setSuccess] = useState<string | undefined>()
-  const { update } = useSession()
-  const [isPending, startTransition] = useTransition()
+  );
+  const updateAccountMutation = useMutation(
+    trpc.private_creata.updateAccount.mutationOptions()
+  );
+  updateAccountMutation.mutate({ name: "Jerry" });
 
-  const form = useForm<z.infer<typeof SettingsSchema>>({
-    resolver: zodResolver(SettingsSchema),
+  const [error, setError] = useState<string | undefined>();
+  const [success, setSuccess] = useState<string | undefined>();
+  const [isPending, startTransition] = useTransition();
+
+  const form = useForm<CreataAccountUpdateInput>({
+    resolver: zodResolver(updateAccountSchema),
     defaultValues: {
       avatarURL:
         userAccount?.avatarURL ??
@@ -63,30 +51,31 @@ const AccountEditSetting = () => {
       username: userAccount?.username ?? "",
       email: user?.email ?? "",
     },
-  })
-  // const onSubmit = (values: z.infer<typeof SettingsSchema>) => {
-  //   startTransition(() => {
-  //     settings(values)
-  //       .then((data) => {
-  //         if (data.error) {
-  //           setError(data.error);
-  //         }
-
-  //         if (data.success) {
-  //           update();
-  //           setSuccess(data.success);
-  //         }
-  //       })
-  //       .catch(() => setError("Something went wrong!"));
-  //   });
-  // };
-  // if (isPending && !user) {
-  //   return null;
-  // }
+  });
+  const onSubmit = (values: CreataAccountUpdateInput) => {
+    startTransition(() => {
+      updateAccountMutation.mutate(values, {
+        onSuccess: (data) => {
+          if (data.status == "error") {
+            setError(data.message);
+          }
+          if (data.status == "success") {
+            setSuccess(data.message);
+          }
+        },
+        onError: () => {
+          setError("Something went wrong!");
+        },
+      });
+    });
+  };
+  if (isPending && !user) {
+    return null;
+  }
 
   return (
     <Form {...form}>
-      <form className="space-y-6" onSubmit={form.handleSubmit(() => {})}>
+      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-4">
           <FormField
             control={form.control}
@@ -174,7 +163,7 @@ const AccountEditSetting = () => {
         </div>
       </form>
     </Form>
-  )
-}
+  );
+};
 
-export default AccountEditSetting
+export default AccountEditSetting;
