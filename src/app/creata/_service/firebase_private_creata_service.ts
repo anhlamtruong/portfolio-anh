@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { firestore } from "@/services/firebase/firebase-admin";
-
+import {
+  collection,
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { timestampToDate } from "./utils";
 import { db } from "@/services/firebase/service-provider";
 
