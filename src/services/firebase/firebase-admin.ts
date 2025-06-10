@@ -11,5 +11,5 @@ if (!admin.apps.length) {
   });
 }
 
-const firestore = admin.firestore();
-export { firestore };
+const firestore_admin = admin.firestore();
+export { firestore_admin };

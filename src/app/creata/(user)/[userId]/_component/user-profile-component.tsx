@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { UserRoundCog } from "lucide-react";
 import { notFound, useRouter } from "next/navigation";
-
 const UserProfileComponent = ({ id }: { id: string }) => {
   const trpc = useTRPC();
   const { data: user } = useSuspenseQuery(

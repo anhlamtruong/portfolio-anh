@@ -35,7 +35,6 @@ const AccountEditSetting = () => {
   const updateAccountMutation = useMutation(
     trpc.private_creata.updateAccount.mutationOptions()
   );
-  updateAccountMutation.mutate({ name: "Jerry" });
 
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState<string | undefined>();

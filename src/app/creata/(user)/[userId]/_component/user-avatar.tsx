@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/services/authenticate-service/hooks/use_current_user";
 import { useRouter } from "next/navigation";
 import { FaUser } from "react-icons/fa";
-
 interface UserAvatarProps {
   className?: string;
   onClick?: () => void;
@@ -20,7 +19,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ className, onClick }) => {
   return (
     <Avatar
       onClick={onClick ?? handleClick}
-      className={cn("hover:opacity-80", className)}
+      className={cn("hover:opacity-80 cursor-pointer", className)}
     >
       <AvatarImage src={user?.image || ""} />
       <AvatarFallback>

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { firestore } from "@/services/firebase/firebase-admin";
+import { firestore_admin } from "@/services/firebase/firebase-admin";
 
 import { timestampToDate } from "./utils";
 
@@ -22,7 +22,7 @@ export interface MetadataProps {
 export class FirebasePublicCreataClient {
   async getAllComponentConfigs(): Promise<MetadataProps[]> {
     try {
-      const snapshot = await firestore
+      const snapshot = await firestore_admin
         .collection("creata-component-metadata")
         .get();
 
@@ -36,19 +36,26 @@ export class FirebasePublicCreataClient {
         } as MetadataProps;
       });
     } catch (error) {
-      console.error(`FIREBASE_SERVICE_COMPONENT_GET_ALL_COMPONENTS: ${error}`);
-      return [];
+      console.error(
+        `FIREBASE_SERVICE_COMPONENT_GET_ALL_COMPONENTS: An unexpected error occurred: ${error}`
+      );
+      throw new Error(
+        `FIREBASE_SERVICE_COMPONENT_GET_ALL_COMPONENTS: An unexpected error occurred: ${error}`
+      );
     }
   }
 
-  async getComponentConfigById(id: string): Promise<MetadataProps | null> {
+  async getComponentConfigById(id: string): Promise<MetadataProps> {
     try {
-      const docRef = firestore.collection("creata-component-metadata").doc(id);
+      const docRef = firestore_admin
+        .collection("creata-component-metadata")
+        .doc(id);
       const docSnap = await docRef.get();
 
       if (!docSnap.exists) {
-        console.log("Document not found");
-        return null;
+        throw new Error(
+          "FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_ID: Document not found"
+        );
       }
 
       return {
@@ -58,8 +65,12 @@ export class FirebasePublicCreataClient {
         updatedAt: timestampToDate(docSnap.data()?.updatedAt),
       } as MetadataProps;
     } catch (error) {
-      console.error(`FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_ID: ${error}`);
-      return null;
+      console.error(
+        `FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_ID: An unexpected error occurred: ${error}`
+      );
+      throw new Error(
+        `FIREBASE_SERVICE_COMPONENT_GET_COMPONENT_BY_ID: An unexpected error occurred: ${error}`
+      );
     }
   }
 }

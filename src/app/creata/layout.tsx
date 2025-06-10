@@ -1,5 +1,8 @@
-import { ReactNode } from "react"
-
+import { ReactNode, Suspense } from "react";
+import { HydrateClient, prefetch, trpc } from "./_trpc/server";
+import { CreataQueryProviders } from "./_provider/query-provider";
+import { TRPCReactProvider } from "./_trpc/client";
+import { PageContentLoading } from "@/components/ui/loading";
 /**
  * CreataDashboardLayout component.
  * This layout wraps the children components with necessary providers and suspense fallback.
@@ -7,7 +10,13 @@ import { ReactNode } from "react"
 export default async function CreataDashboardLayout({
   children,
 }: {
-  children: ReactNode
+  children: ReactNode;
 }) {
-  return <main>{children}</main>
+  return (
+    <CreataQueryProviders>
+      <TRPCReactProvider>
+        <main>{children}</main>
+      </TRPCReactProvider>
+    </CreataQueryProviders>
+  );
 }
