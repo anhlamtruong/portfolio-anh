@@ -47,6 +47,26 @@ export class FirebasePrivateCreataClient {
     }
   }
 
+  async checkUsername(username: string) {
+    try {
+      if (!username) {
+        throw new Error(
+          "FIREBASE_USER_SERVICE_CHECK_USERNAME: Username is required"
+        );
+      }
+      const docRef = doc(db, "usernames", username);
+      const snapshot = await getDoc(docRef);
+      return snapshot.exists();
+    } catch (error) {
+      console.error(
+        `FIREBASE_USER_SERVICE_CHECK_USERNAME: An unexpected error occurred: ${error}`
+      );
+      throw new Error(
+        "FIREBASE_USER_SERVICE_CHECK_USERNAME: An unexpected error occurred"
+      );
+    }
+  }
+
   async updateAccountService(
     input: CreataAccountUpdateInput & { id: string }
   ): Promise<void> {
@@ -63,6 +83,24 @@ export class FirebasePrivateCreataClient {
           "FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: Document not found"
         );
       }
+      const data = snapshot.data() as UserProps;
+      if (!data) {
+        throw new Error(
+          "FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: No data found for the provided ID"
+        );
+      }
+      if (data.id !== id) {
+        throw new Error("FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: ID mismatch");
+      }
+      if (updateData?.username && updateData?.username !== data.username) {
+        const isExisted = await this.checkUsername(updateData.username);
+        if (isExisted) {
+          throw new Error(
+            `FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: Username ${updateData.username} is already taken`
+          );
+        }
+      }
+
       return await updateDoc(docRef, {
         ...updateData,
         updatedAt: serverTimestamp(),
