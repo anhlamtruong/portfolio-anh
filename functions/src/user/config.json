@@ -1,0 +1,7 @@
+{
+  "applicationsPathForTriggers": "applications/{applicationID}",
+  "email": "applications/{applicationID}",
+  "password": "applications/{applicationID}",
+  "projectId": "reddit-2c99b",
+  "firebaseConsoleUrl": "https://console.firebase.google.com"
+}

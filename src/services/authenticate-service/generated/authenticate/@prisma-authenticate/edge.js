@@ -170,7 +170,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/emcaemchut/Documents/Code/portfolio-anh/src/services/authenticate-service/generated/authenticate/@prisma-authenticate",
+      "value": "D:\\portfolio-anh\\src\\services\\authenticate-service\\generated\\authenticate\\@prisma-authenticate",
       "fromEnvVar": null
     },
     "config": {
@@ -179,12 +179,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "darwin-arm64",
+        "value": "windows",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/emcaemchut/Documents/Code/portfolio-anh/src/services/authenticate-service/prisma/schema.prisma",
+    "sourceFilePath": "D:\\portfolio-anh\\src\\services\\authenticate-service\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -198,6 +198,7 @@ const config = {
     "db"
   ],
   "activeProvider": "mongodb",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

@@ -1,23 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "module": "esnext",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
     "esModuleInterop": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "allowJs": true,
-    "skipLibCheck": true,
+    "moduleResolution": "nodenext",
+    "noImplicitReturns": true,
+    "outDir": "lib",
+    "sourceMap": true,
     "strict": true,
-    "noEmit": false,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "target": "es2017",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "compileOnSave": true,
+  "include": ["src"]
 }
