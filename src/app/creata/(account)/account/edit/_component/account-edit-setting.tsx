@@ -23,23 +23,33 @@ import {
   CreataAccountUpdateInput,
   updateAccountSchema,
 } from "@/app/creata/_types";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const AccountEditSetting = () => {
+  // Initialize TRPC and Next.js router
   const trpc = useTRPC();
+  const router = useRouter();
+
+  // Fetch current user account and user data
   const { data: userAccount } = useSuspenseQuery(
     trpc.private_creata.getCurrentUserAccount.queryOptions()
   );
   const { data: user } = useSuspenseQuery(
     trpc.private_creata.getCurrentUser.queryOptions()
   );
+
+  // Setup mutation for updating account
   const updateAccountMutation = useMutation(
     trpc.private_creata.updateAccount.mutationOptions()
   );
 
+  // Local state for error/success messages and pending state
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState<string | undefined>();
   const [isPending, startTransition] = useTransition();
 
+  // Setup form with default values and validation schema
   const form = useForm<CreataAccountUpdateInput>({
     resolver: zodResolver(updateAccountSchema),
     defaultValues: {
@@ -51,23 +61,32 @@ const AccountEditSetting = () => {
       email: user?.email ?? "",
     },
   });
+
+  // Handle form submission
   const onSubmit = (values: CreataAccountUpdateInput) => {
     startTransition(() => {
       updateAccountMutation.mutate(values, {
         onSuccess: (data) => {
+          // Show error or success message based on API response
           if (data.status == "error") {
             setError(data.message);
           }
           if (data.status == "success") {
             setSuccess(data.message);
+            toast.success(data.message);
+            router.refresh();
           }
         },
-        onError: () => {
-          setError("Something went wrong!");
+        onError: (error) => {
+          // Show generic error message and toast on network/server error
+          setError("Something went wrong! Please try again later.");
+          toast.error(error.message);
         },
       });
     });
   };
+
+  // Show nothing while loading and user data is not available
   if (isPending && !user) {
     return null;
   }
@@ -76,6 +95,7 @@ const AccountEditSetting = () => {
     <Form {...form}>
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-4">
+          {/* Name field */}
           <FormField
             control={form.control}
             name="name"
@@ -93,7 +113,7 @@ const AccountEditSetting = () => {
               </FormItem>
             )}
           />
-
+          {/* Username field */}
           <FormField
             control={form.control}
             name="username"
@@ -111,6 +131,7 @@ const AccountEditSetting = () => {
               </FormItem>
             )}
           />
+          {/* Avatar URL field */}
           <FormField
             control={form.control}
             name="avatarURL"
@@ -131,6 +152,7 @@ const AccountEditSetting = () => {
               </FormItem>
             )}
           />
+          {/* Email field (disabled for OAuth users) */}
           <FormField
             control={form.control}
             name="email"
@@ -152,6 +174,7 @@ const AccountEditSetting = () => {
             )}
           />
         </div>
+        {/* Show error or success messages */}
         <FormError message={error} />
         <FormSuccess message={success} />
         <div className=" flex items-center gap-2">

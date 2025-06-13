@@ -84,15 +84,27 @@ export class FirebasePrivateCreataClient {
         );
       }
       const data = snapshot.data() as UserProps;
+
       if (!data) {
         throw new Error(
           "FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: No data found for the provided ID"
         );
       }
-      if (data.id !== id) {
+      if (snapshot.id !== id) {
         throw new Error("FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: ID mismatch");
       }
-      if (updateData?.username && updateData?.username !== data.username) {
+
+      if (updateData?.username) {
+        const updateUsernameUserIDRef = doc(
+          db,
+          "username",
+          updateData.username
+        );
+        const updateUsernameUserIDSnapshot = await getDoc(
+          updateUsernameUserIDRef
+        );
+        const data = updateUsernameUserIDSnapshot.data();
+        //TODO: Check if the username is already taken
         const isExisted = await this.checkUsername(updateData.username);
         if (isExisted) {
           throw new Error(

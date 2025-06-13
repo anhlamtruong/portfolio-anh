@@ -9,7 +9,8 @@
     "strict": true,
     "target": "es2017",
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": ["src"]
