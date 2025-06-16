@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/functions/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -48,3 +49,15 @@ next-env.d.ts
 lam-anh-truong-portfolio-firebase-adminsdk-a1xq2-12a6766a8e.json
 cors.json
 dependency.txt
+
+//Functions
+# Compiled JavaScript files
+/functions/lib/**/*.js
+/functions/lib/**/*.js.map
+
+# TypeScript v1 declaration files
+/functions/typings/
+
+# Node.js dependency directory
+/functions/node_modules/
+/functions/*.local
