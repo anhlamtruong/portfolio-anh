@@ -47,26 +47,6 @@ export class FirebasePrivateCreataClient {
     }
   }
 
-  async checkUsername(username: string) {
-    try {
-      if (!username) {
-        throw new Error(
-          "FIREBASE_USER_SERVICE_CHECK_USERNAME: Username is required"
-        );
-      }
-      const docRef = doc(db, "usernames", username);
-      const snapshot = await getDoc(docRef);
-      return snapshot.exists();
-    } catch (error) {
-      console.error(
-        `FIREBASE_USER_SERVICE_CHECK_USERNAME: An unexpected error occurred: ${error}`
-      );
-      throw new Error(
-        "FIREBASE_USER_SERVICE_CHECK_USERNAME: An unexpected error occurred"
-      );
-    }
-  }
-
   async updateAccountService(
     input: CreataAccountUpdateInput & { id: string }
   ): Promise<void> {
@@ -93,19 +73,24 @@ export class FirebasePrivateCreataClient {
       if (snapshot.id !== id) {
         throw new Error("FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: ID mismatch");
       }
+      console.log(`Updating username: ${updateData?.username}`);
 
       if (updateData?.username) {
         const updateUsernameUserIDRef = doc(
           db,
-          "username",
+          "usernames",
           updateData.username
         );
         const updateUsernameUserIDSnapshot = await getDoc(
           updateUsernameUserIDRef
         );
+        console.log(updateUsernameUserIDSnapshot);
         const data = updateUsernameUserIDSnapshot.data();
-        //TODO: Check if the username is already taken
-        const isExisted = await this.checkUsername(updateData.username);
+        console.log(updateUsernameUserIDSnapshot.data());
+        console.log(id);
+
+        const isExisted = data && data.userId !== id;
+
         if (isExisted) {
           throw new Error(
             `FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: Username ${updateData.username} is already taken`

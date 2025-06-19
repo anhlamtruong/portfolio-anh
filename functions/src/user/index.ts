@@ -10,7 +10,7 @@ export const onAccountUpdated = onDocumentUpdated(
       // Ensure event data and accountId are present
       if (!event.data) throw new Error("Event data is missing");
       if (!event.params.accountId) throw new Error("Account ID is missing");
-
+      // TODO: Should not update if there is already existing username
       logger.info("Account updated", {
         accountId: event.params.accountId,
         before: event.data.before.data(),
