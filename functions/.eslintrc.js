@@ -30,5 +30,6 @@ module.exports = {
     "@typescript-eslint/no-unused-vars": "off",
     "eol-last": "off",
     "linebreak-style": "off",
+    "valid-jsdoc": "off",
   },
 };
