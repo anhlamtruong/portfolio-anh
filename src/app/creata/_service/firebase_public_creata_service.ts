@@ -13,6 +13,7 @@ export interface MetadataProps {
   createdAt?: Date;
   updatedAt?: Date;
   thumbnails?: string;
+  privacy?: string;
   tags?: string[];
   userId: string;
   propsSchema: Record<string, any>;
