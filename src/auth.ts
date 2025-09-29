@@ -104,6 +104,7 @@ export const {
   session: { strategy: "jwt" },
   // Spread in additional auth config
   ...authConfig,
+
   // Auth secret from environment
   secret: process.env.AUTH_SECRET,
 });

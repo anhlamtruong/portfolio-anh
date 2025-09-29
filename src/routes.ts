@@ -14,9 +14,11 @@ export const authRoutes = [
   "/auth/login",
   "/auth/register",
   "/auth/error",
+
   "/auth/reset",
   "/auth/new-password",
 ];
+export const authCLIRoutes = ["/auth/cli-login"];
 
 /**
  * The prefix for API authentication routes

@@ -19,11 +19,9 @@ export interface UserProps {
 export class FirebasePrivateCreataClient {
   async getUserById(id: string): Promise<UserProps> {
     try {
-      console.log(`Fetching user by ID: ${id}`);
       if (!id) {
         throw new Error("FIREBASE_USER_SERVICE_GET_USER_BY_ID: ID is required");
       }
-      console.log(`ID provided: ${id}`);
       const docRef = doc(db, "users", id);
 
       const snapshot = await getDoc(docRef);
@@ -32,7 +30,6 @@ export class FirebasePrivateCreataClient {
         throw new Error(
           "FIREBASE_USER_SERVICE_GET_USER_BY_ID: Document not found"
         );
-
       const data = snapshot.data();
       return {
         ...(data as UserProps),

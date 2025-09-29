@@ -27,7 +27,7 @@ export function CreateButton() {
   const handleClick = () => {
     setIsLoading(true);
     setTimeout(() => {
-      router.push("/creata/comp/new?mode=metadata");
+      router.push("/creata/new?mode=metadata");
     }, 100);
   };
 

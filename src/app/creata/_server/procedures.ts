@@ -26,6 +26,7 @@ export const PublicCreataRouter = createTRPCRouter({
         });
       }
       const metadata = await client.getAllComponentConfigs();
+      console.log(metadata);
       return metadata;
     } catch (error) {
       throw new TRPCError({
