@@ -5,3 +5,7 @@ tsconfig.tsbuildinfo
 .gitignore
 .vscode/
 *.log
+
+# .npmignore
+!src/templates
+tsconfig.json

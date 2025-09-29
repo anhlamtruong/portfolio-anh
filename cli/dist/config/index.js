@@ -1,4 +1,11 @@
+// Import command handler(s)
 import { architectCommand } from "../commands/architect/index.js";
+/**
+ * Generates usage/help messages for the CLI.
+ * @param cli_name - The name of the CLI tool.
+ * @param command_name - The command to show usage for.
+ * @returns An object containing usage messages.
+ */
 export const main_config_message = (cli_name, command_name) => {
     return {
         messages: {
@@ -6,6 +13,10 @@ export const main_config_message = (cli_name, command_name) => {
         },
     };
 };
+/**
+ * Configuration object for all supported CLI commands.
+ * Each command can define its handler, supported flags, and flag aliases.
+ */
 export const commandConfigs = {
     cre: {
         handler: architectCommand,

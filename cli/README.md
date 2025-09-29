@@ -1,106 +1,142 @@
-# 🧱 creata-cli
+# 🚀 Creata CLI
 
-A custom CLI to upload and down components
+Creata is a command-line tool designed to streamline the development of Next.js applications by automating the creation of microservice folder structures. Generate pages, API routes, hooks, and components with a single command.
 
----
+## ✨ Features
 
-## 📦 Install & Dev Setup
+- **Rapid Scaffolding**: Create complete folder structures in seconds
+- **Optional Generators**: Include API routes, React hooks, and components with simple flags
+- **TypeScript Support**: Built with TypeScript, generates `.ts` and `.tsx` files
+- **Consistent Architecture**: Enforces standardized project structure
 
-```bash
-# Clone and install dependencies
-git clone <your-repo-url>
-cd the-architect-cli
-pnpm install  # or npm install / yarn / bun
-```
+## 📦 Installation
 
----
-
-## 🧪 Local Development
-
-Run your CLI directly via dev script:
+Use directly with `npx`:
 
 ```bash
-# From the root
-npm run dev -- cre dashboard --with-api --with-hooks --with-components
-
-# Or with short aliases
-npm run dev -- cre dashboard -a -h -c
+npx creata-cli cre <service-name> [options]
 ```
 
-⚠️ Always include `--` after `npm run dev` to pass flags properly.
-
----
-
-## 🌐 Global Usage
-
-### Option 1: Use via `npm link`
+Or install globally:
 
 ```bash
-pnpm build         # compile TypeScript to dist/
-npm link           # symlink as global CLI command
-
-# Then run anywhere:
-creata cre dashboard -a -h -c
+npm install -g creata-cli
 ```
 
-### Option 2: Use with `npx`
+## 🛠️ Usage
 
-After publishing to npm:
+### Basic Command
 
 ```bash
-npx creata cre dashboard -a -h -c
+creata cre <service-name>
 ```
 
----
+### Available Options
 
-## 🧠 CLI Usage
-
-```bash
-tac arch <name> [options]
-```
-
-| Option              | Alias | Description                  |
+| Flag                | Alias | Description                  |
 | ------------------- | ----- | ---------------------------- |
-| `--with-api`        | `-a`  | Include API route in `/api`  |
-| `--with-hooks`      | `-h`  | Include custom hook template |
-| `--with-components` | `-c`  | Include sample UI component  |
+| `--with-api`        | `-a`  | Generate API route           |
+| `--with-hooks`      | `-h`  | Generate custom hooks        |
+| `--with-components` | `-c`  | Generate component templates |
 
-### Example
+### Examples
+
+1. **Create a basic service:**
 
 ```bash
-tac arch blog --with-api
+creata cre dashboard
+```
+
+2. **Create service with API:**
+
+```bash
+creata cre products --with-api
 # or
-tac arch blog -a
+creata cre products -a
 ```
 
----
-
-## 🛠️ Output Structure
+3. **Create full service:**
 
 ```bash
-src/app/blog/
-├── page.tsx
-├── api/
-│   └── route.ts
-├── hooks/
-│   └── useBlog.ts
-└── components/
-    └── BlogWidget.tsx
+creata cre user-profile -a -h -c
 ```
 
----
+## 📁 Generated Structure
 
-## 🧼 Clean Up
+Basic structure:
 
-To remove global CLI:
+```
+src/app/
+└── service-name/
+    └── page.tsx
+```
+
+Full structure (with all options):
+
+```
+src/app/
+└── service-name/
+    ├── api/
+    │   └── route.ts
+    ├── components/
+    │   └── ServiceNameWidget.tsx
+    ├── hooks/
+    │   └── useServiceName.ts
+    └── page.tsx
+```
+
+## 🧪 Development
+
+1. **Clone and Install:**
 
 ```bash
-npm unlink -g creata
+git clone <repository-url>
+cd creata-cli
+npm install
 ```
 
----
+2. **Run Locally:**
+
+```bash
+npm run dev -- cre example-service -a -h -c
+```
+
+3. **Build:**
+
+```bash
+npm run build
+```
+
+## 🔧 Commands
+
+```bash
+# Development
+npm run dev
+
+# Build
+npm run build
+
+# Create new service
+npm run cre
+```
+
+## 📝 License
+
+ISC
 
 ## ✍️ Author
 
-Created by **Lam Anh Truong**
+Created by **Lam Anh Truong**  
 📧 Email: anhlamtruong1012@gmail.com
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 🐛 Bug Reports
+
+Please use the [issues page](https://github.com/anhlamtruong/portfolio-anh/issues) to report any bugs or request features.
