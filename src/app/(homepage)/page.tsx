@@ -8,9 +8,10 @@ import { CertificatesSection } from "./_components/section-3/certificates-sectio
 import { SnapSection } from "./_components/homepage/homepage-section";
 import { AboutMeSection } from "./_components/section-1/about-me-section";
 import { SkillsSection } from "./_components/section-2/skills-section";
-import { ExperiencesSection } from "./_components/section-4/experiences-section";
+import { ProjectSection } from "./_components/section-4/projects-section";
 import { PageContentLoading } from "@/components/ui/loading";
 import dynamic from "next/dynamic";
+import { ResumeSection } from "./_components/section-10/resume-section";
 const StarsBackground = dynamic(
   () => import("./_components/homepage/stars-background"),
   { ssr: false }
@@ -72,24 +73,24 @@ function useSectionSync() {
 
 export default function Home() {
   return (
-    <div className="relative overflow-hidden no-scrollbar">
+    <main className="relative w-screen h-screen overflow-hidden no-scrollbar">
       <StarsBackground />
       <Suspense fallback={<PageContentLoading />}>
         <HomeComponents></HomeComponents>
       </Suspense>
-    </div>
+    </main>
   );
 }
 
 const HomeComponents = () => {
   useSectionSync();
   return (
-    <main className="relative z-10">
+    <div className="relative z-10">
       <div className="flex items-center justify-center">
-        <div className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full  scroll-smooth">
+        <div className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full scroll-smooth">
           <SnapSection
             id="section-1"
-            className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+            className="w-full bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
           >
             <AboutMeSection></AboutMeSection>
           </SnapSection>
@@ -109,10 +110,16 @@ const HomeComponents = () => {
             id="section-4"
             className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
           >
-            <ExperiencesSection></ExperiencesSection>
+            <ProjectSection></ProjectSection>
+          </SnapSection>
+          <SnapSection
+            id="section-10"
+            className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+          >
+            <ResumeSection></ResumeSection>
           </SnapSection>
         </div>
       </div>
-    </main>
+    </div>
   );
 };

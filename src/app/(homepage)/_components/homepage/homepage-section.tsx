@@ -18,7 +18,10 @@ export const SnapSection: FC<SnapSectionProps> = ({
   return (
     <section
       id={id}
-      className={cn("h-screen flex justify-center items-center", className)}
+      className={cn(
+        "h-screen w-full flex justify-center items-center",
+        className
+      )}
     >
       {children}
     </section>

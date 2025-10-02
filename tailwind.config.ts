@@ -10,6 +10,14 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Keep your sans-serif font if you want, or define it here
+        sans: ["var(--font-inter)", "sans-serif"],
+        // Add Roboto Serif as the 'serif' font
+        // We use `font-serif` to apply Roboto Serif.
+        //We use `font-black` to apply the 900 weight we loaded.
+        serif: ["var(--font-roboto-serif)", "serif"],
+      },
       keyframes: {
         animStar: {
           "0%": { transform: "translateY(0)" },
