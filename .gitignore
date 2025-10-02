@@ -74,3 +74,5 @@ dependency.txt
 # Node.js dependency directory
 /cli/node_modules/
 /cli/*.local
+
+/cli/*

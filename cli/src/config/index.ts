@@ -1,5 +1,7 @@
 // Import command handler(s)
+import { loginCommand } from "@/commands/login/index.js";
 import { architectCommand } from "../commands/architect/index.js";
+import { logoutCommand } from "@/commands/logout/index.js";
 
 /**
  * Generates usage/help messages for the CLI.
@@ -28,6 +30,16 @@ export const commandConfigs = {
       h: "with-hooks",
       c: "with-components",
     },
+  },
+  login: {
+    handler: loginCommand,
+    flags: [],
+    alias: {},
+  },
+  logout: {
+    handler: logoutCommand,
+    flags: [],
+    alias: {},
   },
   push: {
     handler: architectCommand,
