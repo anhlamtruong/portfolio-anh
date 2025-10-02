@@ -171,7 +171,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\portfolio-anh\\src\\services\\authenticate-service\\generated\\authenticate\\@prisma-authenticate",
+      "value": "/Users/emcaemchut/Documents/Code/portfolio-anh/src/services/authenticate-service/generated/authenticate/@prisma-authenticate",
       "fromEnvVar": null
     },
     "config": {
@@ -180,12 +180,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "windows",
+        "value": "darwin-arm64",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\portfolio-anh\\src\\services\\authenticate-service\\prisma\\schema.prisma",
+    "sourceFilePath": "/Users/emcaemchut/Documents/Code/portfolio-anh/src/services/authenticate-service/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -248,8 +248,8 @@ exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
-path.join(__dirname, "query_engine-windows.dll.node");
-path.join(process.cwd(), "src/services/authenticate-service/generated/authenticate/@prisma-authenticate/query_engine-windows.dll.node")
+path.join(__dirname, "libquery_engine-darwin-arm64.dylib.node");
+path.join(process.cwd(), "src/services/authenticate-service/generated/authenticate/@prisma-authenticate/libquery_engine-darwin-arm64.dylib.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "src/services/authenticate-service/generated/authenticate/@prisma-authenticate/schema.prisma")
