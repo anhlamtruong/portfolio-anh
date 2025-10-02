@@ -1,12 +1,17 @@
 // src/components/StarsBackground.tsx
 "use client";
+
+import { cn } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
+import { FlipWords } from "./flip-words";
 
 export default function StarsBackground() {
   const small = useMemo(() => genBoxShadow(700), []);
   const medium = useMemo(() => genBoxShadow(200), []);
   const large = useMemo(() => genBoxShadow(100), []);
-
+  const params = useSearchParams();
+  const sectionNumber = Number(params.get("section"));
   return (
     <div className="absolute inset-0 overflow-hidden bg-gradient-to-b from-[#1B2735] to-[#090A0F]">
       {/* small */}
@@ -41,14 +46,30 @@ export default function StarsBackground() {
       />
 
       {/* title */}
-      <h1 className="absolute top-1/2 left-1/2 text-center transform -translate-x-1/2 -translate-y-1/2 text-5xl font-light tracking-[10px] text-white">
-        <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 block p-4">
-          Lam Anh Truong
-        </span>
-        <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 block p-4">
-          Software Engineer
-        </span>
-      </h1>
+      <div className="w-full h-screen">
+        <h1
+          className={cn(
+            sectionNumber && sectionNumber != 1 ? " blur-lg" : "",
+            "w-1/2 h-1/2 absolute top-1/2 left-1/2 text-center transition-all transform -translate-x-1/2 -translate-y-1/2 text-2xl md:text-5xl font-light tracking-[10px] text-white"
+          )}
+        >
+          <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 block p-4">
+            Lam Anh Truong
+          </span>
+          <span className="block">
+            <FlipWords
+              className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 block p-4 text-white"
+              words={[
+                "Web Developer",
+                "Software Engineer",
+                "Creator",
+                "Designer",
+                "Entrepreneur",
+              ]}
+            />
+          </span>
+        </h1>
+      </div>
     </div>
   );
 }
