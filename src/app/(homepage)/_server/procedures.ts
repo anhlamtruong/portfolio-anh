@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { getLogosFromStorage } from "../_services/logo-loader/actions/get-logos-storage";
 import { incrementAndGetViews } from "../_services/logo-loader/actions/viewer-count-firestore";
 import { baseProcedure, createTRPCRouter } from "../_trpc/init";
@@ -19,9 +20,18 @@ export const HomePageRouter = createTRPCRouter({
   getAndIncrementView: baseProcedure
     // 1. Remove the .input() since we no longer need a slug
     .mutation(async () => {
-      // 2. Reference the specific document ID
-      const count = await incrementAndGetViews();
-      console.log(`Total views at procedure: ${count}`);
-      return count;
+      try {
+        const count = await incrementAndGetViews();
+        console.log(`Total views at procedure: ${count}`);
+        return count;
+      } catch (error) {
+        console.error("[TRPC_ERROR] Failed in getAndIncrementView:", error);
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to increment and get views.",
+          cause: error,
+        });
+      }
     }),
 });
