@@ -9,7 +9,6 @@ import { SnapSection } from "./_components/homepage/homepage-section";
 import { AboutMeSection } from "./_components/section-1/about-me-section";
 import { SkillsSection } from "./_components/section-2/skills-section";
 import { ProjectSection } from "./_components/section-4/projects-section";
-import { PageContentLoading } from "@/components/ui/loading";
 import dynamic from "next/dynamic";
 import { ResumeSection } from "./_components/section-10/resume-section";
 const StarsBackground = dynamic(
@@ -75,9 +74,7 @@ export default function Home() {
   return (
     <main className="relative w-screen h-screen overflow-hidden no-scrollbar">
       <StarsBackground />
-      <Suspense fallback={<PageContentLoading />}>
-        <HomeComponents></HomeComponents>
-      </Suspense>
+      <HomeComponents></HomeComponents>
     </main>
   );
 }

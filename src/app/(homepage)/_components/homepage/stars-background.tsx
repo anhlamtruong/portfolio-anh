@@ -50,7 +50,7 @@ export default function StarsBackground() {
         <h1
           className={cn(
             sectionNumber && sectionNumber != 1 ? " blur-lg" : "",
-            "w-1/2 h-1/2 absolute top-1/2 left-1/2 text-center transition-all transform -translate-x-1/2 -translate-y-1/2 text-2xl md:text-5xl font-light tracking-[10px] text-white"
+            "w-11/12 md:w-3/4 h-1/2 absolute top-2/3 left-1/2 text-center transition-all transform -translate-x-1/2 -translate-y-1/2 text-3xl md:text-5xl font-light tracking-[10px] text-white"
           )}
         >
           <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 block p-4">
