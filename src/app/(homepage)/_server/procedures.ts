@@ -23,7 +23,7 @@ export const HomePageRouter = createTRPCRouter({
       try {
         const count = await incrementAndGetViews();
         console.log(`Total views at procedure: ${count}`);
-        return count;
+        return { count: count ?? 0 };
       } catch (error) {
         console.error("[TRPC_ERROR] Failed in getAndIncrementView:", error);
 

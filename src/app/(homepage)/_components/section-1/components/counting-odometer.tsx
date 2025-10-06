@@ -3,7 +3,7 @@
 import { useTRPC } from "@/app/(homepage)/_trpc/client";
 import { cn } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
-import React, { use, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
 interface CountingOdometerProps {
   amount?: number;
@@ -27,7 +27,7 @@ const CountingOdometer: React.FC<CountingOdometerProps> = ({
   const updateViewMutation = useMutation(
     trpc.homepage.getAndIncrementView.mutationOptions({
       onSuccess(data) {
-        setAmountStr(data.toString());
+        setAmountStr(data.count.toString());
         // console.log(`This is the ${data} visit!`);
       },
       onError(error) {
