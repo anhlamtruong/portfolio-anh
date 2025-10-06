@@ -3,48 +3,26 @@ import { useEffect, useState } from "react";
 import AnimatedWrapper from "./animation/animation-wrapper";
 import { FlipWords } from "../homepage/flip-words";
 import SpringOdometer from "./spring-odmeter";
+import CountingOdometer from "./components/counting-odometer";
 
 export const AboutMeSection = () => {
-  const [value, setValue] = useState(0); // The current value of the counter
-  const targetValue = 12345; // The target value you want to count up to
-  const duration = 2000; // Duration for the animation in milliseconds
-  const incrementTime = 50; // How often to update the counter (in milliseconds)
-
-  // Function to increment the value over time
-  useEffect(() => {
-    const incrementAmount = targetValue / (duration / incrementTime); // Calculate how much to increment per step
-
-    const interval = setInterval(() => {
-      setValue((prevValue) => {
-        const nextValue = prevValue + incrementAmount;
-        if (nextValue >= targetValue) {
-          clearInterval(interval); // Stop the interval when the target value is reached
-          return targetValue;
-        }
-        return nextValue;
-      });
-    }, incrementTime);
-
-    return () => clearInterval(interval); // Clean up the interval on component unmount
-  }, [targetValue, duration, incrementTime]);
-
   return (
-    <div className="mt-2 md:mt-0 h-screen w-full flex flex-col justify-start items-start p-8">
+    <div className="font-serif h-screen w-full flex flex-col items-center md:justify-start md:items-start  text-center lg:items-start lg:text-left p-4 md:p-8">
       <AnimatedWrapper>
-        <h1 className="font-serif text-white md:text-8xl sm:text-7xl text-4xl">
+        <h1 className=" text-white text-5xl sm:text-7xl md:text-8xl">
           Welcome!
         </h1>
       </AnimatedWrapper>
-      <div className="text-pretty flex items-start text-center mt-3 text-white gap-2 justify-end text-lg sm:text-xl md:text-2xl ">
+      <div className="text-pretty flex flex-wrap items-baseline justify-center lg:justify-end text-center mt-3 text-white gap-2 text-lg sm:text-xl md:text-2xl">
         <h2 className="-mr-1 mt-1">You are the</h2>
-        <div className="relative flex items-end">
-          <SpringOdometer
-            className="font-bold max-[445px]:text-4xl max-[445px]:mt-3"
-            endValue={value}
+        <div className="transform scale-80 sm:scale-100 md:scale-100 lg:scale-120 origin-center md:translate-y-1">
+          <CountingOdometer
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl "
+            amount={20000}
           />
-          <span className="text-sm mb-3">th</span>
         </div>
-        <h2 className="-ml-1 mt-1">person who visit the page 🎉</h2>
+        <span className="text-sm mb-3">th</span>
+        <h2 className="-ml-1 mt-1">person who visit my page 🙌</h2>
       </div>
     </div>
   );
