@@ -1,9 +1,10 @@
 "use client";
 
 import { useTRPC } from "@/app/(homepage)/_trpc/client";
+import { PageContentLoading } from "@/components/ui/loading";
 import { cn } from "@/lib/utils";
-import { useMutation } from "@tanstack/react-query";
-import React, { useEffect, useRef } from "react";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import React, { Suspense, useEffect, useRef } from "react";
 
 interface CountingOdometerProps {
   amount?: number;
@@ -20,35 +21,27 @@ const CountingOdometer: React.FC<CountingOdometerProps> = ({
 }) => {
   const tracks = useRef<(HTMLDivElement | null)[]>([]);
 
-  const [amountStr, setAmountStr] = React.useState("0");
-
   const trpc = useTRPC();
 
   const updateViewMutation = useMutation(
-    trpc.homepage.getAndIncrementView.mutationOptions({
-      onSuccess(data) {
-        setAmountStr(data.count.toString());
-        // console.log(`This is the ${data} visit!`);
-      },
+    trpc.homepage.incrementPageView.mutationOptions({
       onError(error) {
-        setAmountStr(amount.toString());
         console.error("Error incrementing view count:", error);
       },
     })
   );
+  const { data } = useSuspenseQuery(trpc.homepage.getPageView.queryOptions());
+
   useEffect(() => {
     updateViewMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (amountStr === "0") {
-      return;
-    }
     const timer = window.setTimeout(() => {
       tracks.current.forEach((el, idx) => {
         if (!el) return;
-        const digit = Number(amountStr[idx]);
+        const digit = Number(data.count[idx]);
         const total = (idx + EXTRA_ITERS - 1) * 10 + digit;
         el.style.transform = `translateY(-${total * 8}rem)`;
         el.style.transition = `transform ${TRANS_MS}ms ease-in-out`;
@@ -56,37 +49,39 @@ const CountingOdometer: React.FC<CountingOdometerProps> = ({
     }, 50);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amountStr]);
+  }, [data.count]);
 
   return (
-    <div className={cn(className, "flex items-center justify-start")}>
-      <div className="flex">
-        {Array.from(amountStr).map((char, idx) => (
-          <div
-            key={`digit-${idx}`}
-            className="relative h-[8rem] overflow-hidden"
-          >
+    <Suspense fallback={<PageContentLoading />}>
+      <div className={cn(className, "flex items-center justify-start")}>
+        <div className="flex">
+          {Array.from(data.count).map((char, idx) => (
             <div
-              className="flex flex-col items-start justify-start"
-              ref={(el) => {
-                tracks.current[idx] = el;
-              }}
+              key={`digit-${idx}`}
+              className="relative h-[8rem] overflow-hidden"
             >
-              {Array.from({ length: idx + EXTRA_ITERS }).flatMap((_, cycle) =>
-                DIGITS.map((d) => (
-                  <span
-                    key={`${idx}-${cycle}-${d}`}
-                    className="h-[8rem] flex items-center justify-start"
-                  >
-                    {d}
-                  </span>
-                ))
-              )}
+              <div
+                className="flex flex-col items-start justify-start"
+                ref={(el) => {
+                  tracks.current[idx] = el;
+                }}
+              >
+                {Array.from({ length: idx + EXTRA_ITERS }).flatMap((_, cycle) =>
+                  DIGITS.map((d) => (
+                    <span
+                      key={`${idx}-${cycle}-${d}`}
+                      className="h-[8rem] flex items-center justify-start"
+                    >
+                      {d}
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 };
 

@@ -1,8 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
 import AnimatedWrapper from "./animation/animation-wrapper";
-import { FlipWords } from "../homepage/flip-words";
-import SpringOdometer from "./spring-odmeter";
 import CountingOdometer from "./components/counting-odometer";
 
 export const AboutMeSection = () => {
