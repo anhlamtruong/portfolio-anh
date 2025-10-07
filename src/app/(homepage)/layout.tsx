@@ -8,6 +8,7 @@ export default function HomePageDashboardLayout({
   children: ReactNode;
 }) {
   prefetch(trpc.homepage.getLogos.queryOptions()); // Prefetch the components metadata
+  prefetch(trpc.homepage.getPageView.queryOptions()); // Prefetch the components metadata
   return (
     <HydrateClient>
       <Suspense fallback={<PageContentLoading />}>{children}</Suspense>
