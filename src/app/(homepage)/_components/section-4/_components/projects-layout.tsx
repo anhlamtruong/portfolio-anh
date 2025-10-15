@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { motion } from "motion/react";
+import { motion, Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 
 type Card = {
@@ -9,6 +9,28 @@ type Card = {
   className: string;
   thumbnail: string;
   title: string;
+};
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.9,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { y: 70, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      damping: 12,
+      stiffness: 100,
+    },
+  },
 };
 
 export const ProjectLayoutGrid = ({ cards }: { cards: Card[] }) => {
@@ -26,10 +48,16 @@ export const ProjectLayoutGrid = ({ cards }: { cards: Card[] }) => {
   };
 
   return (
-    <div className="w-full h-full p-10 grid grid-cols-1 md:grid-cols-3   mx-auto gap-4 relative">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      className="w-full h-full p-10 grid grid-cols-1 md:grid-cols-3 mx-auto gap-4 relative"
+    >
       {cards.map((card, i) => (
-        <div key={i} className={cn(card.className, "")}>
+        <motion.div key={i} className={cn(card.className, "")}>
           <motion.div
+            variants={itemVariants}
             onClick={() => handleClick(card)}
             className={cn(
               card.className,
@@ -48,7 +76,7 @@ export const ProjectLayoutGrid = ({ cards }: { cards: Card[] }) => {
               card={card}
             />
           </motion.div>
-        </div>
+        </motion.div>
       ))}
       <motion.div
         onClick={handleOutsideClick}
@@ -58,7 +86,7 @@ export const ProjectLayoutGrid = ({ cards }: { cards: Card[] }) => {
         )}
         animate={{ opacity: selected?.id ? 0.3 : 0 }}
       />
-    </div>
+    </motion.div>
   );
 };
 

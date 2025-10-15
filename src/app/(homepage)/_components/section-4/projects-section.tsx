@@ -114,23 +114,15 @@ const mockCards = [
   },
   {
     id: 3,
-    content:
-      "A native mobile weather application developed with React Native, providing real-time forecasts via an external API.",
-    className:
-      "p-4 bg-indigo-900/50 border border-indigo-700 rounded-lg text-white",
-    thumbnail: "https://picsum.photos/seed/project3/300/500",
-    title: "Weather App",
-  },
-  {
-    id: 4,
     content: (
       <div className="font-serif flex flex-col gap-4 text-sm md:text-md lg:text-lg">
         <p>
-          <strong>The Bankist project</strong> is a landing page for a
-          minimalist digital bank, designed to create a clean, modern, and
-          highly interactive user experience. The primary focus was to blend a
-          minimalist aesthetic with advanced JavaScript DOM manipulation to
-          build a professional and engaging website from scratch.
+          <strong>The Forkify project</strong> is a modern recipe application
+          that allows users to search, view, bookmark, and even upload their own
+          recipes. The primary architectural goal was to build the application
+          using the well-established **MVC (Model-View-Controller) pattern**,
+          ensuring a clear separation of concerns and creating a scalable and
+          maintainable codebase from scratch.
         </p>
 
         <div>
@@ -139,29 +131,29 @@ const mockCards = [
           </h4>
           <ul className="list-disc list-inside flex flex-col gap-2">
             <li>
-              <strong>Interactive Component Development:</strong> Key features
-              like the tabbed operations section and the testimonial slider were
-              built using JavaScript to create a dynamic and engaging user flow
-              without reloading the page.
+              <strong>MVC Architecture:</strong> The application is strictly
+              organized with the Model for managing state and business logic
+              (like API calls), the View for rendering the UI, and the
+              Controller to act as the bridge between them.
             </li>
             <li>
-              <strong>Performance Optimization:</strong> Advanced techniques
-              like lazy loading for images and smooth-scrolling navigation were
-              implemented using the Intersection Observer API to ensure a fast,
-              fluid, and seamless user experience.
+              <strong>Asynchronous Data Flow:</strong> All communication with
+              the third-party recipe API is handled with `async/await` inside a
+              reusable `AJAX` helper function, ensuring a smooth, non-blocking
+              user experience while fetching data.
             </li>
             <li>
-              <strong>Systematic & Modern Styling:</strong> A clean and
-              consistent design was achieved through a well-defined color scheme
-              using CSS variables, along with modern CSS properties for layout,
-              transitions, and animations.
+              <strong>Reusable & Class-Based Views:</strong> A parent `View`
+              class was implemented to contain shared rendering logic (like
+              rendering spinners, errors, and messages), which other specific
+              views inherit from, promoting code reusability and efficiency.
             </li>
           </ul>
         </div>
 
         <p>
-          The result is a polished showcase of how to build a modern,
-          interactive, and high-performance website.
+          The result is a robust and feature-rich application that demonstrates
+          modern JavaScript architecture and best practices.
         </p>
 
         <span>
@@ -169,7 +161,72 @@ const mockCards = [
           <Link
             className=" underline text-blue-200"
             target="_blank"
-            href="https://anhlamtruong.github.io/Banklist-DOM/"
+            href="https://forkify-application-anh-portfolio.netlify.app/"
+          >
+            HERE
+          </Link>{" "}
+          to view the website!
+        </span>
+      </div>
+    ),
+    className: "p-4 rounded-lg text-white",
+    thumbnail: "assets/img/forkify.png",
+    title: "Forkify Recipe Keeping App",
+  },
+  {
+    id: 4,
+    content: (
+      <div className="font-serif flex flex-col gap-4 text-sm md:text-md lg:text-lg">
+        <p>
+          <strong>The Bankist project</strong> is a two-part application
+          featuring a modern landing page and a functional, interactive banking
+          GUI. The primary focus was to demonstrate advanced DOM manipulation
+          and modern JavaScript features by building a professional and engaging
+          user experience from the ground up, without relying on any external
+          frameworks.
+        </p>
+
+        <div>
+          <h4 className="font-bold mb-2">
+            Key Design & Development Decisions:
+          </h4>
+          <ul className="list-disc list-inside flex flex-col gap-2">
+            <li>
+              <strong>Interactive Landing Page:</strong> Key features like the
+              tabbed operations section, a testimonial slider, and lazy-loading
+              images were built with advanced JavaScript, utilizing the
+              Intersection Observer API to create a high-performance, animated,
+              and engaging user flow.
+            </li>
+            <li>
+              <strong>Dynamic Banking Application:</strong> The separate banking
+              UI is fully interactive, with features like user login,
+              transaction displays, money transfers, and loan requests. All UI
+              elements are dynamically rendered and updated in real-time through
+              direct DOM manipulation.
+            </li>
+            <li>
+              <strong>Modern JavaScript Implementation:</strong> The application
+              leverages the Internationalization API (`Intl.DateTimeFormat` and
+              `Intl.NumberFormat`) to correctly format dates and currencies
+              based on user locale, and includes a session logout timer to
+              manage user inactivity.
+            </li>
+          </ul>
+        </div>
+
+        <p>
+          The result is a polished showcase of how to build a modern,
+          interactive, and feature-rich web application using vanilla
+          JavaScript.
+        </p>
+
+        <span>
+          Click{" "}
+          <Link
+            className=" underline text-blue-200"
+            target="_blank"
+            href="https://anhlamtruong.github.io/banklist-app/"
           >
             HERE
           </Link>{" "}
@@ -179,7 +236,7 @@ const mockCards = [
     ),
     className: "p-4 rounded-lg text-white",
     thumbnail: "assets/img/bankist.png",
-    title: "Bankist Welcome Page",
+    title: "Bankist Minimal Bank Application",
   },
 ];
 export const ProjectSection = () => {
