@@ -52,36 +52,34 @@ const CountingOdometer: React.FC<CountingOdometerProps> = ({
   }, [data.count]);
 
   return (
-    <Suspense fallback={<PageContentLoading />}>
-      <div className={cn(className, "flex items-center justify-start")}>
-        <div className="flex">
-          {Array.from(data.count).map((char, idx) => (
+    <div className={cn(className, "flex items-center justify-start")}>
+      <div className="flex">
+        {Array.from(data.count).map((char, idx) => (
+          <div
+            key={`digit-${idx}`}
+            className="relative h-[8rem] overflow-hidden"
+          >
             <div
-              key={`digit-${idx}`}
-              className="relative h-[8rem] overflow-hidden"
+              className="flex flex-col items-start justify-start"
+              ref={(el) => {
+                tracks.current[idx] = el;
+              }}
             >
-              <div
-                className="flex flex-col items-start justify-start"
-                ref={(el) => {
-                  tracks.current[idx] = el;
-                }}
-              >
-                {Array.from({ length: idx + EXTRA_ITERS }).flatMap((_, cycle) =>
-                  DIGITS.map((d) => (
-                    <span
-                      key={`${idx}-${cycle}-${d}`}
-                      className="h-[8rem] flex items-center justify-start"
-                    >
-                      {d}
-                    </span>
-                  ))
-                )}
-              </div>
+              {Array.from({ length: idx + EXTRA_ITERS }).flatMap((_, cycle) =>
+                DIGITS.map((d) => (
+                  <span
+                    key={`${idx}-${cycle}-${d}`}
+                    className="h-[8rem] flex items-center justify-start"
+                  >
+                    {d}
+                  </span>
+                ))
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
-    </Suspense>
+    </div>
   );
 };
 
