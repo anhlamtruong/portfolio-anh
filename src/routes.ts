@@ -18,7 +18,6 @@ export const authRoutes = [
   "/auth/reset",
   "/auth/new-password",
 ];
-export const authCLIRoutes = ["/auth/cli-login"];
 
 /**
  * The prefix for API authentication routes
@@ -26,12 +25,27 @@ export const authCLIRoutes = ["/auth/cli-login"];
  * @type {string}
  */
 export const apiAuthPrefix = "/api/auth";
+
 /**
  * The prefix for API publics routes
  * Routes that start with this prefix are used for API publics
  * @type {string}
  */
 export const apiPublicPrefix = "/api/public";
+
+/**
+ * The prefix for API publics routes for TRPC
+ * Routes that start with this prefix are used for API publics for TRPC
+ * @type {string}
+ */
+export const apiTrpcPublicPrefix = "/api/trpc";
+
+/**
+ * The prefix for CLI login routes
+ * Routes that start with this prefix are used for CLI
+ * @type {string}
+ */
+export const authCLIRoutes = ["/auth/cli-login"];
 
 /**
  * The default redirect path after logging in

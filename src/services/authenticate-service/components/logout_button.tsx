@@ -2,7 +2,7 @@
 
 import { logout } from "../actions/logout";
 import { useTransition } from "react";
-import { BeatLoader } from "react-spinners";
+import { BeatLoader, ClockLoader } from "react-spinners";
 import { Button } from "./ui/button";
 import { usePathname } from "next/navigation";
 
@@ -32,7 +32,7 @@ const LogoutButton: React.FC<LogoutButtonProps> = ({ children }) => {
       className=" items-center w-36 cursor-pointer"
     >
       {children}
-      {isPending && <BeatLoader></BeatLoader>}
+      {isPending && <ClockLoader size={20} className="ml-2"></ClockLoader>}
     </Button>
   );
 };

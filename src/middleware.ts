@@ -11,6 +11,7 @@ import {
   publicRoutes,
   apiPublicPrefix,
   authCLIRoutes,
+  apiTrpcPublicPrefix,
 } from "@/routes";
 
 const corsOptions: {
@@ -34,6 +35,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
+  const isTrpcRoute = nextUrl.pathname.startsWith(apiTrpcPublicPrefix);
   const isApiPublicPrefix = nextUrl.pathname.startsWith(apiPublicPrefix);
   const isPublicRoutes = publicRoutes.includes(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
@@ -42,6 +44,11 @@ export default auth((req) => {
   if (isPublicRoutes) {
     return;
   }
+
+  if (isTrpcRoute) {
+    return;
+  }
+
   if (isAuthCLIRoute) {
     return;
   }
