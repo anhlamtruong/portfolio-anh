@@ -37,13 +37,37 @@ const EiffelTower = () => {
   );
 };
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      // This creates the staggered effect. Each child animation will
+      // start 0.07 seconds after the previous one.
+      staggerChildren: 0.07,
+    },
+  },
+};
+const itemVariants = {
+  hidden: { y: 30, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      damping: 10,
+      stiffness: 100,
+    },
+  },
+};
 const TowerLevel = ({ icons }: { icons?: HomePageGetLogosOutput }) => {
   return (
     <motion.div
-      className={`flex justify-center items-center space-x-5 mb-5 transition-all`}
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 8 }}
+      className={`flex justify-center items-center space-x-5 mb-5`}
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      // viewport={{ once: true }}
     >
       {icons?.map((icon, index) => <WiggleBlock key={index} icon={icon} />)}
     </motion.div>
@@ -56,6 +80,7 @@ const WiggleBlock = ({ icon }: { icon: { path: string; name: string } }) => {
     <motion.div
       className="overflow-auto h-8 w-auto sm:h-9 sm:w-auto md:h-10 md:w-auto rounded-md cursor-pointer flex items-center justify-center"
       whileHover={{ scale: 1.2, rotate: 90 }}
+      variants={itemVariants}
       whileTap={{
         scale: 0.8,
         rotate: -90,
