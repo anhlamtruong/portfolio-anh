@@ -1,9 +1,7 @@
 // Imports
 // ========================================================
 import { NextResponse } from "next/server";
-import authConfig from "@/auth.config";
-import NextAuth from "next-auth";
-const { auth } = NextAuth(authConfig);
+import { auth } from "@/auth";
 import {
   DEFAULT_LOGIN_REDIRECT,
   apiAuthPrefix,
@@ -35,7 +33,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
-  const isTrpcRoute = nextUrl.pathname.startsWith(apiTrpcPublicPrefix);
+  const isPublicTrpcRoute = nextUrl.pathname.startsWith(apiTrpcPublicPrefix);
   const isApiPublicPrefix = nextUrl.pathname.startsWith(apiPublicPrefix);
   const isPublicRoutes = publicRoutes.includes(nextUrl.pathname);
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
@@ -45,7 +43,7 @@ export default auth((req) => {
     return;
   }
 
-  if (isTrpcRoute) {
+  if (isPublicTrpcRoute) {
     return;
   }
 
