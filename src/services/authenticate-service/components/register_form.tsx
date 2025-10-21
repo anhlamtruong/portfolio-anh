@@ -36,7 +36,7 @@ export const RegisterForm = () => {
       password: "",
     },
   });
-
+  //TODO: Add Loading State Notification
   const onSubmit = (values: z.infer<typeof RegisterSchema>) => {
     setError("");
     setSuccess("");

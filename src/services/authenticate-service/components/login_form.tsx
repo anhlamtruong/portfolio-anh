@@ -29,7 +29,7 @@ export const LoginForm = () => {
     searchParams.get("error") === "OAuthAccountNotLinked"
       ? MESSAGES.ui.oauth_account_not_linked
       : "";
-
+  //TODO: Add Loading State Notification
   const [isPending, startTransition] = useTransition();
   const [showTwoFactor, setShowTwoFactor] = useState<boolean>(false);
   const [error, setError] = useState<string | undefined>("");
@@ -86,7 +86,9 @@ export const LoginForm = () => {
                   name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{MESSAGES.ui.login_two_factor_label}</FormLabel>
+                      <FormLabel>
+                        {MESSAGES.ui.login_two_factor_label}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -140,7 +142,9 @@ export const LoginForm = () => {
                         asChild
                         className="px-0 font-normal"
                       >
-                        <Link href="/auth/reset">{MESSAGES.ui.forgot_password}</Link>
+                        <Link href="/auth/reset">
+                          {MESSAGES.ui.forgot_password}
+                        </Link>
                       </Button>
                       <FormMessage></FormMessage>
                     </FormItem>
@@ -154,9 +158,7 @@ export const LoginForm = () => {
           {!!success && (
             <p>
               {MESSAGES.ui.go_to_mailbox}{" "}
-              <a href="https://mail.google.com/">
-                {MESSAGES.ui.mailbox_here}
-              </a>
+              <a href="https://mail.google.com/">{MESSAGES.ui.mailbox_here}</a>
             </p>
           )}
           <Button disabled={isPending} type="submit" className=" w-full">
