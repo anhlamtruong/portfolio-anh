@@ -238,6 +238,67 @@ const mockCards = [
     thumbnail: "assets/img/bankist.png",
     title: "Bankist Minimal Bank Application",
   },
+  {
+    id: 5,
+    content: (
+      <div className="font-serif flex flex-col gap-4 text-sm md:text-md lg:text-lg">
+        <p>
+          <strong>The Creata project</strong> is a full-stack social media
+          application built with Next.js, Firebase, and TypeScript. The primary
+          focus was to design a scalable and modern web app centered around a
+          robust, asynchronous state management architecture using{" "}
+          <strong>Redux-Saga</strong>.
+        </p>
+
+        <div>
+          <h4 className="font-bold mb-2">
+            Key Design & Development Decisions:
+          </h4>
+          <ul className="list-disc list-inside flex flex-col gap-2">
+            <li>
+              <strong>Scalable State Management:</strong> Leveraged Redux-Saga
+              to manage all asynchronous actions, such as user authentication
+              with Firebase and fetching posts, ensuring that side effects are
+              isolated and application state remains predictable.
+            </li>
+            <li>
+              <strong>Server-Side & Static Rendering (SSR/SSG):</strong>{" "}
+              Utilized Next.js features like `getStaticProps` and
+              `getStaticPaths` to pre-render post pages, ensuring fast load
+              times and SEO optimization, while using real-time Firestore
+              listeners for data hydration./[slug].tsx
+            </li>
+            <li>
+              <strong>Backend-Driven Content & Auth:</strong> Designed a secure
+              backend using Firebase Authentication for user management and
+              Firestore for database operations, including a "heart" feature and
+              de-normalized post data for efficient querying.
+            </li>
+          </ul>
+        </div>
+
+        <p>
+          The result is a feature-complete social media platform demonstrating a
+          modern, decoupled, and event-driven application architecture.
+        </p>
+
+        <span>
+          Click{" "}
+          <Link
+            className=" underline text-blue-200"
+            target="_blank"
+            href="https://creeta.vercel.app/"
+          >
+            HERE
+          </Link>{" "}
+          to view the website!
+        </span>
+      </div>
+    ),
+    className: "p-4 rounded-lg text-white",
+    thumbnail: "assets/img/social-media.png",
+    title: "Minimal Social Media",
+  },
 ];
 export const ProjectSection = () => {
   return (
