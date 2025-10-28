@@ -6,7 +6,10 @@ import { getUserById } from "@/services/authenticate-service/data/user";
 import { getTwoFactorConfirmationByUserId } from "@/services/authenticate-service/data/two_factor_confirmation";
 import { getAccountByUserId } from "@/services/authenticate-service/data/account";
 import { UserRole } from "@/services/authenticate-service/generated/authenticate/@prisma-authenticate";
-import { ensureFirestoreUserDoc } from "@/services/firebase/utils/firestore-utils";
+import {
+  ensureFirestoreUserDoc,
+  FirestoreUserPayload,
+} from "@/services/firebase/utils/firestore-utils";
 
 // Export NextAuth handlers and helpers
 export const {
@@ -35,14 +38,11 @@ export const {
     // Callback for sign in attempts
     async signIn({ user, account }) {
       // OAuth or credential-based sign-in
-      const existing = await getUserById(user.id!);
-      if (!existing) return false;
-
       if (account?.provider !== "credentials") {
-        // On OAuth, fire-and-forget Firestore sync
-        ensureFirestoreUserDoc(existing).catch(console.error);
         return true;
       }
+      const existing = await getUserById(user.id!);
+      if (!existing) return false;
 
       // Credential sign-in: enforce email verification
       if (!existing.emailVerified) return false;
@@ -82,18 +82,32 @@ export const {
       return session;
     },
     // Callback to augment JWT token
-    async jwt({ token }) {
+    async jwt({ token, user, account }) {
+      //TODO: Handle Syncing Change between Firebase and Prisma Authentication
+      //TODO: When Account in Prisma changed, update Firestore User Document, and the opposite
+      if (account && user) {
+        ensureFirestoreUserDoc(user as FirestoreUserPayload).catch(
+          console.error
+        );
+        token.sub = user.id;
+        token.role = (user as any).role;
+        token.isTwoFactorEnabled = (user as any).isTwoFactorEnabled;
+        token.name = user.name;
+        token.email = user.email;
+        token.isOAuth = true;
+        return token;
+      }
       if (!token.sub) return token;
 
-      const existing = await getUserById(token.sub);
-      if (!existing) return token;
-      const existingAccount = await getAccountByUserId(existing.id);
+      const existingUser = await getUserById(token.sub);
+      if (!existingUser) return token;
+      const existingAccount = await getAccountByUserId(existingUser.id);
 
       token.isOAuth = !!existingAccount;
-      token.name = existing.name;
-      token.email = existing.email;
-      token.role = existing.role;
-      token.isTwoFactorEnabled = existing.isTwoFactorEnabled;
+      token.name = existingUser.name;
+      token.email = existingUser.email;
+      token.role = existingUser.role;
+      token.isTwoFactorEnabled = existingUser.isTwoFactorEnabled;
 
       return token;
     },

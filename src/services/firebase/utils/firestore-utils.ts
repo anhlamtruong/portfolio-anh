@@ -9,14 +9,15 @@ export interface FirestoreUserPayload {
   image?: string | null;
   role: UserRole;
 }
+
 /**
  * Ensures a Firestore user document exists for the given user.
  */
 export async function ensureFirestoreUserDoc(user: FirestoreUserPayload) {
   const ref = doc(db, "users", user.id);
   const snap = await getDoc(ref);
+  const now = new Date();
   if (!snap.exists()) {
-    const now = new Date();
     await setDoc(ref, {
       name: user.name,
       email: user.email,
@@ -26,5 +27,15 @@ export async function ensureFirestoreUserDoc(user: FirestoreUserPayload) {
       createdAt: now,
       updatedAt: now,
     });
+  } else {
+    await setDoc(
+      ref,
+      {
+        name: user.name,
+        avatarURL: user.image,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
   }
 }
