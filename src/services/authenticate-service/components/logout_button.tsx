@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 interface LogoutButtonProps {
   children: React.ReactNode;
 }
-
+//TODO: Add Loading State Notification
 const LogoutButton: React.FC<LogoutButtonProps> = ({ children }) => {
   const [isPending, startTransition] = useTransition();
 
