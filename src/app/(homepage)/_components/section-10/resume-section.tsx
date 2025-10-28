@@ -13,8 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import AnimatedWrapper from "../section-1/animation/animation-wrapper";
 import { cn } from "@/lib/utils";
 
-const FILE_ID = "1r9FGyd2hJ-NhBAC8qazOBJ_urr9F1nUI";
-const RESUME_URL_PDF_PREVIEW = `https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da`;
+const RESUME_URL_PDF_PREVIEW = `https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da?toolbar=0&navpanes=0&scrollbar=0`;
 const RESUME_DOWNLOAD_URL = `https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da`;
 
 export const ResumeSection = () => {
