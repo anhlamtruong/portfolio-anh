@@ -271,8 +271,8 @@ const mockCards = [
             <li>
               <strong>Backend-Driven Content & Auth:</strong> Designed a secure
               backend using Firebase Authentication for user management and
-              Firestore for database operations, including a "heart" feature and
-              de-normalized post data for efficient querying.
+              Firestore for database operations, including a &quot;heart&quot;
+              feature and de-normalized post data for efficient querying.
             </li>
           </ul>
         </div>
