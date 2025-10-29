@@ -302,7 +302,7 @@ const mockCards = [
 ];
 export const ProjectSection = () => {
   return (
-    <div className="mt-2 md:mt-0 h-screen w-full flex flex-col justify-start items-start p-8">
+    <div className="mt-2 md:mt-0 h-screen w-full flex flex-col justify-start items-start p-8 ">
       <AnimatedWrapper>
         <h1 className="text-white md:text-8xl sm:text-7xl text-4xl">
           My Projects or {<ColorfulText text="Portfolio"></ColorfulText>}

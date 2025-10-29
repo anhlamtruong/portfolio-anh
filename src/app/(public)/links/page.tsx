@@ -34,16 +34,6 @@ const links = [
   },
   { title: "GitHub", url: "https://github.com/anhlamtruong", icon: FaGithub },
   {
-    title: "Threads",
-    url: "https://www.threads.com/@lam.anh.truong",
-    icon: SiThreads,
-  },
-  {
-    title: "Projects",
-    url: "https://lamanhtruong.com/?section=4",
-    icon: FaCode,
-  },
-  {
     title: "Transcript",
     url: "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTranscript%20-%20%20Lam%20Anh%20Truong.pdf?alt=media&token=e4e70ecf-41fc-401f-9f71-b4a96abf471f",
     icon: SiReadthedocs,
@@ -52,6 +42,16 @@ const links = [
     title: "Resume",
     url: "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=400de9c9-c5b3-4ac5-bc70-032c1d316b16",
     icon: FaFileAlt,
+  },
+  {
+    title: "Threads",
+    url: "https://www.threads.com/@lam.anh.truong",
+    icon: SiThreads,
+  },
+  {
+    title: "Projects",
+    url: "https://lamanhtruong.com/?section=4",
+    icon: FaCode,
   },
 ];
 
@@ -79,8 +79,8 @@ const itemVariants = {
 
 const LinkPage = () => {
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900 p-4 pt-24 md:pt-8">
-      <div className="w-full max-w-md mx-auto text-center">
+    <div className="overflow-scroll flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900 p-4 pt-24 md:pt-8">
+      <div className="overflow-scroll w-full max-w-md mx-auto text-center">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
