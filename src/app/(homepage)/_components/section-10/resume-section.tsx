@@ -87,17 +87,8 @@ export const ResumeSection = () => {
               title="Anh Truong's Resume"
               className="w-full h-full"
               style={{ border: "none" }}
-            >
-              {/* <p>
-                Your browser does not support embedded PDFs.
-                <a
-                  href={RESUME_DOWNLOAD_URL}
-                  style={{ color: "blue", textDecoration: "underline" }}
-                >
-                  Please download the resume to view it.
-                </a>
-              </p> */}
-            </iframe>
+              allow="fullscreen"
+            />
           </div>
         </div>
       </div>

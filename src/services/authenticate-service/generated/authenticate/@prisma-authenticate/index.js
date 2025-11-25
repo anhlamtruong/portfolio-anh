@@ -171,7 +171,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/emcaemchut/Documents/Code/portfolio-anh/src/services/authenticate-service/generated/authenticate/@prisma-authenticate",
+      "value": "/Users/emcaemchut/Documents/portfolio-anh/src/services/authenticate-service/generated/authenticate/@prisma-authenticate",
       "fromEnvVar": null
     },
     "config": {
@@ -185,7 +185,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/emcaemchut/Documents/Code/portfolio-anh/src/services/authenticate-service/prisma/schema.prisma",
+    "sourceFilePath": "/Users/emcaemchut/Documents/portfolio-anh/src/services/authenticate-service/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

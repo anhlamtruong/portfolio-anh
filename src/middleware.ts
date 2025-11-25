@@ -1,7 +1,7 @@
 // Imports
 // ========================================================
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+// import { auth } from "@/auth";
 import {
   DEFAULT_LOGIN_REDIRECT,
   apiAuthPrefix,
@@ -11,6 +11,8 @@ import {
   authCLIRoutes,
   apiTrpcPublicPrefix,
 } from "@/routes";
+import NextAuth from "next-auth";
+import authConfig from "./auth.config";
 
 const corsOptions: {
   allowedMethods: string[];
@@ -27,6 +29,8 @@ const corsOptions: {
   maxAge: (process.env?.MAX_AGE && parseInt(process.env?.MAX_AGE)) || undefined, // 60 * 60 * 24 * 30, // 30 days
   credentials: process.env?.CREDENTIALS == "true",
 };
+
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { nextUrl } = req;
