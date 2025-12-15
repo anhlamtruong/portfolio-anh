@@ -299,6 +299,73 @@ const mockCards = [
     thumbnail: "assets/img/social-media.png",
     title: "Minimal Social Media",
   },
+  {
+    id: 6,
+    content: (
+      <div className="font-serif flex flex-col gap-4 text-sm md:text-md lg:text-lg">
+        <p>
+          <strong>The Web3 Asset Dashboard</strong> is a comprehensive
+          decentralized application (dApp) built with Next.js, Thirdweb, and
+          Sanity.io. The primary objective was to abstract the complexity of
+          blockchain interactions into a clean, modern interface that allows
+          users to seamlessly manage their portfolios and deploy their own
+          tokens.
+        </p>
+
+        <div>
+          <h4 className="font-bold mb-2">
+            Key Design & Development Decisions:
+          </h4>
+          <ul className="list-disc list-inside flex flex-col gap-2">
+            <li>
+              <strong>Seamless Blockchain Integration:</strong> Leveraged the{" "}
+              <strong>Thirdweb SDK</strong> to handle secure wallet connections
+              and smart contract interactions. This abstraction layer enables
+              complex actions—like minting custom tokens—to be performed with a
+              single click, significantly improving the Web3 user experience.
+            </li>
+            <li>
+              <strong>Hybrid Data Architecture:</strong> Implemented a
+              dual-source data strategy using
+              <strong>Sanity.io</strong> (Headless CMS) to manage static assets
+              and token metadata, combined with real-time on-chain data
+              fetching. This ensures the application remains performant and
+              SEO-friendly while displaying accurate blockchain states.
+            </li>
+            <li>
+              <strong>Component-Driven UI System:</strong> Built a modular and
+              responsive interface using
+              <strong>Tailwind CSS</strong> and Shadcn/UI components. The design
+              includes dynamic theme switching and skeleton loading states to
+              provide immediate visual feedback, crucial for maintaining user
+              engagement during asynchronous blockchain transactions.
+            </li>
+          </ul>
+        </div>
+
+        <p>
+          The result is a professional-grade dashboard that demonstrates how to
+          build accessible and scalable frontend architectures for the
+          decentralized web.
+        </p>
+
+        <span>
+          Click{" "}
+          <Link
+            className=" underline text-blue-200"
+            target="_blank"
+            href="https://3rd-web-dashboard.vercel.app/?section=dashboard"
+          >
+            HERE
+          </Link>{" "}
+          to view the website!
+        </span>
+      </div>
+    ),
+    className: "p-4 rounded-lg text-white",
+    thumbnail: "assets/img/3rdweb.png", // Make sure to update this path
+    title: "Web3 Asset Manager",
+  },
 ];
 export const ProjectSection = () => {
   return (
