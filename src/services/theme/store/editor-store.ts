@@ -50,12 +50,16 @@ export const useEditorStore = create<EditorStore>()(
           currentMode: undefined,
           layoutMode: undefined,
         };
-        const newStateWithoutMode = { ...newState, currentMode: undefined, layoutMode: undefined };
+        const newStateWithoutMode = {
+          ...newState,
+          currentMode: undefined,
+          layoutMode: undefined,
+        };
 
         if (
           isDeepEqual(oldStateWithoutMode, newStateWithoutMode) &&
           (oldThemeState.currentMode !== newState.currentMode ||
-           oldThemeState.layoutMode !== newState.layoutMode)
+            oldThemeState.layoutMode !== newState.layoutMode)
         ) {
           set({ themeState: newState });
           return;

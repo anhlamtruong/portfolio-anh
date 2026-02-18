@@ -32,7 +32,11 @@ type ThemeProviderProps = {
 };
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  const { themeState, setThemeState, setLayoutMode: storeSetLayoutMode } = useEditorStore();
+  const {
+    themeState,
+    setThemeState,
+    setLayoutMode: storeSetLayoutMode,
+  } = useEditorStore();
 
   // Handle theme preset from URL
   useThemePresetFromUrl();

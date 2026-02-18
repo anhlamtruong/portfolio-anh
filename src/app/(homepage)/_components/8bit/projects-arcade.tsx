@@ -62,6 +62,24 @@ const projects = [
     description:
       "A dApp dashboard for managing portfolios and deploying tokens using Thirdweb SDK and Sanity.io CMS.",
   },
+  {
+    id: 7,
+    title: "CRUSHIE AI COACH",
+    thumbnail: "/assets/img/crushie.jpg",
+    link: "https://devpost.com/software/crushie",
+    tech: ["NEXT.JS", "AZURE AI", "SUPABASE"],
+    description:
+      "Real-time conversation coaching with Patriot AI, Azure OpenAI & ElevenLabs. pgvector HNSW engine + gamified SIQ scoring.",
+  },
+  {
+    id: 8,
+    title: "FINHACK FINANCE",
+    thumbnail: "/assets/img/finhack.png",
+    link: "https://devpost.com/software/finance-queens",
+    tech: ["GEMINI", "SNOWFLAKE", "DOCKER"],
+    description:
+      "Voice-enabled AI financial platform with Gemini, Claude 3.7, Snowflake ML forecasting & Solana blockchain auditing.",
+  },
 ];
 
 // ── Pixel project cartridge ──
@@ -80,9 +98,7 @@ function ProjectCartridge({
     <motion.button
       data-project-id={project.id}
       className={`shrink-0 w-36 sm:w-44 pixel-border p-2 sm:p-3 flex flex-col cursor-pointer transition-all ${
-        isSelected
-          ? "bg-primary/15 scale-105"
-          : "bg-card/60 hover:bg-card/80"
+        isSelected ? "bg-primary/15 scale-105" : "bg-card/60 hover:bg-card/80"
       }`}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -105,7 +121,7 @@ function ProjectCartridge({
       </div>
 
       {/* Title */}
-      <h3 className="text-primary text-[7px] sm:text-[9px] text-left leading-tight mb-1 line-clamp-2">
+      <h3 className="text-primary text-xs sm:text-sm text-left leading-tight mb-1 line-clamp-2">
         {project.title}
       </h3>
 
@@ -114,7 +130,7 @@ function ProjectCartridge({
         {project.tech.map((t) => (
           <span
             key={t}
-            className="text-[5px] sm:text-[6px] px-1 bg-muted text-muted-foreground pixel-border-sm"
+            className="text-[11px] sm:text-xs px-1.5 bg-muted text-muted-foreground pixel-border-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {t}
@@ -149,12 +165,12 @@ function ProjectDetail({ project }: { project: (typeof projects)[number] }) {
       </div>
 
       {/* Info */}
-      <h3 className="text-primary text-[10px] sm:text-xs crt-glow mb-2">
+      <h3 className="text-primary text-sm sm:text-base crt-glow mb-2">
         {project.title}
       </h3>
 
       <p
-        className="text-muted-foreground text-[7px] sm:text-[9px] mb-3 leading-relaxed"
+        className="text-muted-foreground text-xs sm:text-sm mb-3 leading-relaxed"
         style={{ fontFamily: "var(--font-vt323), monospace" }}
       >
         {project.description}
@@ -165,7 +181,7 @@ function ProjectDetail({ project }: { project: (typeof projects)[number] }) {
         {project.tech.map((t) => (
           <span
             key={t}
-            className="text-[6px] sm:text-[8px] px-2 py-[1px] bg-accent/20 text-accent pixel-border-sm"
+            className="text-xs sm:text-sm px-2 py-[2px] bg-accent/20 text-accent pixel-border-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {t}
@@ -174,13 +190,9 @@ function ProjectDetail({ project }: { project: (typeof projects)[number] }) {
       </div>
 
       {/* CTA */}
-      <Link
-        href={project.link}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <Link href={project.link} target="_blank" rel="noopener noreferrer">
         <motion.span
-          className="pixel-btn bg-primary text-primary-foreground px-4 py-1 text-[7px] sm:text-[9px] inline-block"
+          className="pixel-btn bg-primary text-primary-foreground px-4 py-1.5 text-xs sm:text-sm inline-block"
           whileHover={{ scale: 1.05 }}
           whileTap={{ y: 2 }}
         >
@@ -208,7 +220,11 @@ export function ProjectsArcade() {
     if (!container) return;
     const card = container.querySelector(`[data-project-id="${id}"]`);
     if (card) {
-      card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      card.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
     }
   }, []);
 
@@ -216,7 +232,10 @@ export function ProjectsArcade() {
   const navigateProject = useCallback(
     (direction: -1 | 1) => {
       const idx = projects.findIndex((p) => p.id === selectedId);
-      const nextIdx = Math.max(0, Math.min(idx + direction, projects.length - 1));
+      const nextIdx = Math.max(
+        0,
+        Math.min(idx + direction, projects.length - 1),
+      );
       const nextId = projects[nextIdx].id;
       setSelectedId(nextId);
       scrollToCartridge(nextId);
@@ -274,14 +293,14 @@ export function ProjectsArcade() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <p className="text-muted-foreground text-[8px] sm:text-[10px] mb-2">
+          <p className="text-muted-foreground text-sm sm:text-base mb-2">
             {"─── "}LEVEL 4{" ───"}
           </p>
-          <h2 className="text-primary text-sm sm:text-lg md:text-xl crt-glow mb-2">
+          <h2 className="text-primary text-lg sm:text-2xl md:text-3xl crt-glow mb-2">
             PROJECT ARCADE
           </h2>
           <p
-            className="text-muted-foreground text-[7px] sm:text-[9px]"
+            className="text-muted-foreground text-xs sm:text-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {">> "}CHOOSE YOUR CARTRIDGE
@@ -352,7 +371,7 @@ export function ProjectsArcade() {
           transition={{ delay: 1 }}
         >
           <p
-            className="text-muted-foreground text-[7px] sm:text-[9px]"
+            className="text-muted-foreground text-xs sm:text-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             CARTRIDGE {projects.findIndex((p) => p.id === selectedId) + 1} OF{" "}

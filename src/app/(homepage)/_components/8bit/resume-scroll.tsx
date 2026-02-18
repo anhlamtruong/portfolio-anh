@@ -72,13 +72,13 @@ function StatRow({
       <span className="text-sm sm:text-base shrink-0">{stat.icon}</span>
       <div className="min-w-0">
         <span
-          className={`text-[7px] sm:text-[9px] ${stat.color} font-bold`}
+          className={`text-xs sm:text-sm ${stat.color} font-bold`}
           style={{ fontFamily: "var(--font-vt323), monospace" }}
         >
           {stat.label}
         </span>
         <p
-          className="text-muted-foreground text-[7px] sm:text-[9px] leading-snug"
+          className="text-muted-foreground text-xs sm:text-sm leading-snug"
           style={{ fontFamily: "var(--font-vt323), monospace" }}
         >
           {stat.value}
@@ -108,7 +108,7 @@ export function ResumeScroll() {
           transition={{ duration: 0.5 }}
         >
           <motion.p
-            className="text-yellow-400 text-[8px] sm:text-[10px] mb-2"
+            className="text-yellow-400 text-sm sm:text-base mb-2"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -117,14 +117,14 @@ export function ResumeScroll() {
           >
             ⚠ WARNING ⚠
           </motion.p>
-          <p className="text-muted-foreground text-[8px] sm:text-[10px] mb-2">
+          <p className="text-muted-foreground text-sm sm:text-base mb-2">
             {"─── "}FINAL BOSS{" ───"}
           </p>
-          <h2 className="text-primary text-sm sm:text-lg md:text-xl crt-glow mb-2">
+          <h2 className="text-primary text-lg sm:text-2xl md:text-3xl crt-glow mb-2">
             RESUME SCROLL
           </h2>
           <p
-            className="text-muted-foreground text-[7px] sm:text-[9px]"
+            className="text-muted-foreground text-xs sm:text-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {">> "}DEFEAT THE BOSS TO CLAIM YOUR REWARD
@@ -142,11 +142,11 @@ export function ResumeScroll() {
           {/* Character header */}
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-muted">
             <div>
-              <h3 className="text-primary text-[10px] sm:text-xs crt-glow">
+              <h3 className="text-primary text-sm sm:text-base crt-glow">
                 LAM ANH TRUONG
               </h3>
               <p
-                className="text-muted-foreground text-[7px] sm:text-[9px]"
+                className="text-muted-foreground text-xs sm:text-sm"
                 style={{ fontFamily: "var(--font-vt323), monospace" }}
               >
                 CLASS: FULL-STACK DEVELOPER │ LVL: 99
@@ -156,8 +156,12 @@ export function ResumeScroll() {
               className="text-right"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
-              <p className="text-accent text-[7px] sm:text-[9px]">HP: ████████ 99/99</p>
-              <p className="text-primary text-[7px] sm:text-[9px]">MP: ███████░ 87/99</p>
+              <p className="text-accent text-xs sm:text-sm">
+                HP: ████████ 99/99
+              </p>
+              <p className="text-primary text-xs sm:text-sm">
+                MP: ███████░ 87/99
+              </p>
             </div>
           </div>
 
@@ -177,7 +181,7 @@ export function ResumeScroll() {
             transition={{ delay: 1 }}
           >
             <span
-              className="text-accent text-[7px] sm:text-[9px] shrink-0"
+              className="text-accent text-xs sm:text-sm shrink-0"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
               EXP:
@@ -191,7 +195,7 @@ export function ResumeScroll() {
                 transition={{ delay: 1.2, duration: 2, ease: "easeOut" }}
               />
               <span
-                className="absolute inset-0 flex items-center justify-center text-[6px] text-primary-foreground"
+                className="absolute inset-0 flex items-center justify-center text-xs text-primary-foreground"
                 style={{ fontFamily: "var(--font-vt323), monospace" }}
               >
                 8500 / 10000
@@ -209,7 +213,7 @@ export function ResumeScroll() {
           transition={{ delay: 1.3, type: "spring", damping: 15 }}
         >
           <p
-            className="text-yellow-400 text-center text-[8px] sm:text-[10px] mb-3 crt-glow"
+            className="text-yellow-400 text-center text-sm sm:text-base mb-3 crt-glow"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             ★ BOSS DEFEATED! CLAIM YOUR REWARD ★
@@ -235,7 +239,7 @@ export function ResumeScroll() {
               download="Truong_Resume.pdf"
             >
               <motion.span
-                className="pixel-btn bg-yellow-400 text-black px-6 py-2 text-[8px] sm:text-[10px] inline-block"
+                className="pixel-btn bg-yellow-400 text-black px-6 py-2.5 text-sm sm:text-base inline-block"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ y: 2 }}
               >
@@ -243,7 +247,7 @@ export function ResumeScroll() {
               </motion.span>
             </Link>
             <p
-              className="text-muted-foreground text-[6px] sm:text-[8px] mt-3"
+              className="text-muted-foreground text-xs sm:text-sm mt-3"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
               +500 EXP │ LEGENDARY DROP │ EXPORT AS .PDF

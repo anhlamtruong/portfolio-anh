@@ -104,9 +104,7 @@ function QuestCard({
   return (
     <motion.button
       className={`w-full pixel-border bg-card/60 p-3 sm:p-4 flex items-center gap-3 text-left group cursor-pointer transition-colors ${
-        isActive
-          ? "bg-primary/10 border-primary"
-          : "hover:bg-card/80"
+        isActive ? "bg-primary/10 border-primary" : "hover:bg-card/80"
       }`}
       initial={{ opacity: 0, x: -30 }}
       whileInView={{ opacity: 1, x: 0 }}
@@ -133,18 +131,18 @@ function QuestCard({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-primary text-[8px] sm:text-[10px] truncate">
+          <h3 className="text-primary text-sm sm:text-base truncate">
             {cert.title.toUpperCase()}
           </h3>
           <span
-            className={`text-[6px] sm:text-[7px] px-1 py-[1px] bg-card pixel-border-sm ${cert.rarityColor}`}
+            className={`text-xs sm:text-sm px-1.5 py-[2px] bg-card pixel-border-sm ${cert.rarityColor}`}
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {cert.rarity}
           </span>
         </div>
         <p
-          className="text-muted-foreground text-[6px] sm:text-[8px]"
+          className="text-muted-foreground text-xs sm:text-sm"
           style={{ fontFamily: "var(--font-vt323), monospace" }}
         >
           {cert.issuer} · {cert.date}
@@ -153,7 +151,7 @@ function QuestCard({
 
       {/* Arrow */}
       <span
-        className={`text-muted-foreground text-[10px] sm:text-xs shrink-0 ${
+        className={`text-muted-foreground text-sm sm:text-base shrink-0 ${
           isActive ? "text-primary crt-glow" : ""
         }`}
       >
@@ -169,7 +167,12 @@ function QuestDetail({ cert }: { cert: (typeof certificates)[number] }) {
     <motion.div
       key={cert.id}
       className="pixel-border bg-card/70 p-4 sm:p-6 origin-center"
-      initial={{ opacity: 0, scaleY: 0.005, scaleX: 1, filter: "brightness(5)" }}
+      initial={{
+        opacity: 0,
+        scaleY: 0.005,
+        scaleX: 1,
+        filter: "brightness(5)",
+      }}
       animate={{ opacity: 1, scaleY: 1, scaleX: 1, filter: "brightness(1)" }}
       exit={{ opacity: 0, scaleY: 0.005, scaleX: 1, filter: "brightness(5)" }}
       transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
@@ -187,11 +190,11 @@ function QuestDetail({ cert }: { cert: (typeof certificates)[number] }) {
           />
         </div>
         <div>
-          <h3 className="text-primary text-[10px] sm:text-xs crt-glow">
+          <h3 className="text-primary text-sm sm:text-base crt-glow">
             {cert.title.toUpperCase()}
           </h3>
           <p
-            className="text-muted-foreground text-[7px] sm:text-[9px]"
+            className="text-muted-foreground text-xs sm:text-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             QUEST COMPLETED: {cert.date}
@@ -202,7 +205,7 @@ function QuestDetail({ cert }: { cert: (typeof certificates)[number] }) {
       {/* Unlocked skills */}
       <div className="mb-4">
         <p
-          className="text-accent text-[7px] sm:text-[9px] mb-2"
+          className="text-accent text-xs sm:text-sm mb-2"
           style={{ fontFamily: "var(--font-vt323), monospace" }}
         >
           {">> "}SKILLS UNLOCKED:
@@ -211,7 +214,7 @@ function QuestDetail({ cert }: { cert: (typeof certificates)[number] }) {
           {cert.skills.map((skill, i) => (
             <motion.div
               key={skill}
-              className="flex items-center gap-2 text-[7px] sm:text-[9px]"
+              className="flex items-center gap-2 text-xs sm:text-sm"
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 + i * 0.08 }}
@@ -229,7 +232,7 @@ function QuestDetail({ cert }: { cert: (typeof certificates)[number] }) {
         href={cert.link}
         target="_blank"
         rel="noopener noreferrer"
-        className="pixel-btn bg-primary text-primary-foreground px-4 py-1 text-[7px] sm:text-[9px] inline-block"
+        className="pixel-btn bg-primary text-primary-foreground px-4 py-1.5 text-xs sm:text-sm inline-block"
         whileHover={{ scale: 1.05 }}
         whileTap={{ y: 2 }}
       >
@@ -245,14 +248,18 @@ function QuestDetail({ cert }: { cert: (typeof certificates)[number] }) {
  */
 export function CertificatesQuest() {
   const [activeId, setActiveId] = useState<string>(certificates[0].id);
-  const activeCert = certificates.find((c) => c.id === activeId) ?? certificates[0];
+  const activeCert =
+    certificates.find((c) => c.id === activeId) ?? certificates[0];
   const listRef = useRef<HTMLDivElement>(null);
 
   // Keyboard navigation for quest list
   const navigateCert = useCallback(
     (direction: -1 | 1) => {
       const idx = certificates.findIndex((c) => c.id === activeId);
-      const nextIdx = Math.max(0, Math.min(idx + direction, certificates.length - 1));
+      const nextIdx = Math.max(
+        0,
+        Math.min(idx + direction, certificates.length - 1),
+      );
       setActiveId(certificates[nextIdx].id);
     },
     [activeId],
@@ -290,14 +297,14 @@ export function CertificatesQuest() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <p className="text-muted-foreground text-[8px] sm:text-[10px] mb-2">
+          <p className="text-muted-foreground text-sm sm:text-base mb-2">
             {"─── "}LEVEL 3{" ───"}
           </p>
-          <h2 className="text-primary text-sm sm:text-lg md:text-xl crt-glow mb-2">
+          <h2 className="text-primary text-lg sm:text-2xl md:text-3xl crt-glow mb-2">
             CERTIFICATES QUEST
           </h2>
           <p
-            className="text-muted-foreground text-[7px] sm:text-[9px]"
+            className="text-muted-foreground text-xs sm:text-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {">> "}SELECT A QUEST TO VIEW DETAILS
@@ -307,7 +314,12 @@ export function CertificatesQuest() {
         {/* Quest log layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Left: Quest list */}
-          <div ref={listRef} className="flex flex-col gap-2" role="tablist" aria-label="Certificate quests">
+          <div
+            ref={listRef}
+            className="flex flex-col gap-2"
+            role="tablist"
+            aria-label="Certificate quests"
+          >
             {certificates.map((cert, i) => (
               <QuestCard
                 key={cert.id}
@@ -326,7 +338,7 @@ export function CertificatesQuest() {
             </AnimatePresence>
             {/* Mobile close hint */}
             <p
-              className="text-center text-muted-foreground text-[6px] mt-2 md:hidden"
+              className="text-center text-muted-foreground text-xs mt-2 md:hidden"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
               ↑ SELECT ANOTHER QUEST ABOVE ↑
@@ -343,7 +355,7 @@ export function CertificatesQuest() {
           transition={{ delay: 1 }}
           style={{ fontFamily: "var(--font-vt323), monospace" }}
         >
-          <span className="text-accent text-[7px] sm:text-[9px]">
+          <span className="text-accent text-xs sm:text-sm">
             QUESTS COMPLETED:
           </span>
           <div className="flex-1 h-2 bg-muted pixel-border-sm overflow-hidden">
@@ -355,7 +367,7 @@ export function CertificatesQuest() {
               transition={{ delay: 1.2, duration: 1.5 }}
             />
           </div>
-          <span className="text-primary text-[7px] sm:text-[9px]">
+          <span className="text-primary text-xs sm:text-sm">
             {certificates.length}/{certificates.length}
           </span>
         </motion.div>

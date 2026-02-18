@@ -16,9 +16,15 @@ declare module "culori" {
   }
 
   export function parse(color: string): Record<string, unknown> | undefined;
-  export function converter(mode: "hsl"): (color: Record<string, unknown>) => Hsl;
-  export function converter(mode: "oklch"): (color: Record<string, unknown>) => Oklch;
-  export function converter(mode: string): (color: Record<string, unknown>) => Record<string, unknown>;
+  export function converter(
+    mode: "hsl",
+  ): (color: Record<string, unknown>) => Hsl;
+  export function converter(
+    mode: "oklch",
+  ): (color: Record<string, unknown>) => Oklch;
+  export function converter(
+    mode: string,
+  ): (color: Record<string, unknown>) => Record<string, unknown>;
   export function formatRgb(color: Record<string, unknown>): string;
   export function formatHex(color: Record<string, unknown>): string;
 }

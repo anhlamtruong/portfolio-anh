@@ -61,12 +61,14 @@ function PixelCounter({ count }: { count: number }) {
   const digits = count.toString().padStart(6, "0");
   return (
     <div className="flex items-center gap-1">
-      <span className="text-accent text-[10px] sm:text-xs mr-2 crt-glow">VISITORS:</span>
+      <span className="text-accent text-sm sm:text-base mr-2 crt-glow">
+        VISITORS:
+      </span>
       <div className="flex gap-[2px]">
         {digits.split("").map((d, i) => (
           <motion.span
             key={i}
-            className="inline-flex items-center justify-center bg-card text-primary w-5 h-7 sm:w-7 sm:h-9 text-xs sm:text-sm pixel-border-sm font-mono"
+            className="inline-flex items-center justify-center bg-card text-primary w-7 h-9 sm:w-9 sm:h-11 text-base sm:text-lg pixel-border-sm font-mono"
             initial={{ rotateX: -90 }}
             animate={{ rotateX: 0 }}
             transition={{ delay: 0.8 + i * 0.1, type: "spring", damping: 15 }}
@@ -104,7 +106,7 @@ function PixelAvatar() {
       </div>
       {/* Pixel badge */}
       <motion.div
-        className="absolute -bottom-1 -right-1 bg-accent text-accent-foreground text-[6px] px-1 py-[1px] pixel-border-sm"
+        className="absolute -bottom-1 -right-1 bg-accent text-accent-foreground text-xs px-2 py-[2px] pixel-border-sm"
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.8, type: "spring" }}
@@ -121,7 +123,9 @@ function PixelAvatar() {
  */
 export function Hero8Bit() {
   const trpc = useTRPC();
-  const { data: viewCount } = useSuspenseQuery(trpc.homepage.getPageView.queryOptions());
+  const { data: viewCount } = useSuspenseQuery(
+    trpc.homepage.getPageView.queryOptions(),
+  );
   const incrementMutation = useMutation(
     trpc.homepage.incrementPageView.mutationOptions({
       onError(error) {
@@ -154,7 +158,7 @@ export function Hero8Bit() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <h1 className="text-primary text-base sm:text-xl md:text-2xl crt-glow mb-3 leading-relaxed">
+          <h1 className="text-primary text-xl sm:text-3xl md:text-4xl crt-glow mb-3 leading-relaxed">
             <TypewriterText text="WELCOME TO MY WORLD" delay={0.5} />
           </h1>
           <motion.div
@@ -163,7 +167,7 @@ export function Hero8Bit() {
             transition={{ delay: 1.8 }}
           >
             <p
-              className="text-muted-foreground text-[8px] sm:text-[10px] leading-relaxed"
+              className="text-muted-foreground text-sm sm:text-base leading-relaxed"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
               {">> "}WEB DEVELOPER | SOFTWARE ENGINEER | TECH ENTHUSIAST
@@ -189,21 +193,25 @@ export function Hero8Bit() {
           transition={{ delay: 2.3 }}
         >
           <motion.button
-            className="pixel-btn bg-primary text-primary-foreground px-5 py-2 text-[8px] sm:text-[10px]"
+            className="pixel-btn bg-primary text-primary-foreground px-6 py-2.5 text-sm sm:text-base"
             whileHover={{ scale: 1.05 }}
             whileTap={{ y: 2 }}
             onClick={() =>
-              document.getElementById("section-2")?.scrollIntoView({ behavior: "smooth" })
+              document
+                .getElementById("section-2")
+                ?.scrollIntoView({ behavior: "smooth" })
             }
           >
             {">"} VIEW SKILLS
           </motion.button>
           <motion.button
-            className="pixel-btn bg-accent text-accent-foreground px-5 py-2 text-[8px] sm:text-[10px]"
+            className="pixel-btn bg-accent text-accent-foreground px-6 py-2.5 text-sm sm:text-base"
             whileHover={{ scale: 1.05 }}
             whileTap={{ y: 2 }}
             onClick={() =>
-              document.getElementById("section-4")?.scrollIntoView({ behavior: "smooth" })
+              document
+                .getElementById("section-4")
+                ?.scrollIntoView({ behavior: "smooth" })
             }
           >
             {">"} VIEW PROJECTS
@@ -212,7 +220,7 @@ export function Hero8Bit() {
 
         {/* Blinking prompt */}
         <motion.p
-          className="mt-8 text-muted-foreground text-[7px] sm:text-[8px] typewriter-cursor inline-block pr-2"
+          className="mt-8 text-muted-foreground text-xs sm:text-sm typewriter-cursor inline-block pr-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2.8 }}

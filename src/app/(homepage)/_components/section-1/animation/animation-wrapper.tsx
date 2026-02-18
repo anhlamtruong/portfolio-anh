@@ -32,8 +32,8 @@ const AnimatedWrapper: React.FC<AnimatedWrapperProps> = ({
   return (
     <motion.div
       initial="hidden"
-      animate="visible"
-      exit="hidden" // Optional: Animate on unmount if used in routes
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.3 }}
       variants={variants || defaultVariants}
       className={cn(className)}
     >

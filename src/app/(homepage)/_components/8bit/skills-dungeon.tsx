@@ -40,7 +40,7 @@ function SkillTile({
         />
       </div>
       <span
-        className="text-[5px] sm:text-[7px] text-muted-foreground group-hover:text-primary transition-colors truncate max-w-[50px] text-center"
+        className="text-[11px] sm:text-sm text-muted-foreground group-hover:text-primary transition-colors truncate max-w-[70px] text-center"
         style={{ fontFamily: "var(--font-vt323), monospace" }}
       >
         {icon.name.toUpperCase()}
@@ -69,14 +69,14 @@ function DungeonFloor({
     >
       {/* Floor label */}
       <span
-        className="text-accent text-[7px] sm:text-[9px] w-8 sm:w-10 text-right shrink-0 crt-glow"
+        className="text-accent text-xs sm:text-sm w-10 sm:w-12 text-right shrink-0 crt-glow"
         style={{ fontFamily: "var(--font-vt323), monospace" }}
       >
         F{floorNumber}
       </span>
 
       {/* Separator */}
-      <span className="text-muted-foreground text-[8px]">│</span>
+      <span className="text-muted-foreground text-sm">│</span>
 
       {/* Skill tiles — grid on mobile, flex on desktop */}
       <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
@@ -100,7 +100,7 @@ function DungeonFloor({
 export function SkillsDungeon() {
   const trpc = useTRPC();
   const { data: logos } = useSuspenseQuery(
-    trpc.homepage.getLogos.queryOptions()
+    trpc.homepage.getLogos.queryOptions(),
   );
 
   // Fallback local icons
@@ -139,14 +139,14 @@ export function SkillsDungeon() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <p className="text-muted-foreground text-[8px] sm:text-[10px] mb-2">
+          <p className="text-muted-foreground text-sm sm:text-base mb-2">
             {"─── "}LEVEL 2{" ───"}
           </p>
-          <h2 className="text-primary text-sm sm:text-lg md:text-xl crt-glow mb-2">
+          <h2 className="text-primary text-lg sm:text-2xl md:text-3xl crt-glow mb-2">
             SKILLS DUNGEON
           </h2>
           <p
-            className="text-muted-foreground text-[7px] sm:text-[9px]"
+            className="text-muted-foreground text-xs sm:text-sm"
             style={{ fontFamily: "var(--font-vt323), monospace" }}
           >
             {">> "}TAP A SKILL TO INSPECT IT
@@ -167,22 +167,16 @@ export function SkillsDungeon() {
 
         {/* Stats bar */}
         <motion.div
-          className="mt-8 pixel-border bg-card/50 px-4 py-2 flex justify-between text-[7px] sm:text-[9px] max-w-sm mx-auto"
+          className="mt-8 pixel-border bg-card/50 px-4 py-2 flex justify-between text-xs sm:text-sm max-w-md mx-auto"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 1.5 }}
           style={{ fontFamily: "var(--font-vt323), monospace" }}
         >
-          <span className="text-accent">
-            SKILLS FOUND: {allIcons.length}
-          </span>
-          <span className="text-primary">
-            FLOORS: {floors.length}
-          </span>
-          <span className="text-secondary-foreground">
-            RANK: S+
-          </span>
+          <span className="text-accent">SKILLS FOUND: {allIcons.length}</span>
+          <span className="text-primary">FLOORS: {floors.length}</span>
+          <span className="text-secondary-foreground">RANK: S+</span>
         </motion.div>
       </CrtWrapper>
     </section>

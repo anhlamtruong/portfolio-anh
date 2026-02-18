@@ -25,12 +25,10 @@ function PixelLinkButton({
         className="pixel-border bg-card/60 hover:bg-primary/10 p-3 flex items-center gap-3 group transition-colors w-full"
       >
         <span className="text-base sm:text-lg shrink-0">{link.emoji}</span>
-        <span className="text-primary text-[8px] sm:text-[10px] group-hover:crt-glow flex-1">
+        <span className="text-primary text-sm sm:text-base group-hover:crt-glow flex-1">
           {link.title.toUpperCase()}
         </span>
-        <span
-          className="text-muted-foreground text-[8px] sm:text-[10px] group-hover:text-primary"
-        >
+        <span className="text-muted-foreground text-sm sm:text-base group-hover:text-primary">
           ▶
         </span>
       </Link>
@@ -82,14 +80,14 @@ export function Links8Bit() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <h1 className="text-primary text-sm sm:text-base crt-glow">
+          <h1 className="text-primary text-lg sm:text-xl crt-glow">
             LAM ANH TRUONG
           </h1>
         </motion.div>
 
         {/* Subtitle */}
         <motion.p
-          className="text-center text-muted-foreground text-[7px] sm:text-[9px] mb-4"
+          className="text-center text-muted-foreground text-xs sm:text-sm mb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -108,7 +106,7 @@ export function Links8Bit() {
           {TECH_TAGS.map((tech) => (
             <span
               key={tech}
-              className="text-[6px] sm:text-[7px] px-2 py-[2px] pixel-border-sm bg-card/60 text-accent"
+              className="text-xs sm:text-sm px-2 py-[2px] pixel-border-sm bg-card/60 text-accent"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
               {tech}
@@ -118,7 +116,7 @@ export function Links8Bit() {
 
         {/* Menu label */}
         <motion.p
-          className="text-center text-accent text-[7px] sm:text-[9px] mb-3"
+          className="text-center text-accent text-xs sm:text-sm mb-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
@@ -136,7 +134,7 @@ export function Links8Bit() {
 
         {/* Footer */}
         <motion.p
-          className="text-center text-muted-foreground text-[6px] sm:text-[7px] mt-6"
+          className="text-center text-muted-foreground text-xs sm:text-sm mt-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}

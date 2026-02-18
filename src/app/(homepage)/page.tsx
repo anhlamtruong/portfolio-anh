@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, Suspense } from "react";
 
-// import { BackgroundBeamsWithCollision } from "./(features)/homepage/ui/background-beams-with-collision";
 import { CertificatesSection } from "./_components/section-3/certificates-section";
 import { SnapSection } from "./_components/homepage/homepage-section";
 import { AboutMeSection } from "./_components/section-1/about-me-section";
@@ -14,11 +13,14 @@ import { ResumeSection } from "./_components/section-10/resume-section";
 import { useEditorStore } from "@/services/theme/store";
 import { LayoutModeToggle } from "./_components/8bit/layout-mode-toggle";
 import { EightBitLayout } from "./_components/8bit/eight-bit-layout";
+import { ScrollProgress } from "./_components/bento/scroll-progress";
 
 const StarsBackground = dynamic(
   () => import("./_components/homepage/stars-background"),
-  { ssr: false }
+  { ssr: false },
 );
+
+const SECTIONS = [1, 2, 3, 4, 10] as const;
 
 function useSectionSync() {
   const router = useRouter();
@@ -44,7 +46,7 @@ function useSectionSync() {
           }
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     document
@@ -54,19 +56,25 @@ function useSectionSync() {
     return () => obs.disconnect();
   }, [router]);
 
-  // 3) KEYBOARD NAV
+  // 3) KEYBOARD NAV — uses SECTIONS array to navigate between all sections
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const curr = Number(params.get("section")) || 1;
-      let next = curr;
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") next = curr + 1;
-      if (e.key === "ArrowUp" || e.key === "ArrowLeft") next = curr - 1;
-      next = Math.max(1, Math.min(next, 4)); // clamp between 1–4
-      if (next !== curr) {
+      const currIdx = SECTIONS.indexOf(curr as (typeof SECTIONS)[number]);
+      if (currIdx === -1) return;
+
+      let nextIdx = currIdx;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight")
+        nextIdx = Math.min(currIdx + 1, SECTIONS.length - 1);
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft")
+        nextIdx = Math.max(currIdx - 1, 0);
+
+      if (nextIdx !== currIdx) {
+        const nextSection = SECTIONS[nextIdx];
         document
-          .getElementById(`section-${next}`)
+          .getElementById(`section-${nextSection}`)
           ?.scrollIntoView({ behavior: "smooth" });
-        router.replace(`/?section=${next}`);
+        router.replace(`/?section=${nextSection}`);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -85,6 +93,7 @@ export default function Home() {
       ) : (
         <main className="relative w-screen h-screen overflow-hidden no-scrollbar">
           <StarsBackground />
+          <ScrollProgress />
           <HomeComponents />
         </main>
       )}
@@ -97,36 +106,36 @@ const HomeComponents = () => {
   return (
     <div className="relative z-10">
       <div className="flex items-center justify-center">
-        <div className=" no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full scroll-smooth">
+        <div className="no-scrollbar h-screen overflow-scroll snap-mandatory snap-y w-full scroll-smooth">
           <SnapSection
             id="section-1"
-            className="w-full bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+            className="w-full snap-center transition-all flex items-start justify-start"
           >
-            <AboutMeSection></AboutMeSection>
+            <AboutMeSection />
           </SnapSection>
           <SnapSection
             id="section-2"
-            className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+            className="snap-center transition-all flex items-start justify-start"
           >
-            <SkillsSection></SkillsSection>
+            <SkillsSection />
           </SnapSection>
           <SnapSection
             id="section-3"
-            className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+            className="snap-center transition-all flex items-start justify-start"
           >
-            <CertificatesSection></CertificatesSection>
+            <CertificatesSection />
           </SnapSection>
           <SnapSection
             id="section-4"
-            className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+            className="snap-center transition-all flex items-start justify-start"
           >
-            <ProjectSection></ProjectSection>
+            <ProjectSection />
           </SnapSection>
           <SnapSection
             id="section-10"
-            className="bg-black bg-opacity-10 snap-center transition-all flex items-start justify-start"
+            className="snap-center transition-all flex items-start justify-start"
           >
-            <ResumeSection></ResumeSection>
+            <ResumeSection />
           </SnapSection>
         </div>
       </div>

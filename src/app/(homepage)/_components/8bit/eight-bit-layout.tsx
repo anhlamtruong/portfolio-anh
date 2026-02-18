@@ -54,7 +54,7 @@ function SectionHUD({
           >
             {/* Label (visible on hover) */}
             <span
-              className="text-[6px] sm:text-[7px] text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+              className="text-xs sm:text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
               style={{ fontFamily: "var(--font-vt323), monospace" }}
             >
               {section.label}
@@ -157,7 +157,8 @@ export function EightBitLayout() {
     const onKey = (e: KeyboardEvent) => {
       const currIdx = SECTIONS.findIndex((s) => s.id === activeSection);
       let nextIdx = currIdx;
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") nextIdx = currIdx + 1;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight")
+        nextIdx = currIdx + 1;
       if (e.key === "ArrowUp" || e.key === "ArrowLeft") nextIdx = currIdx - 1;
       nextIdx = Math.max(0, Math.min(nextIdx, SECTIONS.length - 1));
       if (nextIdx !== currIdx) {
@@ -177,7 +178,10 @@ export function EightBitLayout() {
       </div>
 
       {/* Section Progress HUD */}
-      <SectionHUD activeSection={activeSection} onNavigate={navigateToSection} />
+      <SectionHUD
+        activeSection={activeSection}
+        onNavigate={navigateToSection}
+      />
 
       {/* Scrollable content */}
       <div

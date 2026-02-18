@@ -21,10 +21,7 @@ export function PixelTransition({ children }: { children: ReactNode }) {
 
   return (
     <AnimatePresence mode="wait">
-      <motion.div
-        key={pathname}
-        className="relative w-full h-full"
-      >
+      <motion.div key={pathname} className="relative w-full h-full">
         {/* Content */}
         <motion.div
           initial={{ opacity: 0 }}

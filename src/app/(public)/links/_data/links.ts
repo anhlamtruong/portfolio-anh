@@ -40,4 +40,10 @@ export const LINK_DATA = [
   },
 ] as const;
 
-export const TECH_TAGS = ["PYTHON", "TYPESCRIPT", "REACT", "NODE.JS", "GIT"] as const;
+export const TECH_TAGS = [
+  "PYTHON",
+  "TYPESCRIPT",
+  "REACT",
+  "NODE.JS",
+  "GIT",
+] as const;

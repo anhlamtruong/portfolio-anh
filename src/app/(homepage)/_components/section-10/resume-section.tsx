@@ -1,128 +1,168 @@
 "use client";
 
-import Link from "next/link";
-// 1. Import the new icons you'll need
-import { Download, GraduationCap, DollarSign } from "lucide-react";
+import { BentoGrid, BentoCard, BentoSection } from "../bento/bento-grid";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Download,
+  GraduationCap,
+  DollarSign,
+  ExternalLink,
+} from "lucide-react";
 import { FaCodeBranch } from "react-icons/fa";
 import { AiOutlineRobot } from "react-icons/ai";
 import { GrIntegration } from "react-icons/gr";
 import { IoIosPeople } from "react-icons/io";
 import { PiStudentFill } from "react-icons/pi";
-
-import { buttonVariants } from "@/components/ui/button";
-import AnimatedWrapper from "../section-1/animation/animation-wrapper";
+import Link from "next/link";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const RESUME_URL_PDF_PREVIEW = `https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da?toolbar=0&navpanes=0&scrollbar=0`;
 const RESUME_DOWNLOAD_URL = `https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da`;
 
-export const ResumeSection = () => {
-  return (
-    <div className="h-full w-full flex flex-col justify-start md:justify-center items-start p-8 md:p-12 lg:p-16 overflow-y-auto no-scrollbar">
-      <div className="w-full flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8">
-        <AnimatedWrapper>
-          <h1 className="text-white md:text-8xl sm:text-7xl text-4xl">
-            My Resume
-          </h1>
-        </AnimatedWrapper>
-        <AnimatedWrapper>
-          <Link
-            href={RESUME_DOWNLOAD_URL}
-            download="Truong_Resume.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              buttonVariants({ variant: "default" }),
-              "w-full md:w-auto"
-            )}
-          >
-            Download Resume
-            <Download className="ml-2 h-4 w-4" />
-          </Link>
-        </AnimatedWrapper>
-      </div>
+type Highlight = {
+  icon: React.ElementType;
+  color: string;
+  stat: string;
+  label: string;
+};
 
-      <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
-        <div className="lg:col-span-2 flex flex-col justify-center">
-          <h2 className="text-2xl md:text-3xl font-semibold text-white mb-6">
-            Key Highlights
-          </h2>
-          <ul className="list-none list-inside text-gray-300 text-md sm:text-lg md:text-xl leading-relaxed space-y-4">
-            <HighlightItem Icon={FaCodeBranch} color="text-teal-300">
-              Proficient in <strong>Python</strong>, <strong>C++</strong>,{" "}
-              <strong>Javascript</strong>, and <strong>React</strong>.
-            </HighlightItem>
-            <HighlightItem Icon={AiOutlineRobot} color="text-cyan-300">
-              Created an AI-powered FAQ chatbot for <strong>2K+</strong>{" "}
-              students and <strong>100+</strong> staff.
-            </HighlightItem>
-            <HighlightItem Icon={GrIntegration} color="text-indigo-300">
-              Led <strong>7 people</strong> to integrate job platforms for{" "}
-              <strong>10 clients</strong>, transferring <strong>500+</strong>{" "}
-              monthly jobs.
-            </HighlightItem>
-            <HighlightItem Icon={PiStudentFill} color="text-orange-300">
-              Tutored Data Structures & Algorithms (<strong>C++</strong>) for{" "}
-              <strong>300+</strong> students (<strong>80%</strong> pass rate).
-            </HighlightItem>
-            <HighlightItem Icon={DollarSign} color="text-lime-300">
-              My Cookit <strong>React</strong> project generated{" "}
-              <strong>$1K+</strong> revenue.
-            </HighlightItem>
-            <HighlightItem Icon={GraduationCap} color="text-blue-300">
-              <span className="font-semibold">Migrated:</span>{" "}
-              <strong>2K+</strong> student records with <strong>100%</strong>{" "}
-              accuracy
-            </HighlightItem>
-            <HighlightItem Icon={IoIosPeople} color="text-yellow-300">
-              <span className="font-semibold">Gained:</span>{" "}
-              <strong>1K+</strong> followers on Threads Tech
-            </HighlightItem>
-          </ul>
-        </div>
-        <div className="lg:col-span-3 h-full w-full hidden lg:block">
-          <div className="w-full h-full rounded-lg overflow-hidden border-2 border-gray-700/50">
+const HIGHLIGHTS: Highlight[] = [
+  {
+    icon: FaCodeBranch,
+    color: "text-teal-400",
+    stat: "4+",
+    label: "Languages (Python, C++, JS, React)",
+  },
+  {
+    icon: AiOutlineRobot,
+    color: "text-cyan-400",
+    stat: "2K+",
+    label: "Students served by AI chatbot",
+  },
+  {
+    icon: GrIntegration,
+    color: "text-indigo-400",
+    stat: "500+",
+    label: "Monthly jobs transferred",
+  },
+  {
+    icon: PiStudentFill,
+    color: "text-orange-400",
+    stat: "300+",
+    label: "Students tutored (80% pass rate)",
+  },
+  {
+    icon: DollarSign,
+    color: "text-lime-400",
+    stat: "$1K+",
+    label: "Revenue from Cookit project",
+  },
+  {
+    icon: GraduationCap,
+    color: "text-blue-400",
+    stat: "2K+",
+    label: "Student records migrated (100% accuracy)",
+  },
+  {
+    icon: IoIosPeople,
+    color: "text-yellow-400",
+    stat: "1K+",
+    label: "Followers on Threads Tech",
+  },
+];
+
+export const ResumeSection = () => {
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+
+  return (
+    <BentoSection
+      title="Resume"
+      subtitle="Experience highlights and achievements"
+      action={
+        <Link
+          href={RESUME_DOWNLOAD_URL}
+          download="Truong_Resume.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button className="gap-2">
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+        </Link>
+      }
+    >
+      <BentoGrid className="lg:grid-cols-4 auto-rows-[minmax(120px,auto)]">
+        {/* ── Stat highlight cards ── */}
+        {HIGHLIGHTS.map((h) => (
+          <BentoCard key={h.label} className="flex flex-col justify-center">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2 rounded-lg bg-muted/50", h.color)}>
+                <h.icon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-foreground">
+                  {h.stat}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+                  {h.label}
+                </p>
+              </div>
+            </div>
+          </BentoCard>
+        ))}
+
+        {/* ── PDF Preview (takes remaining space) ── */}
+        <BentoCard
+          colSpan="sm:col-span-2 lg:col-span-4"
+          rowSpan="row-span-2"
+          noHover
+          className="p-0 overflow-hidden hidden md:flex flex-col"
+        >
+          <div className="relative flex-1 min-h-0">
+            {!pdfLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="space-y-3 w-3/4 max-w-md">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-32 w-full mt-4" />
+                </div>
+              </div>
+            )}
             <iframe
               src={RESUME_URL_PDF_PREVIEW}
               title="Anh Truong's Resume"
               className="w-full h-full"
-              style={{ border: "none" }}
+              style={{ border: "none", minHeight: "400px" }}
               allow="fullscreen"
+              onLoad={() => setPdfLoaded(true)}
             />
           </div>
-        </div>
-      </div>
-    </div>
+        </BentoCard>
+
+        {/* ── Mobile: link to open PDF ── */}
+        <BentoCard
+          colSpan="sm:col-span-2"
+          noHover
+          className="flex md:hidden items-center justify-center"
+        >
+          <Link
+            href={RESUME_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="lg" className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              View Full Resume
+            </Button>
+          </Link>
+        </BentoCard>
+      </BentoGrid>
+    </BentoSection>
   );
 };
-
-// 3. Update HighlightItem to accept an Icon component
-const HighlightItem = ({
-  children,
-  color,
-  Icon, // Add Icon prop
-}: {
-  children: React.ReactNode;
-  color: string;
-  Icon?: React.ElementType;
-}) => (
-  <li className="flex items-start gap-3">
-    {Icon ? (
-      <Icon className={cn("flex-shrink-0 w-5 h-5 mt-1", color)} />
-    ) : (
-      <svg
-        className={cn("flex-shrink-0 w-5 h-5 mt-1.5", color)}
-        fill="currentColor"
-        viewBox="0 0 20 20"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          fillRule="evenodd"
-          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-          clipRule="evenodd"
-        ></path>
-      </svg>
-    )}
-    <span>{children}</span>
-  </li>
-);

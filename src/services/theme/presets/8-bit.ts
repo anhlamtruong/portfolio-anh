@@ -63,10 +63,8 @@ export const eightBitPreset: ThemePreset = {
       "sidebar-ring": "#39ff14",
 
       // ── Typography ──
-      "font-sans":
-        "'Press Start 2P', 'VT323', ui-monospace, monospace",
-      "font-serif":
-        "'Press Start 2P', 'VT323', ui-monospace, monospace",
+      "font-sans": "'Press Start 2P', 'VT323', ui-monospace, monospace",
+      "font-serif": "'Press Start 2P', 'VT323', ui-monospace, monospace",
       "font-mono": "'VT323', 'Press Start 2P', ui-monospace, monospace",
 
       // ── Shape ──

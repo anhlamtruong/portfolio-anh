@@ -8,7 +8,7 @@ import { defaultPresets } from "./built-in";
  * Use this for server-side code where store access is not available.
  */
 export function getBuiltInThemeStyles(
-  name: string
+  name: string,
 ): { name: string; styles: ThemeStyles } | null {
   const preset = defaultPresets[name];
   if (!preset) {

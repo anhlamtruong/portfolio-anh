@@ -70,14 +70,30 @@ function createBuildings(
  * Renders at low internal resolution for authentic 8-bit look,
  * then scaled up via CSS image-rendering: pixelated.
  */
-function PixelCityscapeInner({ scrollProgress = 0 }: { scrollProgress?: number }) {
+function PixelCityscapeInner({
+  scrollProgress = 0,
+}: {
+  scrollProgress?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starsRef = useRef<Star[]>(createStars());
   const farBuildingsRef = useRef<Building[]>(
-    createBuildings(BUILDING_COUNT_FAR, 20, 55, ["#1a1040", "#1e1250", "#251560", "#16103a"], false),
+    createBuildings(
+      BUILDING_COUNT_FAR,
+      20,
+      55,
+      ["#1a1040", "#1e1250", "#251560", "#16103a"],
+      false,
+    ),
   );
   const nearBuildingsRef = useRef<Building[]>(
-    createBuildings(BUILDING_COUNT_NEAR, 35, 90, ["#0d0d1a", "#141428", "#1a1a30"], true),
+    createBuildings(
+      BUILDING_COUNT_NEAR,
+      35,
+      90,
+      ["#0d0d1a", "#141428", "#1a1a30"],
+      true,
+    ),
   );
   const animFrameRef = useRef<number>(0);
   const lastFrameTimeRef = useRef(0);
@@ -129,9 +145,15 @@ function PixelCityscapeInner({ scrollProgress = 0 }: { scrollProgress?: number }
       for (const star of stars) {
         const alpha =
           star.brightness *
-          (0.5 + 0.5 * Math.sin(timeSec * star.twinkleSpeed + star.twinkleOffset));
+          (0.5 +
+            0.5 * Math.sin(timeSec * star.twinkleSpeed + star.twinkleOffset));
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha.toFixed(2)})`;
-        ctx.fillRect(Math.floor(star.x), Math.floor(star.y), star.size, star.size);
+        ctx.fillRect(
+          Math.floor(star.x),
+          Math.floor(star.y),
+          star.size,
+          star.size,
+        );
       }
 
       // Parallax offsets
@@ -141,19 +163,29 @@ function PixelCityscapeInner({ scrollProgress = 0 }: { scrollProgress?: number }
       // ── Far buildings (silhouettes) ──
       const groundY = H * 0.65;
       for (const b of farBuildingsRef.current) {
-        const bx = ((b.x - farOffset) % (W + 40) + W + 40) % (W + 40) - 20;
+        const bx = ((((b.x - farOffset) % (W + 40)) + W + 40) % (W + 40)) - 20;
         ctx.fillStyle = b.color;
-        ctx.fillRect(Math.floor(bx), Math.floor(groundY - b.height), b.width, b.height + 40);
+        ctx.fillRect(
+          Math.floor(bx),
+          Math.floor(groundY - b.height),
+          b.width,
+          b.height + 40,
+        );
       }
 
       // ── Ground strip ──
       ctx.fillStyle = "#0d0d1a";
-      ctx.fillRect(0, Math.floor(groundY + 25), W, H - Math.floor(groundY + 25));
+      ctx.fillRect(
+        0,
+        Math.floor(groundY + 25),
+        W,
+        H - Math.floor(groundY + 25),
+      );
 
       // ── Near buildings with windows ──
       const nearGroundY = H * 0.72;
       for (const b of nearBuildingsRef.current) {
-        const bx = ((b.x - nearOffset) % (W + 40) + W + 40) % (W + 40) - 20;
+        const bx = ((((b.x - nearOffset) % (W + 40)) + W + 40) % (W + 40)) - 20;
         const by = Math.floor(nearGroundY - b.height);
         ctx.fillStyle = b.color;
         ctx.fillRect(Math.floor(bx), by, b.width, b.height + 60);
@@ -164,7 +196,8 @@ function PixelCityscapeInner({ scrollProgress = 0 }: { scrollProgress?: number }
           const flicker = Math.sin(timeSec * 3 + w.wx * 7 + w.wy * 11) > 0.85;
           ctx.fillStyle = flicker ? "#ffcc00" : "#ffaa00";
           // Deterministic occasional dark window (replaces Math.random())
-          const darkCycle = Math.sin(timeSec * 0.5 + w.wx * 13 + w.wy * 17) > 0.995;
+          const darkCycle =
+            Math.sin(timeSec * 0.5 + w.wx * 13 + w.wy * 17) > 0.995;
           if (!darkCycle) {
             ctx.fillRect(Math.floor(bx + w.wx), by + w.wy, 3, 3);
           }
