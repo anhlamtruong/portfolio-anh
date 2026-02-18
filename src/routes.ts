@@ -6,6 +6,7 @@
 export const publicRoutes = [
   "/",
   "/links",
+  "/theme-editor",
   "/auth/new-verification",
   "/creata",
 ];

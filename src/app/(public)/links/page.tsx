@@ -20,6 +20,8 @@ import {
   SiGit,
   SiPython,
 } from "react-icons/si";
+import { useEditorStore } from "@/services/theme";
+import { Links8Bit } from "./links-8bit";
 
 const links = [
   {
@@ -78,6 +80,12 @@ const itemVariants = {
 };
 
 const LinkPage = () => {
+  const layoutMode = useEditorStore((s) => s.themeState.layoutMode);
+
+  if (layoutMode === "8bit") {
+    return <Links8Bit />;
+  }
+
   return (
     <div className="overflow-scroll flex flex-col items-center justify-start min-h-screen bg-gray-100 dark:bg-gray-900 p-4 pt-24 md:pt-8">
       <div className="overflow-scroll w-full max-w-md mx-auto text-center">

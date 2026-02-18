@@ -39,6 +39,10 @@ const NavBar = () => {
           {" "}
           <Link href={"/sassy_authy/settings"}>Settings</Link>
         </Button>
+        <Button variant={pathname === "/theme-editor" ? "default" : "outline"}>
+          {" "}
+          <Link href={"/theme-editor"}>Theme Editor</Link>
+        </Button>
 
         {/* <ThemeSwitcher></ThemeSwitcher> */}
       </div>

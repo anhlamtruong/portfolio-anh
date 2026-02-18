@@ -11,6 +11,10 @@ import { SkillsSection } from "./_components/section-2/skills-section";
 import { ProjectSection } from "./_components/section-4/projects-section";
 import dynamic from "next/dynamic";
 import { ResumeSection } from "./_components/section-10/resume-section";
+import { useEditorStore } from "@/services/theme/store";
+import { LayoutModeToggle } from "./_components/8bit/layout-mode-toggle";
+import { EightBitLayout } from "./_components/8bit/eight-bit-layout";
+
 const StarsBackground = dynamic(
   () => import("./_components/homepage/stars-background"),
   { ssr: false }
@@ -71,11 +75,20 @@ function useSectionSync() {
 }
 
 export default function Home() {
+  const layoutMode = useEditorStore((s) => s.themeState.layoutMode ?? "modern");
+
   return (
-    <main className="relative w-screen h-screen overflow-hidden no-scrollbar">
-      <StarsBackground />
-      <HomeComponents></HomeComponents>
-    </main>
+    <>
+      <LayoutModeToggle />
+      {layoutMode === "8bit" ? (
+        <EightBitLayout />
+      ) : (
+        <main className="relative w-screen h-screen overflow-hidden no-scrollbar">
+          <StarsBackground />
+          <HomeComponents />
+        </main>
+      )}
+    </>
   );
 }
 
