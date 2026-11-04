@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { timestampToDate } from "./utils";
-import { db } from "@/services/firebase/service-provider";
+import { getFirestoreAdmin } from "@/services/firebase/firebase-admin";
 import { CreataAccountUpdateInput } from "../_types";
+
+// `users` and `usernames` are denied to client SDKs by firestore.rules,
+// so everything here goes through the Admin SDK on the server.
 
 export interface UserProps {
   id: string;
@@ -23,17 +26,15 @@ export class FirebasePrivateCreataClient {
       if (!id) {
         throw new Error("FIREBASE_USER_SERVICE_GET_USER_BY_ID: ID is required");
       }
-      console.log(`ID provided: ${id}`);
-      const docRef = doc(db, "users", id);
+      const db = await getFirestoreAdmin();
+      const snapshot = await db.collection("users").doc(id).get();
 
-      const snapshot = await getDoc(docRef);
-
-      if (!snapshot.exists())
+      if (!snapshot.exists)
         throw new Error(
           "FIREBASE_USER_SERVICE_GET_USER_BY_ID: Document not found"
         );
 
-      const data = snapshot.data();
+      const data = snapshot.data() ?? {};
       return {
         ...(data as UserProps),
         id: snapshot.id,
@@ -58,15 +59,16 @@ export class FirebasePrivateCreataClient {
       if (!id) {
         throw new Error("FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: ID not found");
       }
-      const docRef = doc(db, "users", id);
+      const db = await getFirestoreAdmin();
+      const docRef = db.collection("users").doc(id);
 
-      const snapshot = await getDoc(docRef);
-      if (!snapshot.exists()) {
+      const snapshot = await docRef.get();
+      if (!snapshot.exists) {
         throw new Error(
           "FIREBASE_USER_SERVICE_UPDATE_ACCOUNT: Document not found"
         );
       }
-      const data = snapshot.data() as UserProps;
+      const data = snapshot.data() as UserProps | undefined;
 
       if (!data) {
         throw new Error(
@@ -79,20 +81,13 @@ export class FirebasePrivateCreataClient {
       console.log(`Updating username: ${updateData?.username}`);
 
       if (updateData?.username) {
-        const updateUsernameUserIDRef = doc(
-          db,
-          "usernames",
-          updateData.username
-        );
-        const updateUsernameUserIDSnapshot = await getDoc(
-          updateUsernameUserIDRef
-        );
-        console.log(updateUsernameUserIDSnapshot);
-        const data = updateUsernameUserIDSnapshot.data();
-        console.log(updateUsernameUserIDSnapshot.data());
-        console.log(id);
+        const usernameSnapshot = await db
+          .collection("usernames")
+          .doc(updateData.username)
+          .get();
+        const usernameData = usernameSnapshot.data();
 
-        const isExisted = data && data.userId !== id;
+        const isExisted = usernameData && usernameData.userId !== id;
 
         if (isExisted) {
           throw new Error(
@@ -101,9 +96,9 @@ export class FirebasePrivateCreataClient {
         }
       }
 
-      return await updateDoc(docRef, {
+      await docRef.update({
         ...updateData,
-        updatedAt: serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error(
