@@ -13,10 +13,11 @@ import { baseProcedure, createTRPCRouter } from "../_trpc/init";
 export const HomePageRouter = createTRPCRouter({
   getLogos: baseProcedure.query(async () => {
     try {
-      const logos = await getLogosFromStorage();
-      return logos;
+      return await getLogosFromStorage();
     } catch (error) {
       console.error("[LOGOS_GET]", error);
+      // Never return undefined: the UI falls back to local icons on [].
+      return [];
     }
   }),
   getAndIncrementView: baseProcedure.mutation(async () => {
