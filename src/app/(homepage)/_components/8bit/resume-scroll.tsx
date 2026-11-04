@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CrtWrapper } from "./crt-wrapper";
 
 const RESUME_DOWNLOAD_URL =
-  "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da";
+  "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media";
 
 // ── Highlight data (mirrored from resume-section.tsx) ──
 const highlights = [

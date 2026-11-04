@@ -116,7 +116,7 @@ export const AboutMeSection = () => {
             </Button>
           </Link>
           <Link
-            href="https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=bf26ad57-f9f1-42fe-acde-265b3bebd3da"
+            href="https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media"
             target="_blank"
           >
             <Button variant="outline" className="w-full gap-2" size="lg">

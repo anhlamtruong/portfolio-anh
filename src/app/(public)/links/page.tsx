@@ -42,7 +42,7 @@ const links = [
   },
   {
     title: "Resume",
-    url: "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media&token=400de9c9-c5b3-4ac5-bc70-032c1d316b16",
+    url: "https://firebasestorage.googleapis.com/v0/b/lam-anh-truong-portfolio.firebasestorage.app/o/portfolio%2FTruong_Resume.pdf?alt=media",
     icon: FaFileAlt,
   },
   {
