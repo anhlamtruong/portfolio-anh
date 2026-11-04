@@ -1,12 +1,24 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+// Public, read-only assets for the portfolio site.
+// Files are uploaded from the Firebase Console, so the app never writes here.
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Skill logos listed on the homepage
+    match /logos/{allPaths=**} {
+      allow read;
     }
+
+    // Resume and transcript PDFs linked from the site
+    match /portfolio/{allPaths=**} {
+      allow read;
+    }
+
+    // Videos and fonts used by Creata components
+    match /creata/{allPaths=**} {
+      allow read;
+    }
+
+    // Anything not matched above (including all writes) is denied.
   }
 }
