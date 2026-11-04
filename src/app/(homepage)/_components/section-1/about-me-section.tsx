@@ -55,7 +55,7 @@ export const AboutMeSection = () => {
           className="flex flex-col items-center justify-center text-center gap-4"
         >
           <Avatar className="h-24 w-24 md:h-32 md:w-32 ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
-            <AvatarImage src="/assets/img/avatar.jpg" alt="Lam Anh Truong" />
+            <AvatarImage src="/assets/img/ava.jpg" alt="Lam Anh Truong" />
             <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
               LA
             </AvatarFallback>
