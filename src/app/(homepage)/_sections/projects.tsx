@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { projects, type Project } from "@/content/profile";
 import { CrossMark, DimLine } from "./decor";
+import { LoopVideo } from "./loop-video";
+import { ScrambleText } from "./fx/scramble-text";
 import { AgentGraphArt, ExternalArrow, SectionHeader } from "./shared";
 
 function ProjectLinks({ links }: { links: Project["links"] }) {
@@ -15,7 +17,7 @@ function ProjectLinks({ links }: { links: Project["links"] }) {
           rel="noopener noreferrer"
           className="bp-link inline-flex items-center gap-1"
         >
-          {link.label}
+          <ScrambleText>{link.label}</ScrambleText>
           <ExternalArrow className="h-3.5 w-3.5" />
         </a>
       ))}
@@ -36,9 +38,19 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
         data-build-item
         data-build="image"
         data-build-from={index % 2 === 0 ? "left" : "right"}
+        {...(project.video ? { "data-build-label": `${project.video}.mp4` } : {})}
         className="relative aspect-[16/10] overflow-hidden border-b border-[color:var(--bp-line)] bg-[#0a0e15]"
       >
-        {project.image ? (
+        {project.video ? (
+          <LoopVideo
+            name={project.video}
+            label={`${project.title}: animated preview`}
+            width={1280}
+            height={800}
+            toggle
+            className="h-full w-full"
+          />
+        ) : project.image ? (
           <Image
             src={project.image}
             alt={`${project.title} screenshot`}

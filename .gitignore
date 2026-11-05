@@ -51,3 +51,10 @@ lam-anh-truong-portfolio-3a36859c3caa.json
 cors.json
 dependency.txt
 
+
+# HyperFrames video sources (video/<name>/): renders, snapshots and caches stay local;
+# the encoded files the site loads live in public/videos/.
+/video/*/renders/
+/video/*/snapshots/
+/video/*/node_modules/
+/video/*/.hyperframes/

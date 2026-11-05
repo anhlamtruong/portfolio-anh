@@ -353,6 +353,19 @@ function hsv([r, g, b]: number[]): number[] {
 
 const px = (v: string) => Number.parseFloat(v) || 0;
 
+// Poster frames of looping clips, loaded once (same URL as the <video>, so cached).
+const posters = new Map<string, HTMLImageElement>();
+function posterImage(url: string): HTMLImageElement {
+  let img = posters.get(url);
+  if (!img) {
+    img = new Image();
+    img.decoding = "async";
+    img.src = url;
+    posters.set(url, img);
+  }
+  return img;
+}
+
 /** "ava.jpg" from a plain or next/image URL (build hashes stripped). */
 function fileName(img: HTMLImageElement): string {
   try {
@@ -396,12 +409,15 @@ function measureStyle(t: Task, cs: CSSStyleDeclaration): void {
       }
     }
   } else if (t.kind === "image") {
-    const img = t.el instanceof HTMLImageElement ? t.el : t.el.querySelector("img");
+    let img = t.el instanceof HTMLImageElement ? t.el : t.el.querySelector("img");
+    // A looping clip: the dragged-in card shows its poster frame.
+    const video = img ? null : t.el.querySelector<HTMLVideoElement>("video[poster]");
+    if (video) img = posterImage(video.poster);
     t.img = img;
     if (!t.el.dataset.buildLabel && img) t.logName = fileName(img) || t.label;
     t.alt = img?.alt || t.el.getAttribute("aria-label") || t.el.querySelector("[aria-label]")?.getAttribute("aria-label") || t.label;
     if (img) {
-      const ics = getComputedStyle(img);
+      const ics = getComputedStyle(video ?? img);
       t.fit = ics.objectFit;
       const [x, y] = ics.objectPosition.split(" ");
       t.pos = [frac(x, 0.5), frac(y, 0.5)];

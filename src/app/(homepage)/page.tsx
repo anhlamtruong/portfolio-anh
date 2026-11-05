@@ -10,6 +10,8 @@ import { Skills } from "./_sections/skills";
 import { Credentials } from "./_sections/credentials";
 import { Contact, SiteFooter } from "./_sections/contact";
 import { Parallax } from "./_sections/parallax";
+import { FxRoot } from "./_sections/fx/fx-root";
+import { VideoBand } from "./_sections/video-band";
 import { displaySerif } from "./_sections/fonts";
 
 // Fully static: rendered at build time and refreshed once a day (for the
@@ -32,12 +34,23 @@ export default async function HomePage() {
       <main id="main">
         <Hero />
         <Experience />
+        <VideoBand
+          name="band-pipeline"
+          reel="reel 01 · pipeline"
+          caption="plan → code → test → review → ship"
+        />
         <Projects />
+        <VideoBand
+          name="band-trace"
+          reel="reel 02 · trace"
+          caption="every span, every agent, end to end"
+        />
         <Skills logos={logos} />
         <Credentials />
         <Contact />
       </main>
       <SiteFooter />
+      <FxRoot />
       <Parallax />
       <SwarmRoot />
     </div>

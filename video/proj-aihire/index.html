@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=800" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/GeistVF.woff") format("woff"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMonoVF.woff") format("woff"); font-weight: 100 900; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Regular.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); }
+
+      :root {
+        --ground: #07090d;
+        --panel: #0c1017;
+        --line: #1c2431;
+        --line-strong: #2a3546;
+        --text: #e8edf4;
+        --muted: #8a97a8;
+        --dim: #5b6676;
+        --accent: #5eead4;
+        --triage: #60a5fa;
+        --screen: #a78bfa;
+        --risk: #fbbf24;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1280px; height: 800px; overflow: hidden; background: var(--ground); }
+      #root {
+        position: relative;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: var(--ground);
+        font-family: "Geist", sans-serif;
+        color: var(--text);
+      }
+
+      /* ---- shared frame language (all four project clips) ---- */
+      #grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(to right, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+          linear-gradient(to right, rgba(120, 140, 170, 0.035) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(120, 140, 170, 0.035) 1px, transparent 1px);
+        background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+      }
+      #foot { position: absolute; left: 40px; right: 40px; top: 736px; height: 64px; }
+      #foot-rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 10px;
+        border-top: 1px solid var(--line-strong);
+        background-image:
+          repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 80px),
+          repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px 20px);
+        background-size: 100% 10px, 100% 5px;
+        background-repeat: no-repeat;
+      }
+      #foot-tag {
+        position: absolute;
+        left: 0;
+        top: 22px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Geist Mono", monospace;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #foot-tag .idx { color: var(--accent); }
+      #foot-tag .sep { color: var(--dim); }
+      #foot-readout {
+        position: absolute;
+        right: 0;
+        top: 24px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      /* ---- recruiter agent: three stage gates ---- */
+      #dim-line {
+        position: absolute;
+        left: 330px;
+        top: 112px;
+        width: 620px;
+        height: 24px;
+      }
+      #dim-line .rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 12px;
+        border-top: 1px solid var(--line-strong);
+      }
+      #dim-line .tick {
+        position: absolute;
+        top: 4px;
+        width: 1px;
+        height: 17px;
+        background: var(--muted);
+      }
+      #dim-line .lbl {
+        position: absolute;
+        left: 50%;
+        top: -2px;
+        transform: translateX(-50%);
+        padding: 0 14px;
+        background: var(--ground);
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #dim-line .lbl b { color: var(--text); font-weight: 500; }
+      .gate {
+        position: absolute;
+        top: 236px;
+        width: 2px;
+        height: 470px;
+        margin-left: -1px;
+        background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 6px, transparent 6px 13px);
+      }
+      .gate-lit {
+        position: absolute;
+        inset: 0;
+        background: currentColor;
+        opacity: 0;
+        box-shadow: 0 0 12px currentColor;
+      }
+      .agent {
+        position: absolute;
+        top: 156px;
+        width: 236px;
+        height: 80px;
+        margin-left: -118px;
+        padding: 12px 18px;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+      }
+      .agent .glow {
+        position: absolute;
+        inset: -1px;
+        border-radius: 14px;
+        border: 1.5px solid currentColor;
+        box-shadow: 0 0 22px -4px currentColor;
+        opacity: 0;
+      }
+      .agent .name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Geist", sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .agent .name i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); display: block; }
+      .agent .st {
+        margin-top: 4px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      #stack {
+        position: absolute;
+        left: -276px;
+        top: 284px;
+        width: 480px;
+        height: 396px;
+      }
+      .ghost {
+        position: absolute;
+        inset: 0;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .ghost .g-h { position: absolute; left: 24px; top: 30px; width: 130px; height: 18px; border-radius: 9px; background: #161d29; }
+      .ghost .g-id {
+        position: absolute; left: 300px; top: 22px;
+        font-family: "Geist Mono", monospace; font-size: 26px; color: var(--muted);
+      }
+      .ghost .g-c { position: absolute; left: 24px; height: 38px; border-radius: 19px; background: #161d29; }
+      .ghost .g-r { position: absolute; left: 270px; width: 180px; height: 8px; border-radius: 4px; background: #161d29; }
+      .ghost .g-s {
+        position: absolute; left: 24px; right: 24px; top: 312px; height: 58px;
+        border: 1px solid var(--line-strong); border-radius: 10px;
+        display: flex; align-items: center; justify-content: flex-end; padding-right: 36px;
+        font-family: "Geist Mono", monospace; font-size: 24px; color: var(--muted);
+      }
+      #inbound-lbl {
+        position: absolute;
+        left: 40px;
+        top: 692px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      /* ---- candidate card ---- */
+      .card {
+        position: absolute;
+        left: 0;
+        top: 284px;
+        width: 480px;
+        height: 396px;
+        margin-left: -240px;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .card .edge {
+        position: absolute;
+        inset: -1px;
+        border-radius: 14px;
+        border: 1.5px solid var(--accent);
+        box-shadow: 0 0 34px -8px rgba(94, 234, 212, 0.55);
+        opacity: 0;
+      }
+      .card .hdr {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        top: 22px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .card .cid {
+        font-family: "Geist Mono", monospace;
+        font-size: 26px;
+        font-weight: 500;
+        color: var(--text);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .card .cid span { color: var(--muted); }
+      .card .anon {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .card .chips {
+        position: absolute;
+        left: 24px;
+        top: 72px;
+        height: 38px;
+        display: flex;
+        gap: 10px;
+      }
+      .chipwrap { position: relative; height: 38px; }
+      .chip {
+        height: 38px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        border-radius: 19px;
+        background: #121925;
+        border: 1px solid var(--line-strong);
+        font-size: 22px;
+        font-weight: 500;
+        color: #c9d3df;
+        white-space: nowrap;
+      }
+      .skel {
+        position: absolute;
+        inset: 0;
+        border-radius: 19px;
+        background: #161d29;
+      }
+      .card .div {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        top: 128px;
+        border-top: 1px solid var(--line);
+      }
+      .row {
+        position: absolute;
+        left: 24px;
+        width: 290px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .row .rl {
+        width: 86px;
+        flex-shrink: 0;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .row .track {
+        width: 92px;
+        flex-shrink: 0;
+        height: 8px;
+        border-radius: 4px;
+        background: var(--line);
+        overflow: hidden;
+      }
+      .row .fill {
+        width: 100%;
+        height: 100%;
+        border-radius: 4px;
+        background: currentColor;
+        transform-origin: 0 50%;
+      }
+      .row .res {
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .ring {
+        position: absolute;
+        right: 22px;
+        top: 142px;
+        width: 140px;
+        height: 140px;
+      }
+      .ring svg { position: absolute; inset: 0; }
+      .ring .val {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 34px;
+        text-align: center;
+        font-family: "Geist Mono", monospace;
+        font-size: 44px;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+      }
+      .ring .val small { font-size: 24px; color: var(--muted); letter-spacing: 0; }
+      .ring .cap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 84px;
+        text-align: center;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+      }
+      .status {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        top: 312px;
+        height: 58px;
+        border-radius: 10px;
+        border: 1px solid var(--line-strong);
+        overflow: hidden;
+      }
+      .status .sfill {
+        position: absolute;
+        inset: 0;
+        background: var(--accent);
+        transform-origin: 0 50%;
+      }
+      .status .stxt {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-family: "Geist Mono", monospace;
+        font-size: 24px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .scan {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 90px;
+        opacity: 0;
+      }
+      .scan .beam {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: currentColor;
+        box-shadow: 0 0 14px 2px currentColor;
+      }
+      .scan .trail {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to bottom, transparent, currentColor);
+        opacity: 0.12;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="6"
+      data-width="1280"
+      data-height="800"
+    >
+      <div id="grid"></div>
+
+      <div id="dim-line">
+        <div class="rule"></div>
+        <div class="tick" style="left: 0"></div>
+        <div class="tick" style="left: 310px"></div>
+        <div class="tick" style="right: 0"></div>
+        <div class="lbl"><b>recruiter agent</b> · 3 checks</div>
+      </div>
+
+      <div id="gate-1" class="gate" style="left: 330px; color: var(--triage)"><div class="gate-lit"></div></div>
+      <div id="gate-2" class="gate" style="left: 640px; color: var(--screen)"><div class="gate-lit"></div></div>
+      <div id="gate-3" class="gate" style="left: 950px; color: var(--risk)"><div class="gate-lit"></div></div>
+
+      <div id="agent-1" class="agent" style="left: 330px; color: var(--triage); --c: var(--triage)">
+        <div class="glow"></div>
+        <div class="name"><i></i>triage</div>
+        <div class="st">idle</div>
+      </div>
+      <div id="agent-2" class="agent" style="left: 640px; color: var(--screen); --c: var(--screen)">
+        <div class="glow"></div>
+        <div class="name"><i></i>micro-screen</div>
+        <div class="st">idle</div>
+      </div>
+      <div id="agent-3" class="agent" style="left: 950px; color: var(--risk); --c: var(--risk)">
+        <div class="glow"></div>
+        <div class="name"><i></i>risk check</div>
+        <div class="st">idle</div>
+      </div>
+
+      <div id="stack" data-layout-ignore>
+        <div class="ghost" style="transform: translate(-28px, -24px); opacity: 0.35"></div>
+        <div class="ghost" style="transform: translate(-14px, -12px); opacity: 0.6"></div>
+        <div class="ghost top">
+          <div class="g-h"></div><div class="g-id">#····</div>
+          <div class="g-c" style="top: 72px; width: 96px"></div><div class="g-c" style="top: 72px; left: 130px; width: 64px"></div>
+          <div class="g-r" style="top: 162px"></div><div class="g-r" style="top: 214px"></div><div class="g-r" style="top: 266px"></div>
+          <div class="g-s">queued</div>
+        </div>
+      </div>
+      <div id="cards" data-layout-allow-overflow></div>
+
+      <div id="foot">
+        <div id="foot-rule"></div>
+        <div id="foot-tag">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 1v16M1 9h16" stroke="#5b6676" stroke-width="1.5" /><circle cx="9" cy="9" r="4" fill="none" stroke="#5eead4" stroke-width="1.5" /></svg>
+          <span><span class="idx">02</span><span class="sep"> / </span>ai-hire-ai</span>
+        </div>
+        <div id="foot-readout">recruiter agent ⇄ candidate agent</div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var LOOP = 6;
+        var STACK_X = -36;     // inbound queue (candidate agent side)
+        var GATES = [330, 640, 950];
+        var COLORS = ["#60a5fa", "#a78bfa", "#fbbf24"];
+        var TINTS = ["#93c5fd", "#c4b5fd", "#fcd34d"]; // lighter role tints for small status text
+        var ID = "0412";
+        var STAGES = [
+          // card arrives, agent works (scan + score), result word, match after this stage
+          { name: "triage", start: 0.7, end: 1.7, score: 0.84, res: "fit", match: 31 },
+          { name: "screen", start: 2.25, end: 3.25, score: 0.9, res: "pass", match: 63 },
+          { name: "risk", start: 3.8, end: 4.8, score: 1.0, res: "clear", match: 92 },
+        ];
+        var SHORTLIST = 4.8;  // status fills, card lights up
+        var EXIT = 5.95;       // leaves to the right
+        var PHASE = 5.45;      // card life time shown at t = 0 (poster: just shortlisted)
+
+        // ---------- build two identical cards (the one leaving, the one arriving) ----------
+        function cardHTML(k) {
+          var rows = STAGES.map(function (s, i) {
+            return (
+              '<div class="row" style="top:' + (146 + i * 52) + 'px;color:' + COLORS[i] + '">' +
+              '<div class="rl">' + s.name + '</div>' +
+              '<div class="track"><div class="fill" id="' + k + '-fill-' + i + '"></div></div>' +
+              '<div class="res" id="' + k + '-res-' + i + '">' + s.res + ' ✓</div></div>'
+            );
+          }).join("");
+          var chips = ["Python", "AWS", "LLM agents"].map(function (c, i) {
+            return '<div class="chipwrap"><div class="chip" id="' + k + '-chip-' + i + '">' + c + '</div><div class="skel" id="' + k + '-skel-' + i + '"></div></div>';
+          }).join("");
+          return (
+            '<div class="card" id="' + k + '-card">' +
+            '<div class="edge" id="' + k + '-edge"></div>' +
+            '<div class="hdr"><div class="cid"><span>candidate </span><span id="' + k + '-hash">#</span><b id="' + k + '-id" style="font-weight:500">0412</b></div>' +
+            '<div class="anon"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2.5" y="7" width="11" height="7.5" rx="1.5" fill="none" stroke="#8a97a8" stroke-width="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="#8a97a8" stroke-width="1.5"/></svg>anon</div></div>' +
+            '<div class="chips">' + chips + '</div>' +
+            '<div class="div"></div>' +
+            rows +
+            '<div class="ring"><svg viewBox="0 0 140 140"><circle cx="70" cy="70" r="60" fill="none" stroke="#1c2431" stroke-width="10"/>' +
+            '<circle id="' + k + '-arc" cx="70" cy="70" r="60" fill="none" stroke="#5eead4" stroke-width="10" stroke-linecap="round" transform="rotate(-90 70 70)" pathLength="100" stroke-dasharray="0 100"/></svg>' +
+            '<div class="val" id="' + k + '-val">0<small>%</small></div><div class="cap">match</div></div>' +
+            '<div class="status"><div class="sfill" id="' + k + '-sfill"></div><div class="stxt" id="' + k + '-stxt">queued</div></div>' +
+            '<div class="scan" id="' + k + '-scan"><div class="trail"></div><div class="beam"></div></div>' +
+            "</div>"
+          );
+        }
+        var host = document.getElementById("cards");
+        host.innerHTML = cardHTML("a") + cardHTML("b");
+
+        function $(id) { return document.getElementById(id); }
+        var cards = ["a", "b"].map(function (k) {
+          return {
+            card: $(k + "-card"), edge: $(k + "-edge"), id: $(k + "-id"), arc: $(k + "-arc"),
+            val: $(k + "-val"), sfill: $(k + "-sfill"), stxt: $(k + "-stxt"), scan: $(k + "-scan"),
+            fills: [0, 1, 2].map(function (i) { return $(k + "-fill-" + i); }),
+            res: [0, 1, 2].map(function (i) { return $(k + "-res-" + i); }),
+            chips: [0, 1, 2].map(function (i) { return $(k + "-chip-" + i); }),
+            skels: [0, 1, 2].map(function (i) { return $(k + "-skel-" + i); }),
+            last: {},
+          };
+        });
+        var agents = [1, 2, 3].map(function (i) {
+          var a = $("agent-" + i);
+          return { glow: a.querySelector(".glow"), st: a.querySelector(".st"), gate: $("gate-" + i).querySelector(".gate-lit"), last: null };
+        });
+
+        var E = {
+          o3: gsap.parseEase("power3.out"),
+          io2: gsap.parseEase("power2.inOut"),
+          i3: gsap.parseEase("power3.in"),
+          expo: gsap.parseEase("expo.out"),
+        };
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function seg(tau, a, b) { return clamp((tau - a) / (b - a), 0, 1); }
+
+        // card x (centre) for a card-life time tau
+        function cardX(tau) {
+          if (tau < 0) return STACK_X;
+          var s0 = STAGES[0], s1 = STAGES[1], s2 = STAGES[2];
+          if (tau < s0.start) return STACK_X + (GATES[0] - STACK_X) * E.o3(seg(tau, 0, s0.start));
+          if (tau < s0.end) return GATES[0];
+          if (tau < s1.start) return GATES[0] + (GATES[1] - GATES[0]) * E.io2(seg(tau, s0.end, s1.start));
+          if (tau < s1.end) return GATES[1];
+          if (tau < s2.start) return GATES[1] + (GATES[2] - GATES[1]) * E.io2(seg(tau, s1.end, s2.start));
+          if (tau < EXIT) return GATES[2];
+          return GATES[2] + 760 * E.i3(seg(tau, EXIT, EXIT + 0.55));
+        }
+
+        function setText(c, key, el, html) {
+          if (c.last[key] !== html) { el.innerHTML = html; c.last[key] = html; }
+        }
+
+        function renderCard(c, tau) {
+          var visible = tau >= -0.001 && tau < EXIT + 0.6;
+          c.card.style.opacity = visible ? 1 : 0;
+          gsap.set(c.card, { x: cardX(tau) });
+          if (!visible) return;
+
+          // id resolves at triage (anonymised id assigned), digits roll then lock
+          var idHtml = "";
+          for (var i = 0; i < 4; i++) {
+            var lock = 0.95 + i * 0.07;
+            if (tau < 0.85) idHtml += "·";
+            else if (tau < lock) idHtml += String((Math.floor(tau * 30) * (i + 3) + i * 7) % 10);
+            else idHtml += ID[i];
+          }
+          setText(c, "id", c.id, idHtml);
+
+          // skills parsed at triage: skeletons give way to chips
+          c.chips.forEach(function (ch, i) {
+            var p = E.o3(seg(tau, 1.0 + i * 0.08, 1.3 + i * 0.08));
+            ch.style.opacity = p;
+            c.skels[i].style.opacity = 1 - p;
+          });
+
+          // stage rows + match ring
+          var match = 0;
+          STAGES.forEach(function (s, i) {
+            var scoreP = E.o3(seg(tau, s.start + 0.2, s.end - 0.2));
+            gsap.set(c.fills[i], { scaleX: s.score * scoreP });
+            var r = E.o3(seg(tau, s.end - 0.25, s.end - 0.05));
+            c.res[i].style.opacity = r;
+            var prev = i === 0 ? 0 : STAGES[i - 1].match;
+            if (tau >= s.start + 0.35) match = prev + (s.match - prev) * E.o3(seg(tau, s.start + 0.35, s.end - 0.1));
+          });
+          c.arc.setAttribute("stroke-dasharray", match.toFixed(2) + " 100");
+          c.arc.setAttribute("opacity", match < 0.5 ? 0 : 1);
+          setText(c, "val", c.val, Math.round(match) + "<small>%</small>");
+
+          // scan beam per stage
+          var scanOn = false;
+          STAGES.forEach(function (s, i) {
+            var p = seg(tau, s.start, s.start + 0.75);
+            if (tau >= s.start && tau < s.start + 0.8) {
+              scanOn = true;
+              c.scan.style.color = COLORS[i];
+              c.scan.style.opacity = Math.min(1, Math.min(p * 6, (1 - p) * 5));
+              gsap.set(c.scan, { y: -90 + 486 * E.io2(p) });
+            }
+          });
+          if (!scanOn) c.scan.style.opacity = 0;
+
+          // status bar
+          var sp = E.o3(seg(tau, SHORTLIST, SHORTLIST + 0.35));
+          gsap.set(c.sfill, { scaleX: sp });
+          c.edge.style.opacity = E.o3(seg(tau, SHORTLIST + 0.1, SHORTLIST + 0.5));
+          var st;
+          if (tau >= SHORTLIST + 0.12) st = '<span style="color:#07090d">✓ shortlisted</span>';
+          else if (tau >= STAGES[1].end) st = '<span style="color:#fbbf24">reviewing · risk</span>';
+          else if (tau >= STAGES[0].end) st = '<span style="color:#a78bfa">reviewing · screen</span>';
+          else if (tau >= STAGES[0].start) st = '<span style="color:#60a5fa">reviewing · triage</span>';
+          else st = '<span style="color:#8a97a8">inbound · queued</span>';
+          setText(c, "st", c.stxt, st);
+        }
+
+        function renderAgents(tau) {
+          agents.forEach(function (a, i) {
+            var s = STAGES[i];
+            var on = 0, txt = "idle", col = "#8a97a8";
+            if (tau >= s.start - 0.15 && tau < s.end) {
+              on = Math.min(E.o3(seg(tau, s.start - 0.15, s.start + 0.1)), 1 - seg(tau, s.end - 0.15, s.end));
+              txt = "reviewing…"; col = TINTS[i];
+            } else if (tau >= s.end && tau < (i === 2 ? EXIT : s.end + 0.6)) {
+              txt = "passed ✓"; col = "#5eead4";
+            }
+            a.glow.style.opacity = on;
+            a.gate.style.opacity = on * 0.9;
+            var key = txt + col;
+            if (a.last !== key) { a.st.textContent = txt; a.st.style.color = col; a.last = key; }
+          });
+        }
+
+        function render(t) {
+          var tauA = t + PHASE;          // the card on screen at the poster
+          var tauB = t + PHASE - LOOP;   // the next candidate, identical at t = 6
+          renderCard(cards[0], tauA);
+          renderCard(cards[1], tauB);
+          // agents follow whichever card is inside the pipeline
+          renderAgents(tauA < EXIT ? tauA : tauB);
+        }
+
+        var proxy = { t: 0 };
+        var tl = gsap.timeline({ paused: true });
+        tl.to(proxy, { t: LOOP, duration: LOOP, ease: "none", onUpdate: function () { render(proxy.t); } }, 0);
+        render(0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

@@ -204,6 +204,8 @@ export type Project = {
   badge?: string;
   links: { label: string; href: string }[];
   image?: StaticImageData;
+  /** Looping clip in public/videos/<video>.{webm,mp4,webp}, made with HyperFrames (see /video). */
+  video?: string;
   featured?: boolean;
 };
 
@@ -227,6 +229,7 @@ export const projects: Project[] = [
     result: "2,400+ tests · drove 23% of 837+ company PRs to merge overnight",
     badge: "Acquired",
     links: [],
+    video: "proj-orchestrator",
     featured: true,
   },
   {
@@ -239,6 +242,7 @@ export const projects: Project[] = [
     result: "Semifinalist + Amazon Nova Feedback Prize among 13,000+ participants",
     badge: "Prize",
     links: [{ label: "Devpost", href: "https://devpost.com/software/my-valentine" }],
+    video: "proj-aihire",
     featured: true,
   },
   {
@@ -250,6 +254,7 @@ export const projects: Project[] = [
     stack: ["Next.js", "tRPC", "Azure OpenAI", "ElevenLabs", "Supabase pgvector"],
     links: [{ label: "Devpost", href: "https://devpost.com/software/crushie" }],
     image: crushieImg,
+    video: "proj-crushie",
     featured: true,
   },
   {
@@ -261,6 +266,7 @@ export const projects: Project[] = [
     stack: ["Gemini", "Claude", "ElevenLabs", "Snowflake ML", "Docker", "Terraform", "Solana"],
     links: [{ label: "Devpost", href: "https://devpost.com/software/finance-queens" }],
     image: finhackImg,
+    video: "proj-finhack",
     featured: true,
   },
   {
