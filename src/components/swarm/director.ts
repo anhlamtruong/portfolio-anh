@@ -5,12 +5,12 @@
 // sets React state per frame.
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { type Ctx, choreograph, edgePoint, neutralCss } from "./choreo";
+import { CU_MAX, type Ctx, choreograph, edgePoint, neutralCss, taskTime } from "./choreo";
 import { readProps } from "./inspect";
 import { LiveLog } from "./log";
 import { COLORS, ROLE_COLOR, SESSION_KEY, rolePref } from "./palette";
 import { Renderer } from "./renderer";
-import { keeps, measureSection, scanPage } from "./scan";
+import { measureSection, measureSteps, scanPage } from "./scan";
 import { Sim } from "./sim";
 import {
   MK, TASK_CLAIMED, TASK_DONE, TASK_PENDING, TASK_RUNNING, TOOL,
@@ -38,8 +38,12 @@ const PLAN = 1;
 const BUILD = 2;
 const REVIEW = 3;
 const DONE = 4;
-/** Share of a section's budget given to the build phase. */
-const BUILD_SHARE = 0.53;
+/** Planner hands off to the workers this soon after a section starts (s). */
+const HANDOFF = 0.3;
+/** Expected travel per task (s), for planning. */
+const TRAVEL_EST = 0.14;
+/** Catch-up ramp length (s): keeps every timeScale change under ~1.2x per 100 ms. */
+const CU_RAMP = 0.7;
 /** Seconds over which the mesh nodes light up at boot. */
 const BOOT_LIGHT = 0.45;
 
@@ -100,22 +104,19 @@ function clearTint(t: Task): void {
   if (t.el.getAttribute("style") === "") t.el.removeAttribute("style");
 }
 
-/** Estimated seconds a task takes at scale 1 (travel excluded). */
-function cost(t: Task, dragTime: number): number {
-  switch (t.kind) {
-    case "frame":
-      return 0.56 + (t.inspect ? 1.3 : 0);
-    case "image":
-      return t.drag ? 0.45 + 0.9 * dragTime : 0.8;
-    case "type":
-      return clamp(t.chars.length * 0.032, 0.2, 0.8) + 0.12 + (t.font ? 1.35 + (t.fontName2 ? 0.2 : 0) : 0) + (t.sweep ? 0.55 : 0);
-    case "reveal":
-      return clamp(t.lines.length * 0.09, 0.28, 0.7) + 0.1;
-    case "color":
-      return 1.75;
-    default:
-      return 0.52 + Math.min(0.06, 0.3 / t.slots.length) * (t.slots.length - 1);
-  }
+/** Reviewer phase timings for a section budget B (all >= 120 ms). */
+const review = (B: number, phone = false) => ({
+  travel: Math.min(0.18, 0.04 * B),
+  outline: Math.max(0.12, Math.min(0.4, 0.09 * B)),
+  open: 0.12,
+  ticks: Math.max(0.12, Math.min(0.36, 0.07 * B)),
+  hold: phone ? 0 : 0.12,
+});
+
+/** Seconds left for the build phase once planning and review are set aside. */
+function buildWindow(B: number, handoff = HANDOFF, phone = false): number {
+  const r = review(B, phone);
+  return Math.max(0.6, B - handoff - (r.travel + r.outline * 0.6 + r.open + r.ticks + r.hold) - 0.12);
 }
 
 export class Director {
@@ -141,7 +142,14 @@ export class Director {
   private lightTl: Anim | null = null;
   private clock = 0;
   private elapsed = 0;
-  private quietUntil = 0;
+  private layoutVer = 0;
+  private pre = new Map<Run, { gen: Generator<void, void, void>; ver: number; done: boolean }>();
+  private idle = 0;
+  private preAt = 0;
+  private paceAt = 0;
+  /** Planner hand-off delay (shorter on phones). */
+  private readonly handoff: number;
+  private paceTick = false;
   private sy = 0;
   private vw = 0;
   private vh = 0;
@@ -166,7 +174,8 @@ export class Director {
     this.o = o;
     this.roles = o.profile.roles;
     this.agentCount = this.roles.length;
-    this.sim = new Sim(this.roles.length);
+    this.sim = new Sim(this.roles.length, o.profile.accel);
+    this.handoff = o.profile.kind === "phone" ? 0.2 : HANDOFF;
     this.renderer = new Renderer(o.canvas, o.profile.dprCap, this.roles.map((r) => ROLE_COLOR[r]), o.profile.labels);
     this.brains = this.roles.map(() => ({ mode: OFF, run: null, task: null, hx: 0, hy: 0, until: 0, go: null }));
     this.planner = this.roles.indexOf("planner");
@@ -183,7 +192,8 @@ export class Director {
     orphans.forEach(markBuilt);
     this.runs = sections.map((m) => ({
       m, phase: WAIT, B: m.onLoad ? p.heroBudget : p.budget, t0: 0, deadline: 0, scale: 1, speedMul: 1,
-      joinGate: 0, stagger: 0.12, flushed: false, marks: [], anims: [], nodes: [], undo: [], recent: [], took: 0, st: null,
+      joinGate: 0, stagger: 0.08, catchUp: 1, cuTarget: 1, cuTween: null, cuApplied: 1, work: [],
+      marks: [], anims: [], nodes: [], recent: [], took: 0, st: null,
     }));
     this.hero = this.runs.find((r) => r.m.onLoad) ?? this.runs[0] ?? null;
     for (const r of this.runs) {
@@ -198,6 +208,7 @@ export class Director {
     document.addEventListener("keydown", this.onKey);
     document.addEventListener("visibilitychange", this.onVisibility);
     window.addEventListener("resize", this.onResize);
+    window.addEventListener("scroll", this.onScroll, { passive: true });
     this.ro = new ResizeObserver(this.onSectionResize);
     this.runs.forEach((r) => this.ro?.observe(r.m.el));
     if (!active) {
@@ -233,12 +244,12 @@ export class Director {
     for (const run of this.runs) {
       this.reset(run);
       run.phase = WAIT;
-      run.flushed = false;
       run.recent = [];
       run.took = 0;
       for (const t of run.m.tasks) {
         t.state = TASK_PENDING;
         t.agent = -1;
+        t.ready = false;
         for (const el of [...t.slots, ...t.absorbed]) {
           el.removeAttribute("data-built");
           clearInline(el);
@@ -261,6 +272,9 @@ export class Director {
     this.setBusy();
     this.log.restore();
     this.log.start();
+    this.cancelPre();
+    this.pre.clear();
+    this.layoutVer++;
     this.arm(false);
     this.emitInspect();
   }
@@ -293,6 +307,8 @@ export class Director {
     document.removeEventListener("keydown", this.onKey);
     document.removeEventListener("visibilitychange", this.onVisibility);
     window.removeEventListener("resize", this.onResize);
+    window.removeEventListener("scroll", this.onScroll);
+    this.cancelPre();
     for (const run of this.runs) {
       this.reset(run);
       for (const t of run.m.tasks) [...t.slots, ...t.absorbed].forEach(clearInline);
@@ -316,12 +332,22 @@ export class Director {
     run.marks = [];
     run.nodes.forEach((n) => n.remove());
     run.nodes = [];
-    run.undo.forEach((f) => f());
-    run.undo = [];
-    run.m.tasks.forEach(clearTint);
+    run.m.tasks.forEach((t) => {
+      clearTint(t);
+      t.tl = null;
+    });
+    this.resetPace(run);
+  }
+
+  private resetPace(run: Run): void {
+    run.cuTween?.kill();
+    run.cuTween = null;
+    run.catchUp = run.cuTarget = run.cuApplied = 1;
+    run.work = [];
   }
 
   private arm(initial: boolean): void {
+    this.schedulePre();
     this.readView();
     for (const run of this.runs) {
       if (run.phase !== WAIT) continue;
@@ -346,14 +372,18 @@ export class Director {
     run.st = null;
     this.readView();
     const m = run.m;
-    measureSection(m, this.o.profile.detail.autoTune);
+    // Use the idle-time pre-measure if no layout change happened since.
+    const pm = this.pre.get(run);
+    if (pm && pm.ver === this.layoutVer) while (!pm.done) pm.done = !!pm.gen.next().done;
+    else measureSection(m, this.o.profile.detail.autoTune, this.o.profile.kind === "phone");
+    this.pre.delete(run);
     for (const t of m.tasks) if (t.state !== TASK_DONE && (t.box.w < 1 || t.box.h < 1)) this.taskDone(run, t);
     const open = m.tasks.filter((t) => t.state !== TASK_DONE);
     if (!open.length || m.box.y + m.box.h <= this.sy) return this.finish(run, true);
 
     run.phase = PLAN;
     run.t0 = this.clock;
-    run.flushed = false;
+    this.resetPace(run);
     this.estimate(run, open);
     if (!(boot && this.boot(run))) this.spawn(run, open.length);
     this.ensureTicking();
@@ -365,36 +395,51 @@ export class Director {
     this.setBusy();
   }
 
-  /** Picks a duration scale so the section fits its time budget. */
+  /** Picks the duration scale that makes the build phase fit the section's target. */
   private estimate(run: Run, open: Task[]): void {
     const tasks = run.m.tasks;
     const dt = this.o.profile.detail.dragTime;
-    const memo = new Map<number, number>();
-    const path = (t: Task): number => {
-      const hit = memo.get(t.id);
-      if (hit !== undefined) return hit;
-      memo.set(t.id, 0);
-      let longest = 0;
-      for (const d of t.deps) if (tasks[d].state !== TASK_DONE) longest = Math.max(longest, path(tasks[d]));
-      const v = cost(t, dt) + 0.16 + longest;
-      memo.set(t.id, v);
-      return v;
-    };
-    let sum = 0;
-    let cp = 0;
-    for (const t of open) {
-      sum += cost(t, dt) + 0.16;
-      cp = Math.max(cp, path(t));
-    }
-    const W = BUILD_SHARE * run.B;
+    const W = buildWindow(run.B, this.handoff, this.o.profile.kind === "phone");
     const crew = this.crew(open.length);
-    run.scale = clamp(W / Math.max(sum / crew, cp), 0.25, 1);
-    run.speedMul = clamp(1 / run.scale, 1, 2.2);
-    run.stagger = clamp((0.5 * W) / crew, 0.08, 0.18);
+    run.stagger = clamp((0.25 * W) / crew, 0.04, 0.1);
+    const time = (sc: number) => {
+      const memo = new Map<number, number>();
+      const path = (t: Task): number => {
+        const hit = memo.get(t.id);
+        if (hit !== undefined) return hit;
+        memo.set(t.id, 0);
+        let longest = 0;
+        for (const d of t.deps) if (tasks[d].state !== TASK_DONE) longest = Math.max(longest, path(tasks[d]));
+        const v = taskTime(t, sc, dt) + TRAVEL_EST + longest;
+        memo.set(t.id, v);
+        return v;
+      };
+      let sum = 0;
+      let cp = 0;
+      for (const t of open) {
+        sum += taskTime(t, sc, dt) + TRAVEL_EST;
+        cp = Math.max(cp, path(t));
+      }
+      return Math.max(sum / crew + run.stagger * crew * 0.5, cp);
+    };
+    let lo = 0.35;
+    let hi = 1;
+    if (time(1) <= W) lo = 1;
+    else {
+      for (let k = 0; k < 7; k++) {
+        const mid = (lo + hi) / 2;
+        if (time(mid) <= W) lo = mid;
+        else hi = mid;
+      }
+    }
+    run.scale = lo;
+    run.speedMul = clamp(1.2 / lo, 1, 1.6);
+    for (const t of open) t.est = taskTime(t, lo, dt);
   }
 
-  /** Workers worth bringing in for n open tasks. */
+  /** Workers worth bringing in for n open tasks (everyone for big sections). */
   private crew(n: number): number {
+    if (n > 8) return this.workers.length;
     return clamp(Math.ceil(n / 1.5), Math.min(2, this.workers.length), this.workers.length);
   }
 
@@ -506,7 +551,8 @@ export class Director {
   }
 
   private plan(run: Run, i: number): void {
-    if (run.phase !== PLAN) return this.free(i, run, null);
+    // The build may already have started (hand-off is time-based); still lay out the plan.
+    if (run.phase !== PLAN && run.phase !== BUILD) return this.free(i, run, null);
     const B = run.B;
     const m = run.m;
     const guides = m.guides.map((g) =>
@@ -518,8 +564,8 @@ export class Director {
     const dur = Math.min(0.3, 0.08 * B);
     const gap = Math.min(0.06, 0.016 * B);
     guides.forEach((g, gi) => tl.to(g, { p: 1, duration: dur, ease: "power2.out" }, gi * gap));
-    tl.to(tag, { a: 1, p: 1, duration: Math.min(0.2, 0.06 * B), ease: "back.out(2)" }, gap);
-    tl.call(() => this.beginBuild(run), undefined, tl.duration() * 0.7);
+    tl.to(tag, { a: 1, p: 1, duration: Math.max(0.12, Math.min(0.2, 0.06 * B)), ease: "back.out(2)" }, gap);
+    tl.call(() => this.beginBuild(run), undefined, Math.min(0.15, tl.duration() * 0.5));
     this.say(run, i >= 0 ? i : this.planner, `planned ${m.tasks.length} tasks`);
     if (i >= 0) {
       const g = guides[0];
@@ -532,35 +578,49 @@ export class Director {
   private beginBuild(run: Run): void {
     if (run.phase !== PLAN) return;
     run.phase = BUILD;
-    run.deadline = this.clock + BUILD_SHARE * run.B;
+    run.deadline = this.clock + buildWindow(run.B, this.handoff, this.o.profile.kind === "phone");
     run.joinGate = this.clock;
   }
 
-  /** Over budget: speed up running tasks and fade in everything unclaimed. */
-  private flush(run: Run): void {
-    run.flushed = true;
-    run.anims.forEach((a) => a.timeScale(5));
-    const els: HTMLElement[] = [];
-    for (const t of run.m.tasks) {
-      if (t.state !== TASK_PENDING && t.state !== TASK_CLAIMED) continue;
-      if (t.agent >= 0 && this.brains[t.agent].task === t) this.release(t.agent);
-      t.agent = -1;
-      t.state = TASK_DONE;
-      clearTint(t);
-      t.absorbed.forEach(markBuilt);
-      for (const el of t.slots) {
-        if (keeps(el, this.o.profile.kind === "phone")) markBuilt(el);
-        else els.push(el);
-      }
+  /**
+   * Running late? Ramp the section's catch-up factor smoothly (never a jump):
+   * it speeds up running and new task timelines and the cursors. Unclaimed
+   * work is still done by agents; the first ramp brings in every free worker.
+   */
+  private pace(run: Run): void {
+    const tasks = run.m.tasks;
+    const dt = this.o.profile.detail.dragTime;
+    const own = (t: Task) =>
+      t.tl ? Math.max(0, t.tl.duration() - t.tl.time()) : taskTime(t, run.scale, dt) + TRAVEL_EST;
+    const memo = new Map<number, number>();
+    const left = (t: Task): number => {
+      if (t.state === TASK_DONE) return 0;
+      const hit = memo.get(t.id);
+      if (hit !== undefined) return hit;
+      memo.set(t.id, 0);
+      let longest = 0;
+      for (const d of t.deps) longest = Math.max(longest, left(tasks[d]));
+      const v = own(t) + longest;
+      memo.set(t.id, v);
+      return v;
+    };
+    let sum = 0;
+    let cp = 0;
+    let open = 0;
+    for (const t of tasks) {
+      if (t.state === TASK_DONE) continue;
+      open++;
+      sum += own(t);
+      cp = Math.max(cp, left(t));
     }
-    if (els.length) {
-      this.anim(run, gsap.fromTo(els, { opacity: 0 }, {
-        opacity: 1,
-        duration: 0.2,
-        stagger: Math.min(0.015, 0.25 / els.length),
-        onComplete: () => els.forEach(markBuilt),
-      }));
-    }
+    if (!open) return;
+    const need = Math.max(sum / this.crew(open), cp) / Math.max(0.35, run.deadline - this.clock);
+    const target = clamp(Math.ceil(need * 1.08 * 20) / 20, 1, CU_MAX);
+    if (target <= run.cuTarget + 0.05) return;
+    if (run.cuTarget === 1) this.spawn(run, Number.POSITIVE_INFINITY);
+    run.cuTarget = target;
+    run.cuTween?.kill();
+    run.cuTween = this.anim(null, gsap.to(run, { catchUp: target, duration: CU_RAMP, ease: "sine.inOut" }));
   }
 
   private review(run: Run): void {
@@ -571,13 +631,13 @@ export class Director {
     if (b.mode !== OFF && b.mode !== IDLE && b.mode !== EXIT) return this.inspect(run, -1);
     const y = clamp(this.sy + 18, box.y + 4, box.y + box.h - 4);
     if (b.mode === OFF) this.sim.place(i, this.vw + 30, y);
-    this.send(i, run, box.x + 4, y, Math.min(0.18, 0.04 * run.B), (ai) => this.inspect(run, ai), null);
+    this.send(i, run, box.x + 4, y, review(run.B).travel, (ai) => this.inspect(run, ai), null);
   }
 
   /** Reviewer: acks from the last workers, outline, a short checklist, then stamp. */
   private inspect(run: Run, i: number): void {
     if (run.phase !== REVIEW) return this.free(i, run, null);
-    const B = run.B;
+    const R = review(run.B, this.o.profile.kind === "phone");
     const bx = run.m.box;
     const b = { x: bx.x + 3, y: bx.y + 3, w: Math.max(1, bx.w - 6), h: Math.max(1, bx.h - 6) };
     const rideY = clamp(this.sy + 18, b.y, b.y + b.h);
@@ -595,22 +655,23 @@ export class Director {
     this.anim(run, gsap.timeline())
       .to(out, {
         p: 1,
-        duration: Math.min(0.4, 0.09 * B),
+        duration: R.outline,
         ease: "power1.inOut",
         onUpdate: () => this.aim(i, b.x + Math.min(b.w, (b.w + b.h) * out.p), rideY),
       })
+      // The checklist opens while the outline finishes.
       .call(() => {
         if (i >= 0) this.sim.tool[i] = TOOL.arrow;
         this.aim(i, cx + 14, rowY());
-      })
-      .to(list, { p: 1, duration: Math.min(0.1, 0.03 * B), ease: "power2.out" })
+      }, undefined, `-=${R.outline * 0.4}`)
+      .to(list, { p: 1, duration: R.open, ease: "power2.out" }, "<")
       .to(list, {
         u: n,
-        duration: Math.min(0.36, 0.07 * B),
+        duration: R.ticks,
         ease: `steps(${n})`,
         onUpdate: () => this.aim(i, cx + 14, rowY()),
       })
-      .to({}, { duration: Math.min(0.08, 0.02 * B) })
+      .to({}, { duration: R.hold || R.open }, R.hold ? ">" : "<")
       .call(() => this.stamp(run, i, list));
   }
 
@@ -656,8 +717,7 @@ export class Director {
     }
     run.nodes.forEach((n) => n.remove());
     run.nodes = [];
-    run.undo.forEach((f) => f());
-    run.undo = [];
+    this.resetPace(run);
     run.m.el.setAttribute("data-built", "");
     for (const m of run.marks) {
       gsap.killTweensOf(m);
@@ -682,20 +742,25 @@ export class Director {
   // ---------------------------------------------------------------- tasks
 
   private claim(): void {
-    if (!this.workers.some((i) => this.brains[i].mode === IDLE)) return;
-    const open: { run: Run; t: Task; x: number; y: number }[] = [];
+    // On phones (5 workers) the planner lends a hand once its plan is drawn.
+    // (The reviewer too; if it is busy when a review is due, the review runs without it.)
+    const crew = this.o.profile.kind === "phone" ? [...this.workers, this.planner, this.reviewer] : this.workers;
+    if (!crew.some((i) => this.brains[i].mode === IDLE)) return;
+    const open: { run: Run; t: Task; x: number; y: number; left: number }[] = [];
     for (const run of this.runs) {
-      if (run.phase !== BUILD || run.flushed) continue;
+      if (run.phase !== BUILD) continue;
       const tasks = run.m.tasks;
+      let left = 0;
+      for (const t of tasks) if (t.state !== TASK_DONE) left++;
       for (const t of tasks) {
-        if (t.state !== TASK_PENDING || !t.deps.every((d) => tasks[d].state === TASK_DONE)) continue;
+        if (t.state !== TASK_PENDING || !t.deps.every((d) => tasks[d].state === TASK_DONE || tasks[d].ready)) continue;
         const [x, y] = this.startPoint(run, t);
-        open.push({ run, t, x, y });
+        open.push({ run, t, x, y, left });
       }
     }
     if (!open.length) return;
     const s = this.sim;
-    for (const i of this.workers) {
+    for (const i of crew) {
       const b = this.brains[i];
       if (b.mode !== IDLE) continue;
       const role = this.roles[i];
@@ -704,19 +769,27 @@ export class Director {
       for (let j = 0; j < open.length; j++) {
         const o = open[j];
         if (o.t.state !== TASK_PENDING || (b.run !== o.run && this.clock < o.run.joinGate)) continue;
-        let score = Math.hypot(o.x - s.x[i], o.y - s.y[i]) + o.t.rank * 22;
+        // Near first, in reading order; small sections slightly first so they
+        // finish promptly when several build at once.
+        let score = Math.hypot(o.x - s.x[i], o.y - s.y[i]) + o.t.rank * 22 + o.left * 6;
         if (o.t.role) score += o.t.role === role ? -200 : 600;
         else score += rolePref(role, o.t.kind);
+        // Critical-path first: color picks end chains, cards with nested items start them.
+        if (o.t.kind === "color") score -= 220;
+        else if (o.t.lead || o.t.tints.some((c) => c.state !== TASK_DONE)) score -= 150;
+        score -= Math.min(1, o.t.est) * 120; // longest first
+        // The reviewer helps on phones only while there is plenty left.
+        if (i === this.reviewer && o.left <= 4) continue;
         const cy = o.t.box.y + o.t.box.h / 2;
         if (cy < this.sy - 20 || cy > this.sy + this.vh + 20) score += 700;
         if (score < bestScore) [bestScore, best] = [score, j];
       }
       if (best < 0) continue;
       const { run, t, x, y } = open[best];
-      if (b.run !== run) run.joinGate = this.clock + run.stagger;
+      if (b.run !== run) run.joinGate = this.clock + run.stagger / run.catchUp;
       t.state = TASK_CLAIMED;
       t.agent = i;
-      const cap = clamp(0.28 * run.scale + 0.04, 0.1, 0.3);
+      const cap = clamp((0.2 * run.scale + 0.04) / run.catchUp, 0.1, 0.22);
       this.send(i, run, x, y, cap, (ai) => this.work(run, t, ai), t);
       this.packet(run, this.planner, i, 0, 0.35);
     }
@@ -765,15 +838,15 @@ export class Director {
     t.state = TASK_RUNNING;
     // Color follow-ups: their elements appear neutral, then get picked.
     for (const c of t.tints) if (c.state === TASK_PENDING) applyTint(c);
-    const tl = this.anim(run, gsap.timeline({ onComplete: () => this.taskDone(run, t) }));
+    const tl = this.labor(run, gsap.timeline({ onComplete: () => this.taskDone(run, t) }));
+    t.tl = tl;
     const ctx: Ctx = {
       run, t, i, tl, s: run.scale, color: ROLE_COLOR[this.roles[i]], sim: this.sim, r: this.renderer,
       sy: this.sy, vw: this.vw, vh: this.vh, phone: this.o.profile.kind === "phone",
       dragTime: this.o.profile.detail.dragTime, layer: this.o.layer,
       mark: (k, p) => this.mark(run, k, p),
-      fx: (a) => void this.anim(run, a),
+      fx: (a) => void this.labor(run, a),
       log: (what) => this.say(run, i, what),
-      quiet: (sec) => void (this.quietUntil = Math.max(this.quietUntil, this.clock + sec)),
     };
     const master = t.kind === "dup" && t.master >= 0 ? run.m.tasks[t.master].box : null;
     choreograph(ctx, master);
@@ -784,6 +857,8 @@ export class Director {
     const i = t.agent;
     t.state = TASK_DONE;
     t.agent = -1;
+    t.tl = null;
+    t.ready = true;
     t.slots.forEach(markBuilt);
     t.absorbed.forEach(markBuilt);
     clearTint(t);
@@ -973,7 +1048,9 @@ export class Director {
     s.tool[i] = TOOL.arrow;
     s.tx[i] = x;
     s.ty[i] = y;
-    s.speed[i] = Math.max(this.o.profile.speed * run.speedMul, (s.dist(i) / Math.max(cap, 0.05)) * 1.3);
+    // Fast but bounded: long trips take a little longer instead of lurching.
+    const base = this.o.profile.speed * run.speedMul * run.catchUp;
+    s.speed[i] = clamp((s.dist(i) / Math.max(cap, 0.05)) * 1.3, base, Math.max(base, this.o.profile.speed * 2.4));
   }
 
   private release(i: number): void {
@@ -1052,12 +1129,20 @@ export class Director {
 
   private update(dt: number): void {
     const s = this.sim;
+    this.paceTick = this.clock - this.paceAt >= 0.1;
+    if (this.paceTick) this.paceAt = this.clock;
     let oldest: Run | null = null;
     for (const run of this.runs) {
-      if (run.phase === PLAN && this.clock > run.t0 + Math.min(0.75, 0.2 * run.B)) this.beginBuild(run);
+      if (run.phase === PLAN && this.clock > run.t0 + this.handoff) this.beginBuild(run);
       if (run.phase === BUILD) {
         if (run.m.tasks.every((t) => t.state === TASK_DONE)) this.review(run);
-        else if (!run.flushed && this.clock > run.deadline) this.flush(run);
+        else if (this.paceTick) this.pace(run);
+      }
+      if (run.catchUp !== run.cuApplied) {
+        // Follow the (smoothly ramping) catch-up factor; drop finished work.
+        run.work = run.work.filter((a) => a.progress() < 1);
+        for (const a of run.work) a.timeScale(run.catchUp);
+        run.cuApplied = run.catchUp;
       }
       if ((run.phase === PLAN || run.phase === BUILD) && (!oldest || run.t0 < oldest.t0)) oldest = run;
     }
@@ -1069,21 +1154,26 @@ export class Director {
         if (!this.busy) this.release(i);
         else if (this.clock >= b.until) this.wake(i);
       } else if (b.mode === TRAVEL) {
-        if (s.dist(i) < 12 || this.clock >= b.until) {
+        // Work starts on arrival only (never at a far-away spot). Past the
+        // cap, "close" counts (agents sharing a start point keep their
+        // personal space); much later, glide in rather than circle.
+        const d = s.dist(i);
+        if (d < 14 || (this.clock >= b.until && d < 48)) {
           const go = b.go;
           b.mode = WORK;
           b.go = null;
           go?.(i);
-        }
+        } else if (this.clock > b.until + 1.2 && !s.follow[i]) s.follow[i] = 9;
       } else if (b.mode === IDLE) {
         if (!this.busy) {
           this.exit(i);
           continue;
         }
         if (i === this.reviewer && oldest) {
+          // Wait where the review starts (top-left), so approval follows the build closely.
           const box = oldest.m.box;
-          b.hx = Math.min(box.x + box.w - 40, this.vw - 70);
-          b.hy = Math.max(box.y, this.sy + 40) + 24;
+          b.hx = clamp(box.x + 28, 20, this.vw - 70);
+          b.hy = clamp(this.sy + 40, box.y + 20, Math.max(box.y + 20, box.y + box.h - 20));
         }
         s.tx[i] = b.hx + Math.sin(this.clock * 1.7 + i * 1.3) * 7;
         s.ty[i] = b.hy + Math.cos(this.clock * 1.3 + i * 2.1) * 5;
@@ -1156,6 +1246,13 @@ export class Director {
     return m;
   }
 
+  /** Task work: follows the section's catch-up factor from the start. */
+  private labor<T extends Anim>(run: Run, a: T): T {
+    a.timeScale(run.catchUp);
+    run.work.push(a);
+    return this.anim(run, a);
+  }
+
   private anim<T extends Anim>(run: Run | null, a: T): T {
     (run ? run.anims : this.fx).push(a);
     return a;
@@ -1194,6 +1291,61 @@ export class Director {
   private onResize = (): void => {
     this.renderer.invalidate();
     this.readView();
+    this.layoutVer++;
+  };
+
+  private onScroll = (): void => {
+    if (this.clock - this.preAt > 0.25 || !this.ticking) this.schedulePre();
+  };
+
+  // ------------------------------------------------------------ pre-measure
+
+  /**
+   * Measures sections within about a viewport below the fold in idle time,
+   * a task at a time, so a section's start never does a big read burst on
+   * the scroll frame. Invalidated by ResizeObserver / window resizes.
+   */
+  private schedulePre(): void {
+    if (this.idle || !this.alive) return;
+    this.preAt = this.clock;
+    const ric = window.requestIdleCallback;
+    this.idle = ric ? ric(this.premeasure, { timeout: 500 }) : window.setTimeout(() => this.premeasure(null), 120);
+  }
+
+  private cancelPre(): void {
+    if (!this.idle) return;
+    if (window.cancelIdleCallback) window.cancelIdleCallback(this.idle);
+    else window.clearTimeout(this.idle);
+    this.idle = 0;
+  }
+
+  private premeasure = (deadline: IdleDeadline | null): void => {
+    this.idle = 0;
+    if (!this.alive) return;
+    const end = performance.now() + (deadline ? Math.max(2, deadline.timeRemaining() - 1) : 6);
+    const vh = window.innerHeight;
+    let more = false;
+    for (const run of this.runs) {
+      if (run.phase !== WAIT) continue;
+      let pm = this.pre.get(run);
+      if (pm && pm.done && pm.ver === this.layoutVer) continue;
+      const r = run.m.el.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > vh * 2) continue;
+      if (!pm || pm.ver !== this.layoutVer) {
+        pm = {
+          gen: measureSteps(run.m, this.o.profile.detail.autoTune, this.o.profile.kind === "phone"),
+          ver: this.layoutVer,
+          done: false,
+        };
+        this.pre.set(run, pm);
+      }
+      while (!pm.done && performance.now() < end) pm.done = !!pm.gen.next().done;
+      if (!pm.done) {
+        more = true;
+        break;
+      }
+    }
+    if (more) this.schedulePre();
   };
 
   private onSectionResize = (entries: ResizeObserverEntry[]): void => {
@@ -1203,12 +1355,10 @@ export class Director {
       else this.roSeen.add(e.target);
     }
     if (!changed || this.roFrame) return;
+    this.layoutVer++;
     this.roFrame = requestAnimationFrame(() => {
       this.roFrame = 0;
-      // A weight sweep reflows its own text; don't treat that as a layout change.
-      if (this.clock >= this.quietUntil) {
-        for (const run of this.runs) if (run.phase >= PLAN && run.phase <= REVIEW) this.finish(run, true);
-      }
+      for (const run of this.runs) if (run.phase >= PLAN && run.phase <= REVIEW) this.finish(run, true);
       ScrollTrigger.refresh();
     });
   };

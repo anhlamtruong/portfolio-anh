@@ -69,12 +69,16 @@ export function detectProfile(): Profile {
   }
   return {
     kind,
-    budget: kind === "phone" ? 2 : kind === "tablet" ? 2.9 : 3.4,
-    heroBudget: kind === "phone" ? 2 : kind === "tablet" ? 3.9 : 4.8,
+    // Planning targets (nothing is forced to finish). Real runs land a little
+    // later than planned, so these sit just under the limits: hero <= 5 s,
+    // sections <= 3.6 s, phones <= 2.2 s.
+    budget: kind === "phone" ? 2.1 : kind === "tablet" ? 3 : 3.45,
+    heroBudget: kind === "phone" ? 2.1 : kind === "tablet" ? 4 : 4.8,
     dprCap: kind === "phone" ? 1.5 : 2,
     roles,
     labels,
-    speed: kind === "phone" ? 900 : 1150,
+    speed: kind === "phone" ? 1215 : kind === "tablet" ? 1640 : 1725,
+    accel: kind === "phone" ? 1.35 : kind === "tablet" ? 1.43 : 1.5,
     detail: DETAIL[kind],
   };
 }

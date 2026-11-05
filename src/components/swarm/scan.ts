@@ -61,7 +61,7 @@ function makeTask(id: number, el: HTMLElement, kind: TaskKind, phone: boolean): 
     label: labelOf(el, kind),
     order: Number.isFinite(order) ? order : null,
     rank: id, deps: [], slots: [el], absorbed: [], master: -1, tints: [],
-    font: false, sweep: false, weight: 0, fontName2: "", logName: el.dataset.buildLabel ?? "",
+    font: false, sweep: false, weight: 0, fontName2: "", logName: el.dataset.buildLabel ?? "", lead: false, tl: null, ready: false, est: 0,
     tune: false, inspect: false, drag: false,
     from: EDGES.includes(from) ? from : null, tint: null,
     box: { x: 0, y: 0, w: 0, h: 0 }, lines: [], chars: [], slotBoxes: [],
@@ -112,7 +112,6 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
     } else taskOf.set(el, add(el, kindOf(el) === "dup" ? "frame" : kindOf(el)));
   }
 
-  const maxBatches = Math.max(2, Math.round(o.workers * 1.5));
   dupGroups.forEach((all, list) => {
     const master = taskOf.get(masterOf(list) as HTMLElement);
     // Large image grids: a few tiles are dragged in from the edge one by one.
@@ -129,14 +128,17 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
       });
       slots = all.filter((s) => !picked.has(s));
     }
-    // Batch the rest so a few agents can finish 50 tiles inside the budget.
-    const size = Math.max(1, Math.ceil(slots.length / maxBatches));
+    // Batch the rest: one agent duplicates several slots in a single sweep
+    // (chip clouds, logo grids), so big lists need few hand-offs.
+    const n2 = slots.length;
+    // Phones: one sweep per list, flown from the master's slot while it is framed.
+    const size = o.phone ? Math.min(24, n2) : n2 <= 3 ? 1 : Math.min(8, Math.max(2, Math.ceil(n2 / 3)));
     for (let i = 0; i < slots.length; i += size) {
       const t = add(slots[i], "dup");
       t.slots = slots.slice(i, i + size);
       t.label = master?.label ?? t.label;
       t.master = master ? master.id : -1;
-      if (master) t.deps.push(master.id);
+      if (master && !o.phone) t.deps.push(master.id);
       for (const s of t.slots) taskOf.set(s, t);
     }
   });
@@ -387,18 +389,26 @@ function measureStyle(t: Task, cs: CSSStyleDeclaration): void {
   }
 }
 
-/** Reads every rect and style the section's build needs. */
-export function measureSection(m: SectionModel, autoTune: number): void {
-  const sy = window.scrollY;
+/**
+ * Reads every rect and style the section's build needs, one task per step
+ * (all reads, no writes), so it can run in idle time in small chunks.
+ * Each step reads scrollY with its rects, so the document coordinates stay
+ * consistent even if the page scrolls between steps.
+ */
+export function* measureSteps(m: SectionModel, autoTune: number, phone = false): Generator<void, void, void> {
   const range = document.createRange();
-  m.box = toDoc(m.el.getBoundingClientRect(), sy);
+  m.box = toDoc(m.el.getBoundingClientRect(), window.scrollY);
   for (const t of m.tasks) {
+    yield;
+    const sy = window.scrollY;
     const r = t.el.getBoundingClientRect();
     t.box = toDoc(r, sy);
     if (t.kind === "type") {
       const text = measureText(t.el, r);
       if (text) [t.chars, t.lines] = [text.chars, text.lines];
-      else [t.kind, t.font] = ["reveal", false];
+      // Phones: longer lines are line-revealed rather than typed (except the
+      // font-swap heading), so a section fits its 2.2 s target.
+      if (!text || (phone && !t.font && text.chars.length > 12)) [t.kind, t.font] = ["reveal", false];
     }
     if (t.kind === "reveal") measureLines(t, r, range);
     if (t.kind === "dup") {
@@ -427,6 +437,7 @@ export function measureSection(m: SectionModel, autoTune: number): void {
   // Inspector panels: data-build-tune always; otherwise every Nth leaf card.
   const parents = new Set<number>();
   for (const t of m.tasks) if (t.kind !== "color") t.deps.forEach((d) => parents.add(d));
+  for (const t of m.tasks) t.lead = parents.has(t.id);
   let n = 0;
   for (const t of geo) {
     if (t.kind !== "frame" || t.keep) continue;
@@ -461,4 +472,9 @@ export function measureSection(m: SectionModel, autoTune: number): void {
   m.guides = guides;
   m.tagX = left;
   m.tagY = top - 26;
+}
+
+/** Measures a whole section synchronously. */
+export function measureSection(m: SectionModel, autoTune: number, phone = false): void {
+  for (const _ of measureSteps(m, autoTune, phone)); // eslint-disable-line @typescript-eslint/no-unused-vars
 }

@@ -41,6 +41,7 @@ div.swarm-layer {
 
 .swarm-draft {
   position: absolute;
+  will-change: opacity, filter;
   box-sizing: border-box;
   margin: 0;
   overflow: hidden;
@@ -50,7 +51,9 @@ div.swarm-layer {
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-.swarm-draft * {
+/* The mono draft is uniform; the face clone (weight sweep) keeps the real
+   nested faces and colors, like the element it stands in for. */
+.swarm-draft:not(.swarm-draft--face) * {
   color: inherit !important;
   font-family: inherit !important;
 }
