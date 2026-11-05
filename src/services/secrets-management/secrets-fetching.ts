@@ -35,18 +35,61 @@ type AppSecrets = {
 // Use a simple in-memory cache
 let cachedSecrets: AppSecrets | null = null;
 
-const client = new SecretManagerServiceClient();
+// Locally the client finds Google credentials on its own (gcloud login or
+// GOOGLE_APPLICATION_CREDENTIALS). Vercel has neither, so there the service
+// account key comes from the GOOGLE_APPLICATION_CREDENTIALS_JSON env var.
+// Returns null when Secret Manager can't be used; secrets then come from
+// env vars only.
+function createSecretManagerClient(): SecretManagerServiceClient | null {
+  const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.trim();
+  if (!raw) {
+    // Without a key, the client on Vercel only fails, after a slow lookup
+    // for credentials that aren't there.
+    return process.env.VERCEL ? null : new SecretManagerServiceClient();
+  }
+
+  try {
+    // Accept the key file as plain JSON or as base64-encoded JSON.
+    const json = raw.startsWith("{")
+      ? raw
+      : Buffer.from(raw, "base64").toString("utf8");
+    const key = JSON.parse(json);
+
+    return new SecretManagerServiceClient({
+      projectId: key.project_id,
+      credentials: {
+        client_email: key.client_email,
+        private_key: key.private_key?.replace(/\\n/g, "\n"),
+      },
+    });
+  } catch (error) {
+    console.error(
+      "GOOGLE_APPLICATION_CREDENTIALS_JSON is not a valid service account key",
+      error
+    );
+    return null;
+  }
+}
+
+const client = createSecretManagerClient();
 
 async function fetchSecret(secretName: string): Promise<string | undefined> {
-  const name = `projects/lam-anh-truong-portfolio/secrets/${secretName}/versions/latest`;
-  try {
-    const [version] = await client.accessSecretVersion({ name });
-    const payload = version.payload?.data?.toString();
-    return payload?.replace(/\\n/g, "\n");
-  } catch (error) {
-    console.error(`Failed to fetch secret: ${secretName}`, error);
-    return undefined;
+  if (client) {
+    const name = `projects/lam-anh-truong-portfolio/secrets/${secretName}/versions/latest`;
+    try {
+      const [version] = await client.accessSecretVersion({ name });
+      const payload = version.payload?.data?.toString();
+      if (payload) {
+        return payload.replace(/\\n/g, "\n");
+      }
+    } catch (error) {
+      console.error(`Failed to fetch secret: ${secretName}`, error);
+    }
   }
+
+  // Fall back to the env var with the same name. Vercel still has the
+  // Firebase Admin keys and RESEND_API_KEY set this way.
+  return process.env[secretName]?.replace(/\\n/g, "\n");
 }
 
 export async function getSecrets(): Promise<AppSecrets> {
