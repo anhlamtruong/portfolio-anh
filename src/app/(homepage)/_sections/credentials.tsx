@@ -1,10 +1,12 @@
 import { certifications, education } from "@/content/profile";
+import { CrossMark } from "./decor";
 import { ExternalArrow, SectionHeader } from "./shared";
 
 export function Credentials() {
   return (
     <section id="credentials" className="bp-section">
       <div className="bp-container">
+        <CrossMark at="-left-6 top-[9rem]" label="x 64 · y 5310" speed={0.3} />
         <SectionHeader
           id="credentials"
           index="04"
@@ -18,13 +20,24 @@ export function Credentials() {
               key={school.school}
               data-build-item
               data-build="frame"
+              {...(i === 0 ? { "data-build-tune": "" } : {})}
               data-build-label="school"
               className="bp-card p-6 md:p-8"
             >
-              <p data-build-item data-build="type" className="bp-mono bp-accent text-xs">
+              <p
+                data-build-item
+                data-build="type"
+                data-build-color="text"
+                className="bp-mono bp-accent text-xs"
+              >
                 {school.dates} · {school.place}
               </p>
-              <h3 data-build-item data-build="type" className="bp-h3 mt-3 text-xl">
+              <h3
+                data-build-item
+                data-build="type"
+                data-build-font
+                className="bp-h3 mt-3 text-xl"
+              >
                 {school.degree}
               </h3>
               <p data-build-item data-build="type" className="mt-1">

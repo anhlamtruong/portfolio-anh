@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { projects, type Project } from "@/content/profile";
+import { CrossMark, DimLine } from "./decor";
 import { AgentGraphArt, ExternalArrow, SectionHeader } from "./shared";
 
 function ProjectLinks({ links }: { links: Project["links"] }) {
@@ -27,12 +28,14 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
     <article
       data-build-item
       data-build="frame"
+      data-build-tune
       data-build-label="project"
       className="bp-card bp-card-hover flex w-full flex-col overflow-hidden"
     >
       <div
         data-build-item
         data-build="image"
+        data-build-from={index % 2 === 0 ? "left" : "right"}
         className="relative aspect-[16/10] overflow-hidden border-b border-[color:var(--bp-line)] bg-[#0a0e15]"
       >
         {project.image ? (
@@ -43,10 +46,12 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
             placeholder="blur"
             sizes="(min-width: 1024px) 540px, (min-width: 768px) 50vw, 100vw"
             className="object-cover object-top"
-            priority={false}
+            data-parallax-img
           />
         ) : (
-          <AgentGraphArt seed={project.title} label={`${project.title} diagram`} />
+          <div data-parallax-img className="h-full w-full">
+            <AgentGraphArt seed={project.title} label={`${project.title} diagram`} />
+          </div>
         )}
         {project.badge ? (
           <span className="bp-chip absolute left-4 top-4 border-[color:var(--bp-accent)] text-[color:var(--bp-accent)]">
@@ -62,10 +67,20 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
         <p data-build-item data-build="type" className="bp-mono bp-dim text-xs">
           {project.dates}
         </p>
-        <h3 data-build-item data-build="type" className="bp-h3 mt-2 text-xl">
+        <h3
+          data-build-item
+          data-build="type"
+          data-build-font
+          className="bp-h3 mt-2 text-xl"
+        >
           {project.title}
         </h3>
-        <p data-build-item data-build="type" className="bp-accent mt-1 text-sm">
+        <p
+          data-build-item
+          data-build="type"
+          data-build-color="text"
+          className="bp-accent mt-1 text-sm"
+        >
           {project.tagline}
         </p>
         <p
@@ -111,6 +126,8 @@ export function Projects() {
   return (
     <section id="projects" className="bp-section">
       <div className="bp-container">
+        <DimLine at="left-0 top-[11rem]" width="46%" label="col 1 · 540" speed={0.18} />
+        <CrossMark at="-right-4 top-[40rem]" label="x 1180 · y 3020" speed={0.35} />
         <SectionHeader
           id="projects"
           index="02"

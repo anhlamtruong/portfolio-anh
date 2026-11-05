@@ -1,10 +1,16 @@
 // DOM -> task graph. scanPage() reads structure once; measureSection() reads
-// geometry (all reads, no writes) right before a section starts building.
-import type { Box, BuildKind, CharBox, Guide, LineBox, Role, SectionModel, Task } from "./types";
+// geometry and computed style (all reads, no writes) right before a section
+// starts building.
+import { fontLabel } from "./palette";
+import type {
+  Box, BuildKind, CharBox, Detail, Edge, Guide, LineBox, Role, SectionModel, Task, TaskKind, Tint,
+} from "./types";
 
 const SECTION = "[data-build-section]";
 const KINDS: readonly BuildKind[] = ["frame", "type", "reveal", "image", "dup"];
 const ROLES: readonly Role[] = ["planner", "coder", "designer", "reviewer", "tester", "deployer"];
+const EDGES: readonly Edge[] = ["left", "right", "top", "bottom"];
+const TINTS: readonly Tint[] = ["text", "fill", "stroke"];
 const CLASS_WORDS = ["card", "tile", "chip", "btn", "button", "badge", "terminal", "panel", "logo"];
 const TAG_WORDS: Record<string, string> = {
   IMG: "img", PICTURE: "img", SVG: "svg", A: "link", BUTTON: "button", LI: "item",
@@ -12,13 +18,30 @@ const TAG_WORDS: Record<string, string> = {
   H2: "h2", H3: "h3", H4: "h4", DL: "list",
 };
 const MAX_TYPE_CHARS = 120;
+const NEUTRAL: Record<Tint, [string, string, string]> = {
+  text: ["color", "--bp-muted", "#8a97a8"],
+  fill: ["background-color", "--bp-panel-2", "#10151e"],
+  stroke: ["border-color", "--bp-line-strong", "#2a3546"],
+};
+
+export interface ScanOpts {
+  workers: number;
+  phone: boolean;
+  detail: Detail;
+}
 
 const kindOf = (el: HTMLElement): BuildKind => {
   const k = el.dataset.build as BuildKind;
   return KINDS.includes(k) ? k : "frame";
 };
 
-function labelOf(el: HTMLElement, kind: BuildKind): string {
+/** data-build-keep keeps an item visible; ="mobile" only on the phone profile. */
+export const keeps = (el: HTMLElement, phone: boolean) => {
+  const v = el.getAttribute("data-build-keep");
+  return v !== null && (v !== "mobile" || phone);
+};
+
+function labelOf(el: HTMLElement, kind: TaskKind): string {
   if (el.dataset.buildLabel) return el.dataset.buildLabel;
   for (const c of Array.from(el.classList)) {
     const hit = CLASS_WORDS.find((w) => c === w || c.endsWith("-" + w));
@@ -27,22 +50,27 @@ function labelOf(el: HTMLElement, kind: BuildKind): string {
   return TAG_WORDS[el.tagName.toUpperCase()] ?? (kind === "image" ? "img" : "frame");
 }
 
-function makeTask(id: number, el: HTMLElement, kind: BuildKind): Task {
+function makeTask(id: number, el: HTMLElement, kind: TaskKind, phone: boolean): Task {
   const order = Number.parseFloat(el.dataset.buildOrder ?? "");
   const role = el.dataset.buildRole as Role;
+  const from = el.dataset.buildFrom as Edge;
   return {
     id, el, kind,
-    keep: el.hasAttribute("data-build-keep"),
+    keep: keeps(el, phone),
     role: ROLES.includes(role) ? role : null,
     label: labelOf(el, kind),
     order: Number.isFinite(order) ? order : null,
-    rank: id, deps: [], slots: [el], absorbed: [], master: -1,
+    rank: id, deps: [], slots: [el], absorbed: [], master: -1, tints: [],
+    font: false, tune: false, inspect: false, drag: false,
+    from: EDGES.includes(from) ? from : null, tint: null,
     box: { x: 0, y: 0, w: 0, h: 0 }, lines: [], chars: [], slotBoxes: [],
+    radius: 0, pad: [0, 0, 0, 0], align: -1, fontName: "", img: null, alt: "", fit: "fill", pos: [0.5, 0.5],
+    prop: "", prev: null, from4: [], to4: [], hsv: [0, 0, 0], hex: "",
     state: 0, agent: -1,
   };
 }
 
-function scanSection(section: HTMLElement, workers: number): SectionModel {
+function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
   const items = Array.from(section.querySelectorAll<HTMLElement>("[data-build-item]")).filter(
     (el) => el.closest(SECTION) === section,
   );
@@ -63,6 +91,11 @@ function scanSection(section: HTMLElement, workers: number): SectionModel {
   };
 
   const tasks: Task[] = [];
+  const add = (el: HTMLElement, kind: TaskKind) => {
+    const t = makeTask(tasks.length, el, kind, o.phone);
+    tasks.push(t);
+    return t;
+  };
   const taskOf = new Map<HTMLElement, Task>();
   const dupGroups = new Map<HTMLElement, HTMLElement[]>();
   const nestedInDup = new Map<HTMLElement, HTMLElement>();
@@ -75,26 +108,34 @@ function scanSection(section: HTMLElement, workers: number): SectionModel {
       const list = listOf(el) as HTMLElement;
       if (!dupGroups.has(list)) dupGroups.set(list, []);
       (dupGroups.get(list) as HTMLElement[]).push(el);
-    } else {
-      const kind = kindOf(el) === "dup" ? "frame" : kindOf(el);
-      const t = makeTask(tasks.length, el, kind);
-      tasks.push(t);
-      taskOf.set(el, t);
-    }
+    } else taskOf.set(el, add(el, kindOf(el) === "dup" ? "frame" : kindOf(el)));
   }
 
-  // Batch large lists so a few agents can finish 50 tiles inside the budget.
-  const maxBatches = Math.max(2, Math.round(workers * 1.5));
-  dupGroups.forEach((slots, list) => {
+  const maxBatches = Math.max(2, Math.round(o.workers * 1.5));
+  dupGroups.forEach((all, list) => {
     const master = taskOf.get(masterOf(list) as HTMLElement);
+    // Large image grids: a few tiles are dragged in from the edge one by one.
+    let slots = all;
+    const n = all.length;
+    if (n >= 6 && o.detail.logoDrags > 0 && all.some((s) => s.tagName === "IMG" || s.querySelector("img"))) {
+      const k = Math.min(o.detail.logoDrags, Math.floor(n / 4));
+      const picked = new Set<HTMLElement>();
+      for (let j = 0; j < k; j++) picked.add(all[Math.floor(((j + 1) * n) / (k + 1))]);
+      picked.forEach((el) => {
+        const t = add(el, "image");
+        t.label = labelOf(el, "image");
+        taskOf.set(el, t);
+      });
+      slots = all.filter((s) => !picked.has(s));
+    }
+    // Batch the rest so a few agents can finish 50 tiles inside the budget.
     const size = Math.max(1, Math.ceil(slots.length / maxBatches));
     for (let i = 0; i < slots.length; i += size) {
-      const t = makeTask(tasks.length, slots[i], "dup");
+      const t = add(slots[i], "dup");
       t.slots = slots.slice(i, i + size);
       t.label = master?.label ?? t.label;
       t.master = master ? master.id : -1;
       if (master) t.deps.push(master.id);
-      tasks.push(t);
       for (const s of t.slots) taskOf.set(s, t);
     }
   });
@@ -106,6 +147,26 @@ function scanSection(section: HTMLElement, workers: number): SectionModel {
     const parent = parentItem(t.el);
     const dep = parent ? taskOf.get(parent) : undefined;
     if (dep && dep !== t && !t.deps.includes(dep.id)) t.deps.push(dep.id);
+    const el = t.el;
+    t.font = t.kind === "type" && el.hasAttribute("data-build-font");
+    t.tune = t.kind === "frame" && o.detail.panels && el.hasAttribute("data-build-tune");
+    t.drag = t.kind === "image" && !t.keep;
+  }
+
+  // Color-wheel follow-ups run after the item that shows the element.
+  let colors = 0;
+  for (const el of items) {
+    const tint = el.dataset.buildColor as Tint;
+    if (!TINTS.includes(tint) || colors >= o.detail.colorsPerSection) continue;
+    const owner = taskOf.get(el) ?? taskOf.get(nestedInDup.get(el) as HTMLElement);
+    if (!owner) continue;
+    const t = add(el, "color");
+    t.tint = tint;
+    t.label = "color";
+    t.slots = [];
+    t.deps.push(owner.id);
+    owner.tints.push(t);
+    colors++;
   }
 
   return {
@@ -122,10 +183,19 @@ function scanSection(section: HTMLElement, workers: number): SectionModel {
 }
 
 /** Finds every build section plus items that live outside any section. */
-export function scanPage(workers: number): { sections: SectionModel[]; orphans: HTMLElement[] } {
-  const sections = Array.from(document.querySelectorAll<HTMLElement>(SECTION)).map((s) =>
-    scanSection(s, workers),
-  );
+export function scanPage(o: ScanOpts): { sections: SectionModel[]; orphans: HTMLElement[] } {
+  const sections = Array.from(document.querySelectorAll<HTMLElement>(SECTION)).map((s) => scanSection(s, o));
+  // Phones: only the page's first data-build-font item (the main heading) may
+  // swap fonts; kept items never do (they are visible from first paint).
+  let seen = false;
+  for (const m of sections) {
+    for (const t of m.tasks) {
+      if (!t.font) continue;
+      if (seen && o.detail.fontFirstOnly) t.font = false;
+      seen = true;
+      if (t.keep) t.font = false;
+    }
+  }
   const orphans = Array.from(document.querySelectorAll<HTMLElement>("[data-build-item]")).filter(
     (el) => !el.closest(SECTION),
   );
@@ -134,13 +204,14 @@ export function scanPage(workers: number): { sections: SectionModel[]; orphans: 
 
 const toDoc = (r: DOMRect, sy: number): Box => ({ x: r.left, y: r.top + sy, w: r.width, h: r.height });
 
-/** Per-glyph right edges and line boxes for typing. Returns false if unsuitable. */
-function measureChars(t: Task, er: DOMRect, range: Range): boolean {
+/** Per-glyph right edges and line boxes of an element's text, local to `er`. */
+export function measureText(el: HTMLElement, er: DOMRect): { chars: CharBox[]; lines: LineBox[] } | null {
+  const range = document.createRange();
   const chars: CharBox[] = [];
   const lines: LineBox[] = [];
   let cur: LineBox | null = null;
   let prevX = -Infinity;
-  const walker = document.createTreeWalker(t.el, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
     const s = node.data;
     for (let i = 0; i < s.length; i++) {
@@ -155,7 +226,7 @@ function measureChars(t: Task, er: DOMRect, range: Range): boolean {
       const x1 = r.left - er.left;
       const y1 = r.top - er.top;
       if (!cur || y1 > (cur.y + cur.b) / 2 || x1 < prevX - 2) {
-        if (cur && y1 < cur.y) return false; // visual order differs from DOM order
+        if (cur && y1 < cur.y) return null; // visual order differs from DOM order
         cur = { x: x1, y: y1, r: r.right - er.left, b: r.bottom - er.top };
         lines.push(cur);
       } else {
@@ -166,13 +237,10 @@ function measureChars(t: Task, er: DOMRect, range: Range): boolean {
       }
       prevX = x1;
       chars.push({ x: r.right - er.left, line: lines.length - 1 });
-      if (chars.length > MAX_TYPE_CHARS) return false;
+      if (chars.length > MAX_TYPE_CHARS) return null;
     }
   }
-  if (!chars.length) return false;
-  t.chars = chars;
-  t.lines = lines;
-  return true;
+  return chars.length ? { chars, lines } : null;
 }
 
 /** Visual lines of a text block, from text-node fragments only. */
@@ -209,15 +277,98 @@ function measureLines(t: Task, er: DOMRect, range: Range): void {
   t.lines = lines.length ? lines : [{ x: 0, y: 0, r: er.width, b: er.height }];
 }
 
-/** Reads every rect the section's build needs. */
-export function measureSection(m: SectionModel): void {
+let probe: CanvasRenderingContext2D | null | undefined;
+/** Any CSS color -> [r, g, b, a] in sRGB, via a 1x1 canvas. */
+export function rgba(css: string): number[] | null {
+  if (probe === undefined) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    probe = c.getContext("2d", { willReadFrequently: true });
+  }
+  if (!probe || !css) return null;
+  probe.clearRect(0, 0, 1, 1);
+  probe.fillStyle = "#000";
+  probe.fillStyle = css;
+  probe.fillRect(0, 0, 1, 1);
+  const d = probe.getImageData(0, 0, 1, 1).data;
+  return [d[0], d[1], d[2], d[3] / 255];
+}
+
+function hsv([r, g, b]: number[]): number[] {
+  const R = r / 255;
+  const G = g / 255;
+  const B = b / 255;
+  const max = Math.max(R, G, B);
+  const d = max - Math.min(R, G, B);
+  let h = 0;
+  if (d > 0) {
+    if (max === R) h = ((G - B) / d) % 6;
+    else if (max === G) h = (B - R) / d + 2;
+    else h = (R - G) / d + 4;
+  }
+  return [(h * 60 + 360) % 360, max ? d / max : 0, max];
+}
+
+const px = (v: string) => Number.parseFloat(v) || 0;
+const frac = (v: string | undefined, fallback: number) => {
+  if (!v) return fallback;
+  if (v.endsWith("%")) return px(v) / 100;
+  return v === "left" || v === "top" ? 0 : v === "right" || v === "bottom" ? 1 : v === "center" ? 0.5 : fallback;
+};
+
+/** Computed style the detail pass needs (radius, padding, fonts, colors, images). */
+function measureStyle(t: Task, cs: CSSStyleDeclaration): void {
+  const b = t.box;
+  const rad = cs.borderTopLeftRadius;
+  t.radius = rad.endsWith("%") ? (px(rad) / 100) * Math.min(b.w, b.h) : px(rad);
+  if (t.kind === "frame") {
+    t.pad = [px(cs.paddingTop), px(cs.paddingRight), px(cs.paddingBottom), px(cs.paddingLeft)];
+    const a = cs.textAlign;
+    t.align = a === "center" ? 1 : a === "right" || a === "end" ? 2 : 0;
+  } else if (t.kind === "type" && t.font) {
+    t.fontName = fontLabel(cs.fontFamily);
+    if (/mono/i.test(t.fontName)) t.font = false; // already in the draft face
+  } else if (t.kind === "image") {
+    const img = t.el instanceof HTMLImageElement ? t.el : t.el.querySelector("img");
+    t.img = img;
+    t.alt = img?.alt || t.el.getAttribute("aria-label") || t.el.querySelector("[aria-label]")?.getAttribute("aria-label") || t.label;
+    if (img) {
+      const ics = getComputedStyle(img);
+      t.fit = ics.objectFit;
+      const [x, y] = ics.objectPosition.split(" ");
+      t.pos = [frac(x, 0.5), frac(y, 0.5)];
+    }
+  } else if (t.kind === "color" && t.tint) {
+    const [prop, cssVar, fallback] = NEUTRAL[t.tint];
+    const target = t.tint === "text" ? cs.color : t.tint === "fill" ? cs.backgroundColor : cs.borderTopColor;
+    const to = rgba(target);
+    const from = rgba(cs.getPropertyValue(cssVar).trim() || fallback) ?? rgba(fallback);
+    const noStroke = t.tint === "stroke" && px(cs.borderTopWidth) === 0;
+    if (!to || !from || to[3] < 0.05 || noStroke) {
+      t.state = 3; // nothing to pick
+      return;
+    }
+    t.prop = prop;
+    t.from4 = from;
+    t.to4 = to;
+    t.hsv = hsv(to);
+    t.hex = "#" + to.slice(0, 3).map((v) => v.toString(16).padStart(2, "0")).join("");
+  }
+}
+
+/** Reads every rect and style the section's build needs. */
+export function measureSection(m: SectionModel, autoTune: number): void {
   const sy = window.scrollY;
   const range = document.createRange();
   m.box = toDoc(m.el.getBoundingClientRect(), sy);
   for (const t of m.tasks) {
     const r = t.el.getBoundingClientRect();
     t.box = toDoc(r, sy);
-    if (t.kind === "type" && !measureChars(t, r, range)) t.kind = "reveal";
+    if (t.kind === "type") {
+      const text = measureText(t.el, r);
+      if (text) [t.chars, t.lines] = [text.chars, text.lines];
+      else [t.kind, t.font] = ["reveal", false];
+    }
     if (t.kind === "reveal") measureLines(t, r, range);
     if (t.kind === "dup") {
       t.slotBoxes = t.slots.map((s) => toDoc(s.getBoundingClientRect(), sy));
@@ -230,6 +381,7 @@ export function measureSection(m: SectionModel): void {
         h: Math.max(...xs.map((b) => b.y + b.h)) - y,
       };
     }
+    if (t.kind !== "dup" && t.kind !== "reveal") measureStyle(t, getComputedStyle(t.el));
   }
 
   // Default order: rows top-to-bottom, then left-to-right; data-build-order overrides.
@@ -240,6 +392,17 @@ export function measureSection(m: SectionModel): void {
   geo
     .sort((a, b) => (a.order ?? a.rank) - (b.order ?? b.rank) || a.rank - b.rank)
     .forEach((t, i) => (t.rank = i));
+
+  // Inspector panels: data-build-tune always; otherwise every Nth leaf card.
+  const parents = new Set<number>();
+  for (const t of m.tasks) if (t.kind !== "color") t.deps.forEach((d) => parents.add(d));
+  let n = 0;
+  for (const t of geo) {
+    if (t.kind !== "frame" || t.keep) continue;
+    const card = t.radius > 0 || t.pad.some((p) => p >= 8);
+    const auto = autoTune > 0 && card && !parents.has(t.id) && t.box.w >= 120 && t.box.h >= 44;
+    t.inspect = t.tune || (auto && n++ % autoTune === 0);
+  }
 
   const visible = m.tasks.filter((t) => t.box.w > 0 && t.box.h > 0);
   const src = visible.length ? visible.map((t) => t.box) : [m.box];
@@ -260,8 +423,8 @@ export function measureSection(m: SectionModel): void {
   }
   let col = -1;
   let best = 0;
-  counts.forEach((n, x) => {
-    if (n > best) [best, col] = [n, x];
+  counts.forEach((c, x) => {
+    if (c > best) [best, col] = [c, x];
   });
   if (col >= 0) guides.push({ x1: col, y1: top - 18, x2: col, y2: bottom + 18 });
   m.guides = guides;

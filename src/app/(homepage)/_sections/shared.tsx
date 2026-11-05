@@ -8,6 +8,7 @@ import {
   Mail,
 } from "lucide-react";
 import type { SocialLink } from "@/content/profile";
+import { SectionNumeral } from "./decor";
 
 // Section intro. Each header is its own small build section so the
 // agents type it as soon as it scrolls into view.
@@ -25,15 +26,22 @@ export function SectionHeader({
   children?: ReactNode;
 }) {
   return (
+    <>
+      <SectionNumeral value={index} />
     <header
       data-build-section={`${id}-head`}
-      className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+      className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div>
         <p data-build-item data-build="type" className="bp-eyebrow">
           {index} — {label}
         </p>
-        <h2 data-build-item data-build="type" className="bp-h2 mt-4">
+        <h2
+          data-build-item
+          data-build="type"
+          data-build-font
+          className="bp-h2 mt-4"
+        >
           {title}
         </h2>
       </div>
@@ -47,6 +55,7 @@ export function SectionHeader({
         </div>
       ) : null}
     </header>
+    </>
   );
 }
 

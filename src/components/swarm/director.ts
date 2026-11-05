@@ -1,26 +1,18 @@
-// Scheduling: section lifecycle (plan -> build -> review), task claiming,
-// per-item GSAP timelines, and the single gsap.ticker loop that steps the
-// simulation and draws the overlay. Nothing here touches React state per frame.
+// Scheduling: section lifecycle (plan -> build -> review), task claiming, the
+// single gsap.ticker loop that steps the simulation and draws the overlay.
+// Per-task timelines live in choreo.ts. Nothing here sets React state per frame.
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { COLORS, ROLE_COLOR, ROLE_PREFS, SESSION_KEY } from "./palette";
+import { type Ctx, choreograph, edgePoint, neutralCss } from "./choreo";
+import { COLORS, ROLE_COLOR, SESSION_KEY, rolePref } from "./palette";
 import { Renderer } from "./renderer";
-import { measureSection, scanPage } from "./scan";
+import { keeps, measureSection, scanPage } from "./scan";
 import { Sim } from "./sim";
 import {
-  MK,
-  TASK_CLAIMED,
-  TASK_DONE,
-  TASK_PENDING,
-  TASK_RUNNING,
-  type LineBox,
-  type Mark,
-  type MarkKind,
-  type Profile,
-  type Role,
-  type SectionModel,
-  type Task,
+  MK, TASK_CLAIMED, TASK_DONE, TASK_PENDING, TASK_RUNNING, TOOL,
+  type Anim, type Mark, type MarkKind, type Profile, type Role, type Run, type Task,
 } from "./types";
+import { CHECK, CHECK_H } from "./widgets";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -36,27 +28,10 @@ const PLAN = 1;
 const BUILD = 2;
 const REVIEW = 3;
 const DONE = 4;
+/** Share of a section's budget given to the build phase. */
+const BUILD_SHARE = 0.53;
 
-const EMPTY_CLIP = "polygon(0 0, 0 0, 0 0)";
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
-
-type Anim = gsap.core.Animation;
-
-interface Run {
-  m: SectionModel;
-  phase: number;
-  t0: number;
-  deadline: number;
-  /** Duration multiplier for this section's tasks (<= 1). */
-  scale: number;
-  speedMul: number;
-  joinGate: number;
-  stagger: number;
-  flushed: boolean;
-  marks: Mark[];
-  anims: Anim[];
-  st: ScrollTrigger | null;
-}
 
 interface Brain {
   mode: number;
@@ -70,6 +45,8 @@ interface Brain {
 
 export interface DirectorOptions {
   canvas: HTMLCanvasElement;
+  /** Absolutely positioned layer for draft-font clones (outside the page flow). */
+  layer: HTMLElement | null;
   profile: Profile;
   /** Current vertical scroll (Lenis when present, else window.scrollY). */
   getScroll: () => number;
@@ -80,6 +57,7 @@ export interface DirectorOptions {
 function clearInline(el: HTMLElement): void {
   el.style.removeProperty("opacity");
   el.style.removeProperty("clip-path");
+  el.style.removeProperty("filter");
   if (el.getAttribute("style") === "") el.removeAttribute("style");
 }
 
@@ -88,20 +66,42 @@ function markBuilt(el: HTMLElement): void {
   clearInline(el);
 }
 
-/** Clip showing every row above line L, and line L up to x = cx (local px). */
-function stair(lines: LineBox[], L: number, cx: number, w: number, h: number): string {
-  const P = 12;
-  const top = L === 0 ? -P : (lines[L - 1].b + lines[L].y) / 2;
-  const bot = L === lines.length - 1 ? h + P : (lines[L].b + lines[L + 1].y) / 2;
-  const r = w + P;
-  const f = (v: number) => v.toFixed(1) + "px";
-  return `polygon(${f(-P)} ${f(-P)}, ${f(r)} ${f(-P)}, ${f(r)} ${f(top)}, ${f(cx)} ${f(top)}, ${f(cx)} ${f(bot)}, ${f(-P)} ${f(bot)})`;
+/** Neutral color while a color-wheel task waits; remembers the author's inline value. */
+function applyTint(t: Task): void {
+  if (!t.prop || t.prev !== null) return;
+  t.prev = t.el.style.getPropertyValue(t.prop);
+  t.el.style.setProperty(t.prop, neutralCss(t));
+}
+
+function clearTint(t: Task): void {
+  if (!t.prop || t.prev === null) return;
+  if (t.prev) t.el.style.setProperty(t.prop, t.prev);
+  else t.el.style.removeProperty(t.prop);
+  t.prev = null;
+  if (t.el.getAttribute("style") === "") t.el.removeAttribute("style");
+}
+
+/** Estimated seconds a task takes at scale 1 (travel excluded). */
+function cost(t: Task, dragTime: number): number {
+  switch (t.kind) {
+    case "frame":
+      return 0.56 + (t.inspect ? 1.3 : 0);
+    case "image":
+      return t.drag ? 0.45 + 0.9 * dragTime : 0.8;
+    case "type":
+      return clamp(t.chars.length * 0.032, 0.2, 0.8) + 0.12 + (t.font ? 1.35 : 0);
+    case "reveal":
+      return clamp(t.lines.length * 0.09, 0.28, 0.7) + 0.1;
+    case "color":
+      return 1.75;
+    default:
+      return 0.52 + Math.min(0.06, 0.3 / t.slots.length) * (t.slots.length - 1);
+  }
 }
 
 export class Director {
   readonly agentCount: number;
   private readonly o: DirectorOptions;
-  private readonly B: number;
   private readonly sim: Sim;
   private readonly renderer: Renderer;
   private readonly roles: Role[];
@@ -131,16 +131,10 @@ export class Director {
 
   constructor(o: DirectorOptions) {
     this.o = o;
-    this.B = o.profile.budget;
     this.roles = o.profile.roles;
     this.agentCount = this.roles.length;
     this.sim = new Sim(this.roles.length);
-    this.renderer = new Renderer(
-      o.canvas,
-      o.profile.dprCap,
-      this.roles.map((r) => ROLE_COLOR[r]),
-      o.profile.labels,
-    );
+    this.renderer = new Renderer(o.canvas, o.profile.dprCap, this.roles.map((r) => ROLE_COLOR[r]), o.profile.labels);
     this.brains = this.roles.map(() => ({ mode: OFF, run: null, task: null, hx: 0, hy: 0, until: 0, go: null }));
     this.planner = this.roles.indexOf("planner");
     this.reviewer = this.roles.indexOf("reviewer");
@@ -151,13 +145,15 @@ export class Director {
 
   /** Scan the page and arm triggers. `active` = the html build flag is on. */
   start(active: boolean): void {
-    const { sections, orphans } = scanPage(this.workers.length);
+    const p = this.o.profile;
+    const { sections, orphans } = scanPage({ workers: this.workers.length, phone: p.kind === "phone", detail: p.detail });
     orphans.forEach(markBuilt);
     this.runs = sections.map((m) => ({
-      m, phase: WAIT, t0: 0, deadline: 0, scale: 1, speedMul: 1, joinGate: 0,
-      stagger: 0.12, flushed: false, marks: [], anims: [], st: null,
+      m, phase: WAIT, B: m.onLoad ? p.heroBudget : p.budget, t0: 0, deadline: 0, scale: 1, speedMul: 1,
+      joinGate: 0, stagger: 0.12, flushed: false, marks: [], anims: [], nodes: [], st: null,
     }));
     this.runs.forEach((r) => this.byEl.set(r.m.el, r));
+    this.renderer.prepareChecklist();
     document.addEventListener("focusin", this.onFocus);
     document.addEventListener("visibilitychange", this.onVisibility);
     window.addEventListener("resize", this.onResize);
@@ -183,11 +179,7 @@ export class Director {
   replay(): void {
     if (!this.alive) return;
     for (const run of this.runs) {
-      run.st?.kill();
-      run.st = null;
-      run.anims.forEach((a) => a.kill());
-      run.anims = [];
-      run.marks = [];
+      this.reset(run);
       run.phase = WAIT;
       run.flushed = false;
       for (const t of run.m.tasks) {
@@ -229,8 +221,7 @@ export class Director {
     document.removeEventListener("visibilitychange", this.onVisibility);
     window.removeEventListener("resize", this.onResize);
     for (const run of this.runs) {
-      run.st?.kill();
-      run.anims.forEach((a) => a.kill());
+      this.reset(run);
       for (const t of run.m.tasks) [...t.slots, ...t.absorbed].forEach(clearInline);
     }
     this.marks.forEach((m) => gsap.killTweensOf(m));
@@ -239,6 +230,18 @@ export class Director {
   }
 
   // ------------------------------------------------------------ lifecycle
+
+  /** Kills a run's animations and temporary DOM/styles without building it. */
+  private reset(run: Run): void {
+    run.st?.kill();
+    run.st = null;
+    run.anims.forEach((a) => a.kill());
+    run.anims = [];
+    run.marks = [];
+    run.nodes.forEach((n) => n.remove());
+    run.nodes = [];
+    run.m.tasks.forEach(clearTint);
+  }
 
   private arm(initial: boolean): void {
     this.readView();
@@ -264,8 +267,8 @@ export class Director {
     run.st = null;
     this.readView();
     const m = run.m;
-    measureSection(m);
-    for (const t of m.tasks) if (t.box.w < 1 || t.box.h < 1) this.taskDone(run, t);
+    measureSection(m, this.o.profile.detail.autoTune);
+    for (const t of m.tasks) if (t.state !== TASK_DONE && (t.box.w < 1 || t.box.h < 1)) this.taskDone(run, t);
     const open = m.tasks.filter((t) => t.state !== TASK_DONE);
     if (!open.length || m.box.y + m.box.h <= this.sy) return this.finish(run, true);
 
@@ -278,20 +281,15 @@ export class Director {
     const p = this.brains[this.planner];
     const g = m.guides[0];
     if (p.mode === OFF || p.mode === IDLE || p.mode === EXIT) {
-      this.send(this.planner, run, g.x1, g.y1, 0.08 * this.B, (i) => this.plan(run, i), null);
+      this.send(this.planner, run, g.x1, g.y1, Math.min(0.22, 0.06 * run.B), (i) => this.plan(run, i), null);
     } else this.plan(run, -1);
     this.setBusy();
   }
 
-  /** Picks a duration scale so the section fits the time budget. */
+  /** Picks a duration scale so the section fits its time budget. */
   private estimate(run: Run, open: Task[]): void {
     const tasks = run.m.tasks;
-    const cost = (t: Task) =>
-      t.kind === "frame" ? 0.56
-      : t.kind === "image" ? 0.8
-      : t.kind === "type" ? clamp(t.chars.length * 0.032, 0.2, 0.8) + 0.12
-      : t.kind === "reveal" ? clamp(t.lines.length * 0.09, 0.28, 0.7) + 0.1
-      : 0.52 + Math.min(0.06, 0.3 / t.slots.length) * (t.slots.length - 1);
+    const dt = this.o.profile.detail.dragTime;
     const memo = new Map<number, number>();
     const path = (t: Task): number => {
       const hit = memo.get(t.id);
@@ -299,17 +297,17 @@ export class Director {
       memo.set(t.id, 0);
       let longest = 0;
       for (const d of t.deps) if (tasks[d].state !== TASK_DONE) longest = Math.max(longest, path(tasks[d]));
-      const v = cost(t) + 0.14 + longest;
+      const v = cost(t, dt) + 0.16 + longest;
       memo.set(t.id, v);
       return v;
     };
     let sum = 0;
     let cp = 0;
     for (const t of open) {
-      sum += cost(t) + 0.14;
+      sum += cost(t, dt) + 0.16;
       cp = Math.max(cp, path(t));
     }
-    const W = 0.52 * this.B;
+    const W = BUILD_SHARE * run.B;
     const crew = this.crew(open.length);
     run.scale = clamp(W / Math.max(sum / crew, cp), 0.25, 1);
     run.speedMul = clamp(1 / run.scale, 1, 2.2);
@@ -340,6 +338,7 @@ export class Director {
       active++;
       if (b.mode === OFF || far(i)) s.place(i, L + Math.random() * (R - L), sy + vh + 30 + Math.random() * 80);
       s.on[i] = 1;
+      s.tool[i] = TOOL.arrow;
       b.mode = IDLE;
       b.run = null;
       s.speed[i] = this.o.profile.speed * run.speedMul;
@@ -359,6 +358,7 @@ export class Director {
         b.mode = IDLE;
         b.hx = s.x[i];
         b.hy = s.y[i];
+        s.tool[i] = TOOL.arrow;
         s.speed[i] = this.o.profile.speed;
       }
     }
@@ -366,7 +366,7 @@ export class Director {
 
   private plan(run: Run, i: number): void {
     if (run.phase !== PLAN) return this.free(i, run, null);
-    const B = this.B;
+    const B = run.B;
     const m = run.m;
     const guides = m.guides.map((g) =>
       this.mark(run, MK.guide, { x: g.x1, y: g.y1, x2: g.x2, y2: g.y2, color: COLORS.guide }),
@@ -374,12 +374,15 @@ export class Director {
     const label = m.planLabel ?? `plan · ${m.tasks.length} task${m.tasks.length === 1 ? "" : "s"}`;
     const tag = this.mark(run, MK.tag, { x: m.tagX, y: m.tagY, label, a: 0 });
     const tl = this.anim(run, gsap.timeline({ onComplete: () => this.free(i, run, null) }));
-    guides.forEach((g, gi) => tl.to(g, { p: 1, duration: 0.1 * B, ease: "power2.out" }, gi * 0.022 * B));
-    tl.to(tag, { a: 1, p: 1, duration: 0.07 * B, ease: "back.out(2)" }, 0.03 * B);
+    const dur = Math.min(0.3, 0.08 * B);
+    const gap = Math.min(0.06, 0.016 * B);
+    guides.forEach((g, gi) => tl.to(g, { p: 1, duration: dur, ease: "power2.out" }, gi * gap));
+    tl.to(tag, { a: 1, p: 1, duration: Math.min(0.2, 0.06 * B), ease: "back.out(2)" }, gap);
     tl.call(() => this.beginBuild(run), undefined, tl.duration() * 0.7);
     if (i >= 0) {
       const g = guides[0];
       this.sim.follow[i] = 18;
+      this.sim.tool[i] = TOOL.cross;
       tl.eventCallback("onUpdate", () => this.aim(i, g.x + (g.x2 - g.x) * g.p, g.y));
     }
   }
@@ -387,7 +390,7 @@ export class Director {
   private beginBuild(run: Run): void {
     if (run.phase !== PLAN) return;
     run.phase = BUILD;
-    run.deadline = this.clock + 0.52 * this.B;
+    run.deadline = this.clock + BUILD_SHARE * run.B;
     run.joinGate = this.clock;
   }
 
@@ -401,9 +404,10 @@ export class Director {
       if (t.agent >= 0 && this.brains[t.agent].task === t) this.release(t.agent);
       t.agent = -1;
       t.state = TASK_DONE;
+      clearTint(t);
       t.absorbed.forEach(markBuilt);
       for (const el of t.slots) {
-        if (el.hasAttribute("data-build-keep")) markBuilt(el);
+        if (keeps(el, this.o.profile.kind === "phone")) markBuilt(el);
         else els.push(el);
       }
     }
@@ -425,34 +429,57 @@ export class Director {
     if (b.mode === TRAVEL || b.mode === WORK) return this.inspect(run, -1);
     const y = clamp(this.sy + 18, box.y + 4, box.y + box.h - 4);
     if (b.mode === OFF) this.sim.place(i, this.vw + 30, y);
-    this.send(i, run, box.x + 4, y, 0.06 * this.B, (ai) => this.inspect(run, ai), null);
+    this.send(i, run, box.x + 4, y, Math.min(0.18, 0.04 * run.B), (ai) => this.inspect(run, ai), null);
   }
 
+  /** Reviewer: outline the section, tick a short checklist, then stamp. */
   private inspect(run: Run, i: number): void {
     if (run.phase !== REVIEW) return this.free(i, run, null);
+    const B = run.B;
     const bx = run.m.box;
     const b = { x: bx.x + 3, y: bx.y + 3, w: Math.max(1, bx.w - 6), h: Math.max(1, bx.h - 6) };
     const rideY = clamp(this.sy + 18, b.y, b.y + b.h);
     const out = this.mark(run, MK.outline, { x: b.x, y: b.y, w: b.w, h: b.h });
-    if (i >= 0) this.sim.follow[i] = 20;
+    const cx = Math.min(b.x + b.w, this.vw) - CHECK.w - 14;
+    const cy = clamp(rideY + 10, b.y + 6, Math.max(b.y + 6, b.y + b.h - CHECK_H - 6));
+    const list = this.mark(run, MK.check, { x: cx, y: cy, p: 0, u: 0 });
+    if (i >= 0) {
+      this.sim.follow[i] = 20;
+      this.sim.tool[i] = TOOL.cross;
+    }
+    const n = CHECK.items.length;
+    const rowY = () => cy + CHECK.head + Math.min(n - 1, Math.floor(list.u)) * CHECK.row + CHECK.row / 2;
     this.anim(run, gsap.timeline())
       .to(out, {
         p: 1,
-        duration: 0.15 * this.B,
+        duration: Math.min(0.4, 0.09 * B),
         ease: "power1.inOut",
         onUpdate: () => this.aim(i, b.x + Math.min(b.w, (b.w + b.h) * out.p), rideY),
       })
-      .call(() => this.stamp(run, i));
+      .call(() => {
+        if (i >= 0) this.sim.tool[i] = TOOL.arrow;
+        this.aim(i, cx + 14, rowY());
+      })
+      .to(list, { p: 1, duration: Math.min(0.1, 0.03 * B), ease: "power2.out" })
+      .to(list, {
+        u: n,
+        duration: Math.min(0.36, 0.07 * B),
+        ease: `steps(${n})`,
+        onUpdate: () => this.aim(i, cx + 14, rowY()),
+      })
+      .to({}, { duration: Math.min(0.08, 0.02 * B) })
+      .call(() => this.stamp(run, i, list));
   }
 
-  private stamp(run: Run, i: number): void {
+  private stamp(run: Run, i: number, list: Mark): void {
     if (run.phase !== REVIEW) return;
     const label = "✓ approved";
     const { w, h } = this.renderer.pillSize(label, "badge");
-    const box = run.m.box;
-    const x = Math.min(box.x + box.w, this.vw) - w - 14;
-    const y = Math.max(box.y + 10, Math.min(this.sy + 14, box.y + box.h - h - 4));
+    const x = list.x + CHECK.w - w;
+    const y = list.y + 2;
     const badge = this.mark(null, MK.badge, { x, y, label, a: 0, s: 1.5 });
+    const ripple = this.mark(null, MK.ripple, { x: x + w / 2, y: y + h / 2 });
+    this.anim(null, gsap.to(ripple, { p: 1, duration: 0.4, onComplete: () => void (ripple.dead = true) }));
     this.anim(null, gsap.timeline()
       .to(badge, { a: 1, s: 1, duration: 0.16, ease: "back.out(2.5)" })
       .to(badge, { a: 0, duration: 0.25, delay: 0.55, onComplete: () => void (badge.dead = true) }));
@@ -477,12 +504,15 @@ export class Director {
       if (t.state !== TASK_DONE) this.taskDone(run, t);
       t.slots.forEach(markBuilt);
       t.absorbed.forEach(markBuilt);
+      clearTint(t);
     }
+    run.nodes.forEach((n) => n.remove());
+    run.nodes = [];
     run.m.el.setAttribute("data-built", "");
     for (const m of run.marks) {
       gsap.killTweensOf(m);
-      if (instant) m.dead = true;
-      else this.anim(null, gsap.to(m, { a: 0, duration: 0.3, onComplete: () => void (m.dead = true) }));
+      if (instant || m.k === MK.ripple || m.k === MK.flash) m.dead = true;
+      else this.anim(null, gsap.to(m, { a: 0, p: m.k === MK.check ? 0 : m.p, duration: 0.3, onComplete: () => void (m.dead = true) }));
     }
     run.marks = [];
     this.brains.forEach((b, i) => b.run === run && (b.mode === TRAVEL || b.mode === WORK) && this.release(i));
@@ -521,8 +551,9 @@ export class Director {
         if (o.t.state !== TASK_PENDING || (b.run !== o.run && this.clock < o.run.joinGate)) continue;
         let score = Math.hypot(o.x - s.x[i], o.y - s.y[i]) + o.t.rank * 22;
         if (o.t.role) score += o.t.role === role ? -200 : 600;
-        else if (ROLE_PREFS[role].includes(o.t.kind)) score -= 60;
-        if (o.y < this.sy - 20 || o.y > this.sy + this.vh + 20) score += 700;
+        else score += rolePref(role, o.t.kind);
+        const cy = o.t.box.y + o.t.box.h / 2;
+        if (cy < this.sy - 20 || cy > this.sy + this.vh + 20) score += 700;
         if (score < bestScore) [bestScore, best] = [score, j];
       }
       if (best < 0) continue;
@@ -541,6 +572,8 @@ export class Director {
       const mb = t.master >= 0 ? run.m.tasks[t.master].box : t.slotBoxes[0];
       return [mb.x + mb.w / 2, mb.y + mb.h / 2];
     }
+    if (t.kind === "image" && t.drag) return edgePoint(t, this.sy, this.vw, this.vh);
+    if (t.kind === "color") return [Math.min(b.x + b.w, this.vw - 20), b.y + Math.min(b.h / 2, 24)];
     if (t.kind === "type" || t.kind === "reveal") return [b.x + t.lines[0].x, b.y + t.lines[0].b];
     return [b.x, b.y];
   }
@@ -548,134 +581,18 @@ export class Director {
   private work(run: Run, t: Task, i: number): void {
     if (t.state !== TASK_CLAIMED || run.phase !== BUILD) return this.free(i, run, t);
     t.state = TASK_RUNNING;
+    // Color follow-ups: their elements appear neutral, then get picked.
+    for (const c of t.tints) if (c.state === TASK_PENDING) applyTint(c);
     const tl = this.anim(run, gsap.timeline({ onComplete: () => this.taskDone(run, t) }));
-    const sc = run.scale;
-    const s = this.sim;
-    const b = t.box;
-    const el = t.el;
-    const show = !t.keep;
-
-    if (t.kind === "frame" || t.kind === "image") {
-      const f = this.mark(run, MK.frame, { x: b.x, y: b.y, w: b.w, h: b.h, label: t.label });
-      s.follow[i] = 30;
-      tl.to(f, {
-        p: 1,
-        duration: (t.kind === "image" ? 0.28 : 0.42) * sc,
-        ease: "power2.inOut",
-        onUpdate: () => this.aim(i, b.x + b.w * f.p, b.y + b.h * f.p),
-      });
-      if (t.kind === "frame") {
-        if (show) tl.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.24 * sc, ease: "power1.out" }, `-=${0.1 * sc}`);
-      } else {
-        const scan = this.mark(run, MK.scan, { x: b.x, y: b.y, w: b.w, h: b.h, a: 0 });
-        tl.call(() => {
-          scan.a = 1;
-          if (!show) return;
-          el.style.opacity = "1";
-          el.style.clipPath = "inset(0 0 100% 0)";
-        });
-        tl.to(scan, {
-          p: 1,
-          duration: 0.4 * sc,
-          ease: "power1.inOut",
-          onUpdate: () => {
-            if (show) el.style.clipPath = `inset(0 0 ${((1 - scan.p) * 100).toFixed(2)}% 0)`;
-            this.aim(i, b.x + b.w + 3, b.y + b.h * scan.p);
-          },
-        });
-        tl.to(scan, { a: 0, duration: 0.12 * sc });
-      }
-      tl.to(f, { a: 0.35, duration: 0.15 * sc }, "<");
-      return;
-    }
-
-    if (t.kind === "dup") {
-      const mb = t.master >= 0 ? run.m.tasks[t.master].box : t.slotBoxes[0];
-      const n = t.slots.length;
-      const per = 0.36 * sc;
-      const gap = Math.min(0.06, 0.3 / n) * sc;
-      t.absorbed.forEach(markBuilt);
-      s.follow[i] = 26;
-      s.flag[i] = 1;
-      t.slotBoxes.forEach((sb, gi) => {
-        const g = this.mark(run, MK.ghost, {
-          x: sb.x, y: sb.y, w: sb.w, h: sb.h, x2: mb.x, y2: mb.y, w2: mb.w, h2: mb.h, a: 0.9,
-        });
-        const at = gi * gap;
-        const lead = gi === n - 1;
-        tl.to(g, {
-          p: 1,
-          duration: per,
-          ease: "power2.inOut",
-          onUpdate: lead
-            ? () => this.aim(i, mb.x + mb.w / 2 + (sb.x + sb.w / 2 - mb.x - mb.w / 2) * g.p,
-                mb.y + mb.h / 2 + (sb.y + sb.h / 2 - mb.y - mb.h / 2) * g.p)
-            : undefined,
-        }, at);
-        const slot = t.slots[gi];
-        if (!slot.hasAttribute("data-build-keep")) {
-          tl.fromTo(slot, { opacity: 0 }, { opacity: 1, duration: 0.16 * sc }, at + per * 0.8);
-        }
-        tl.to(g, { a: 0, duration: 0.14 * sc }, at + per);
-      });
-      return;
-    }
-
-    // type / reveal: a staircase clip-path follows a caret; layout never changes.
-    const typing = t.kind === "type";
-    const lines = t.lines;
-    const n = typing ? t.chars.length : lines.length;
-    const caret = this.mark(run, MK.caret, { color: ROLE_COLOR[this.roles[i]] });
-    let box: Mark | null = null;
-    if (typing) {
-      const x0 = Math.min(...lines.map((l) => l.x));
-      const y0 = Math.min(...lines.map((l) => l.y));
-      box = this.mark(run, MK.box, {
-        x: b.x + x0 - 3,
-        y: b.y + y0 - 2,
-        w: Math.max(...lines.map((l) => l.r)) - x0 + 6,
-        h: Math.max(...lines.map((l) => l.b)) - y0 + 4,
-        label: t.label,
-        a: 0.5,
-        p: 1,
-      });
-    }
-    if (show) {
-      el.style.opacity = "1";
-      el.style.clipPath = EMPTY_CLIP;
-    }
-    s.follow[i] = typing ? 28 : 14;
-    const st = { v: 0 };
-    let last = "";
-    const paint = () => {
-      let L = 0;
-      let cx = lines[0].x;
-      if (typing) {
-        const k = Math.min(n, Math.floor(st.v));
-        if (k > 0) [L, cx] = [t.chars[k - 1].line, t.chars[k - 1].x];
-      } else {
-        const q = st.v * n;
-        L = Math.min(n - 1, Math.floor(q));
-        cx = lines[L].x + (lines[L].r - lines[L].x) * Math.min(1, q - L);
-      }
-      const ln = lines[L];
-      caret.x = b.x + cx;
-      caret.y = b.y + ln.y;
-      caret.h = ln.b - ln.y;
-      this.aim(i, caret.x + 2, caret.y + caret.h);
-      if (!show) return;
-      const end = typing ? st.v >= n : st.v >= 1;
-      const clip = end ? "none" : typing && st.v < 1 ? EMPTY_CLIP : stair(lines, L, cx + 1, b.w, b.h);
-      if (clip !== last) el.style.clipPath = last = clip;
+    const ctx: Ctx = {
+      run, t, i, tl, s: run.scale, color: ROLE_COLOR[this.roles[i]], sim: this.sim, r: this.renderer,
+      sy: this.sy, vw: this.vw, vh: this.vh, phone: this.o.profile.kind === "phone",
+      dragTime: this.o.profile.detail.dragTime, layer: this.o.layer,
+      mark: (k, p) => this.mark(run, k, p),
+      fx: (a) => void this.anim(run, a),
     };
-    paint();
-    tl.to(st, {
-      v: typing ? n : 1,
-      duration: (typing ? clamp(n * 0.032, 0.2, 0.8) : clamp(n * 0.09, 0.28, 0.7)) * sc,
-      ease: typing ? "none" : "power1.inOut",
-      onUpdate: paint,
-    });
-    tl.to(box ? [caret, box] : caret, { a: 0, duration: 0.12 * sc });
+    const master = t.kind === "dup" && t.master >= 0 ? run.m.tasks[t.master].box : null;
+    choreograph(ctx, master);
   }
 
   private taskDone(run: Run, t: Task): void {
@@ -685,6 +602,7 @@ export class Director {
     t.agent = -1;
     t.slots.forEach(markBuilt);
     t.absorbed.forEach(markBuilt);
+    clearTint(t);
     if (i >= 0 && this.brains[i].task === t) this.release(i);
   }
 
@@ -701,6 +619,7 @@ export class Director {
     b.until = this.clock + cap;
     s.follow[i] = 0;
     s.flag[i] = 0;
+    s.tool[i] = TOOL.arrow;
     s.tx[i] = x;
     s.ty[i] = y;
     s.speed[i] = Math.max(this.o.profile.speed * run.speedMul, (s.dist(i) / Math.max(cap, 0.05)) * 1.3);
@@ -715,6 +634,7 @@ export class Director {
     b.go = null;
     s.follow[i] = 0;
     s.flag[i] = 0;
+    s.tool[i] = TOOL.arrow;
     s.speed[i] = this.o.profile.speed;
     b.hx = s.x[i];
     b.hy = s.y[i];
@@ -743,6 +663,7 @@ export class Director {
     b.until = this.clock + 1.6;
     s.follow[i] = 0;
     s.flag[i] = 0;
+    s.tool[i] = TOOL.arrow;
     s.speed[i] = this.o.profile.speed * 0.75;
     if (this.exitDown) {
       s.tx[i] = s.x[i] + (Math.random() - 0.5) * 80;
@@ -765,7 +686,7 @@ export class Director {
     this.update();
     const steps = Math.min(4, Math.ceil(dt * 60));
     for (let k = 0; k < steps; k++) this.sim.step(dt / steps);
-    this.renderer.draw(this.sim, this.marks, this.sy);
+    this.renderer.draw(this.sim, this.marks, this.sy, this.clock);
     this.writeStats(false);
     if (!this.busy && !this.marks.length && this.brains.every((b) => b.mode === OFF)) this.stopTicking();
   };
@@ -774,7 +695,7 @@ export class Director {
     const s = this.sim;
     let oldest: Run | null = null;
     for (const run of this.runs) {
-      if (run.phase === PLAN && this.clock > run.t0 + 0.34 * this.B) this.beginBuild(run);
+      if (run.phase === PLAN && this.clock > run.t0 + Math.min(0.75, 0.2 * run.B)) this.beginBuild(run);
       if (run.phase === BUILD) {
         if (run.m.tasks.every((t) => t.state === TASK_DONE)) this.review(run);
         else if (!run.flushed && this.clock > run.deadline) this.flush(run);
@@ -863,8 +784,8 @@ export class Director {
 
   private mark(run: Run | null, k: MarkKind, p: Partial<Mark>): Mark {
     const m: Mark = {
-      k, x: 0, y: 0, w: 0, h: 0, x2: 0, y2: 0, w2: 0, h2: 0, p: 0, a: 1, s: 1,
-      color: COLORS.accent, label: "", dead: false, ...p,
+      k, x: 0, y: 0, w: 0, h: 0, x2: 0, y2: 0, w2: 0, h2: 0, p: 0, a: 1, s: 1, r: 0, u: 0, v: 0,
+      blink: false, color: COLORS.accent, label: "", img: null, dead: false, ...p,
     };
     this.marks.push(m);
     run?.marks.push(m);
