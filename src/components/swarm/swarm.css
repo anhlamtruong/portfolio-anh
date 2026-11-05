@@ -1,0 +1,115 @@
+/* Agent-swarm build layer.
+   Hidden-until-built only applies while the head script has set
+   html[data-build="on"]; without JS nothing is ever hidden. Opacity (not
+   visibility) keeps content in the accessibility tree with no layout shift. */
+html[data-build="on"] [data-build-item]:not([data-built]):not([data-build-keep]) {
+  opacity: 0;
+}
+
+/* Element-qualified selectors so `.bp-root > *` cannot override positioning. */
+canvas.swarm-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--swarm-z, 55);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+div.swarm-hud {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: var(--swarm-hud-z, 56);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 5px 5px 12px;
+  font: 500 11px/1.2 var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--bp-muted, #8a97a8);
+  background: rgb(12 16 23 / 0.74);
+  border: 1px solid var(--bp-line, #1c2431);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+}
+
+div.swarm-hud[data-state="idle"] {
+  padding: 4px;
+}
+
+.swarm-hud__stats {
+  margin-right: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.swarm-hud__stats::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--bp-accent, #5eead4);
+  vertical-align: 1px;
+}
+
+.swarm-hud__btn {
+  appearance: none;
+  font: inherit;
+  color: var(--bp-text, #e8edf4);
+  background: transparent;
+  border: 1px solid var(--bp-line, #1c2431);
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+
+div.swarm-hud[data-state="idle"] .swarm-hud__btn {
+  border-color: transparent;
+  color: var(--bp-muted, #8a97a8);
+}
+
+.swarm-hud__btn:hover,
+div.swarm-hud[data-state="idle"] .swarm-hud__btn:hover {
+  border-color: var(--bp-accent, #5eead4);
+  color: var(--bp-accent, #5eead4);
+}
+
+.swarm-hud__btn:focus-visible {
+  outline: 2px solid var(--bp-accent, #5eead4);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  div.swarm-hud {
+    font-size: 10px;
+    padding-left: 9px;
+  }
+}
+
+/* Belt and braces: never hide content when motion is reduced or printing,
+   unless the visitor chose to watch (html[data-build-force]). */
+@media (prefers-reduced-motion: reduce) {
+  html[data-build]:not([data-build-force]) [data-build-item] {
+    opacity: 1 !important;
+    clip-path: none !important;
+  }
+  html:not([data-build-force]) canvas.swarm-canvas {
+    display: none;
+  }
+}
+
+@media print {
+  html[data-build] [data-build-item] {
+    opacity: 1 !important;
+    clip-path: none !important;
+  }
+  canvas.swarm-canvas,
+  div.swarm-hud {
+    display: none;
+  }
+}
