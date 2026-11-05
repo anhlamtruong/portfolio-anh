@@ -32,7 +32,7 @@ async function initializeFirebaseAdmin() {
     !secrets.firebasePrivateKey
   ) {
     throw new Error(
-      "Firebase Admin SDK secrets are not configured in Secret Manager!"
+      "Firebase Admin SDK credentials not found in Secret Manager or env vars!"
     );
   }
 
