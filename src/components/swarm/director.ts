@@ -5,7 +5,7 @@
 // sets React state per frame.
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { CU_MAX, type Ctx, choreograph, edgePoint, neutralCss, taskTime } from "./choreo";
+import { CU_MAX, type Ctx, choreograph, edgePoint, gridLead, neutralCss, taskTime } from "./choreo";
 import { readProps } from "./inspect";
 import { LiveLog } from "./log";
 import { COLORS, ROLE_COLOR, SESSION_KEY, rolePref } from "./palette";
@@ -57,7 +57,13 @@ interface Brain {
   hy: number;
   until: number;
   go: ((i: number) => void) | null;
+  /** When the agent started idling (its loop's clock), or -1. */
+  idleAt: number;
 }
+
+/** Idle agents keep looping this long after the last build activity (s). */
+const IDLE_LINGER = 6;
+const easeInOut = (x: number) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
 
 export interface InspectState {
   available: boolean;
@@ -147,6 +153,10 @@ export class Director {
   private idle = 0;
   private preAt = 0;
   private paceAt = 0;
+  private lastBusy = 0;
+  private readonly loopR: Float32Array;
+  private readonly loopW: Float32Array;
+  private readonly loopDir: Float32Array;
   /** Planner hand-off delay (shorter on phones). */
   private readonly handoff: number;
   private paceTick = false;
@@ -177,7 +187,17 @@ export class Director {
     this.sim = new Sim(this.roles.length, o.profile.accel);
     this.handoff = o.profile.kind === "phone" ? 0.2 : HANDOFF;
     this.renderer = new Renderer(o.canvas, o.profile.dprCap, this.roles.map((r) => ROLE_COLOR[r]), o.profile.labels);
-    this.brains = this.roles.map(() => ({ mode: OFF, run: null, task: null, hx: 0, hy: 0, until: 0, go: null }));
+    this.brains = this.roles.map(() => ({ mode: OFF, run: null, task: null, hx: 0, hy: 0, until: 0, go: null, idleAt: -1 }));
+    // Each agent's own idle loop: radius, angular speed and direction.
+    const n = this.roles.length;
+    this.loopR = new Float32Array(n);
+    this.loopW = new Float32Array(n);
+    this.loopDir = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      this.loopR[i] = o.profile.kind === "phone" ? 10 : 12 + Math.random() * 12;
+      this.loopW[i] = (Math.PI * 2) / (1.4 + Math.random() * 0.8);
+      this.loopDir[i] = Math.random() < 0.5 ? -1 : 1;
+    }
     this.planner = this.roles.indexOf("planner");
     this.reviewer = this.roles.indexOf("reviewer");
     this.roles.forEach((r, i) => r !== "planner" && r !== "reviewer" && this.workers.push(i));
@@ -192,7 +212,8 @@ export class Director {
     orphans.forEach(markBuilt);
     this.runs = sections.map((m) => ({
       m, phase: WAIT, B: m.onLoad ? p.heroBudget : p.budget, t0: 0, deadline: 0, scale: 1, speedMul: 1,
-      joinGate: 0, stagger: 0.08, catchUp: 1, cuTarget: 1, cuTween: null, cuApplied: 1, work: [],
+      joinGate: 0, buildAt: 0, stagger: 0.08, catchUp: 1, cuTarget: 1, cuTween: null, cuApplied: 1, work: [],
+      undo: [], holders: new Map(),
       marks: [], anims: [], nodes: [], recent: [], took: 0, st: null,
     }));
     this.hero = this.runs.find((r) => r.m.onLoad) ?? this.runs[0] ?? null;
@@ -332,6 +353,9 @@ export class Director {
     run.marks = [];
     run.nodes.forEach((n) => n.remove());
     run.nodes = [];
+    run.undo.forEach((u) => u());
+    run.undo = [];
+    run.holders.clear();
     run.m.tasks.forEach((t) => {
       clearTint(t);
       t.tl = null;
@@ -409,11 +433,13 @@ export class Director {
         if (hit !== undefined) return hit;
         memo.set(t.id, 0);
         let longest = 0;
-        for (const d of t.deps) if (tasks[d].state !== TASK_DONE) longest = Math.max(longest, path(tasks[d]));
+        for (const d of t.deps) if (tasks[d].state !== TASK_DONE) longest = Math.max(longest, readyAt(tasks[d]));
         const v = taskTime(t, sc, dt) + TRAVEL_EST + longest;
         memo.set(t.id, v);
         return v;
       };
+      // Grids release their cells once the lines are drawn.
+      const readyAt = (t: Task) => (t.kind === "grid" ? path(t) - taskTime(t, sc, dt) + gridLead(t, sc) : path(t));
       let sum = 0;
       let cp = 0;
       for (const t of open) {
@@ -455,12 +481,31 @@ export class Director {
     const far = (i: number) => s.y[i] < sy - vh * 0.6 || s.y[i] > sy + vh * 1.6;
     let active = this.workers.filter((i) => this.brains[i].mode !== OFF && this.brains[i].mode !== EXIT).length;
     let k = 0;
+    // Entry point just off-screen: below the viewport, or (layout agents, when
+    // the section has a grid) beside the grid's top so it is boxed promptly.
+    const grid = m.tasks.find((t) => t.kind === "grid" && t.state !== TASK_DONE);
+    const enter = (i: number) => {
+      if (grid && this.roles[i] === "layout") s.place(i, grid.box.x < vw / 2 ? -30 : vw + 30, clamp(grid.box.y, sy + 40, sy + vh - 40));
+      else s.place(i, L + Math.random() * (R - L), sy + vh + 30 + Math.random() * 80);
+    };
+    // Idle agents still looping where an earlier section was, now out of view,
+    // re-enter from just off-screen (unseen, so nobody sees a jump).
     for (const i of this.workers) {
+      const b = this.brains[i];
+      if (b.mode !== IDLE || (s.y[i] > sy - 40 && s.y[i] < sy + vh + 40)) continue;
+      enter(i);
+      s.speed[i] = this.o.profile.speed * run.speedMul;
+      b.hx = L + Math.random() * (R - L);
+      b.hy = restY - Math.random() * 30;
+      b.idleAt = -1;
+    }
+    const order = grid ? [...this.workers].sort((a, z) => +(this.roles[z] === "layout") - +(this.roles[a] === "layout")) : this.workers;
+    for (const i of order) {
       const b = this.brains[i];
       if (b.mode !== OFF && b.mode !== EXIT) continue;
       if (active >= wanted) break;
       active++;
-      if (b.mode === OFF || far(i)) s.place(i, L + Math.random() * (R - L), sy + vh + 30 + Math.random() * 80);
+      if (b.mode === OFF || far(i)) enter(i);
       s.on[i] = 1;
       s.tool[i] = TOOL.arrow;
       b.mode = IDLE;
@@ -476,7 +521,12 @@ export class Director {
     ] as const) {
       const b = this.brains[i];
       if (b.mode !== OFF && b.mode !== EXIT && b.mode !== IDLE) continue;
-      if (b.mode === OFF || far(i)) s.place(i, x, y);
+      if (b.mode === OFF || far(i)) {
+        s.place(i, x, y);
+        b.hx = x;
+        b.hy = y;
+        b.idleAt = -1;
+      }
       s.on[i] = 1;
       if (b.mode === OFF || b.mode === EXIT) {
         b.mode = IDLE;
@@ -579,6 +629,7 @@ export class Director {
     if (run.phase !== PLAN) return;
     run.phase = BUILD;
     run.deadline = this.clock + buildWindow(run.B, this.handoff, this.o.profile.kind === "phone");
+    run.buildAt = this.clock;
     run.joinGate = this.clock;
   }
 
@@ -621,6 +672,22 @@ export class Director {
     run.cuTarget = target;
     run.cuTween?.kill();
     run.cuTween = this.anim(null, gsap.to(run, { catchUp: target, duration: CU_RAMP, ease: "sine.inOut" }));
+  }
+
+  /**
+   * True once the build is done, or its last tasks are all running and end
+   * before the reviewer's checklist opens (the review overlaps their tails;
+   * the stamp still waits for every task).
+   */
+  private wrapping(run: Run): boolean {
+    const R = review(run.B, this.o.profile.kind === "phone");
+    const lead = R.travel + R.outline * 0.6 + R.open;
+    for (const t of run.m.tasks) {
+      if (t.state === TASK_DONE) continue;
+      if (!t.tl) return false;
+      if ((t.tl.duration() - t.tl.time()) / Math.max(0.1, t.tl.timeScale()) > lead) return false;
+    }
+    return true;
   }
 
   private review(run: Run): void {
@@ -677,6 +744,11 @@ export class Director {
 
   private stamp(run: Run, i: number, list: Mark): void {
     if (run.phase !== REVIEW) return;
+    // A task tail still running (the review overlapped it): stamp right after.
+    if (!run.m.tasks.every((t) => t.state === TASK_DONE)) {
+      this.anim(run, gsap.delayedCall(0.03, () => this.stamp(run, i, list)));
+      return;
+    }
     const label = "✓ approved";
     const { w, h } = this.renderer.pillSize(label, "badge");
     const x = list.x + CHECK.w - w;
@@ -717,6 +789,9 @@ export class Director {
     }
     run.nodes.forEach((n) => n.remove());
     run.nodes = [];
+    run.undo.forEach((u) => u());
+    run.undo = [];
+    run.holders.clear();
     this.resetPace(run);
     run.m.el.setAttribute("data-built", "");
     for (const m of run.marks) {
@@ -742,17 +817,21 @@ export class Director {
   // ---------------------------------------------------------------- tasks
 
   private claim(): void {
-    // On phones (5 workers) the planner lends a hand once its plan is drawn.
-    // (The reviewer too; if it is busy when a review is due, the review runs without it.)
-    const crew = this.o.profile.kind === "phone" ? [...this.workers, this.planner, this.reviewer] : this.workers;
+    // On phones and tablets (fewer workers) the planner lends a hand once its
+    // plan is drawn. (The reviewer too; if it is busy when a review is due, the
+    // review runs without it.)
+    const crew = this.o.profile.kind !== "desktop" ? [...this.workers, this.planner, this.reviewer] : this.workers;
     if (!crew.some((i) => this.brains[i].mode === IDLE)) return;
     const open: { run: Run; t: Task; x: number; y: number; left: number }[] = [];
     for (const run of this.runs) {
-      if (run.phase !== BUILD) continue;
+      // While the planner draws its plan, layout agents may already box grids.
+      const planning = run.phase === PLAN;
+      if (run.phase !== BUILD && !planning) continue;
       const tasks = run.m.tasks;
       let left = 0;
       for (const t of tasks) if (t.state !== TASK_DONE) left++;
       for (const t of tasks) {
+        if (planning && t.kind !== "grid") continue;
         if (t.state !== TASK_PENDING || !t.deps.every((d) => tasks[d].state === TASK_DONE || tasks[d].ready)) continue;
         const [x, y] = this.startPoint(run, t);
         open.push({ run, t, x, y, left });
@@ -760,6 +839,12 @@ export class Director {
     }
     if (!open.length) return;
     const s = this.sim;
+    // Grids belong to layout agents: others leave them alone while one is free
+    // or for a moment after the build starts; then whoever is free takes them
+    // (everything in the grid waits for it).
+    const layoutOn = this.roles.some((r, k) => r === "layout" && this.brains[k].mode !== OFF);
+    const layoutFree = this.roles.some((r, k) => r === "layout" && this.brains[k].mode === IDLE);
+    const hold = this.o.profile.kind === "phone" ? 0.4 : 1;
     for (const i of crew) {
       const b = this.brains[i];
       if (b.mode !== IDLE) continue;
@@ -769,6 +854,8 @@ export class Director {
       for (let j = 0; j < open.length; j++) {
         const o = open[j];
         if (o.t.state !== TASK_PENDING || (b.run !== o.run && this.clock < o.run.joinGate)) continue;
+        if (o.run.phase === PLAN && role !== "layout") continue;
+        if (o.t.kind === "grid" && role !== "layout" && layoutOn && (layoutFree || this.clock - o.run.buildAt < hold)) continue;
         // Near first, in reading order; small sections slightly first so they
         // finish promptly when several build at once.
         let score = Math.hypot(o.x - s.x[i], o.y - s.y[i]) + o.t.rank * 22 + o.left * 6;
@@ -776,6 +863,7 @@ export class Director {
         else score += rolePref(role, o.t.kind);
         // Critical-path first: color picks end chains, cards with nested items start them.
         if (o.t.kind === "color") score -= 220;
+        else if (o.t.kind === "grid") score -= 200;
         else if (o.t.lead || o.t.tints.some((c) => c.state !== TASK_DONE)) score -= 150;
         score -= Math.min(1, o.t.est) * 120; // longest first
         // The reviewer helps on phones only while there is plenty left.
@@ -834,7 +922,7 @@ export class Director {
   }
 
   private work(run: Run, t: Task, i: number): void {
-    if (t.state !== TASK_CLAIMED || run.phase !== BUILD) return this.free(i, run, t);
+    if (t.state !== TASK_CLAIMED || (run.phase !== BUILD && run.phase !== PLAN)) return this.free(i, run, t);
     t.state = TASK_RUNNING;
     // Color follow-ups: their elements appear neutral, then get picked.
     for (const c of t.tints) if (c.state === TASK_PENDING) applyTint(c);
@@ -846,7 +934,8 @@ export class Director {
       dragTime: this.o.profile.detail.dragTime, layer: this.o.layer,
       mark: (k, p) => this.mark(run, k, p),
       fx: (a) => void this.labor(run, a),
-      log: (what) => this.say(run, i, what),
+      log: (what, bare) => this.say(run, i, what, false, !!bare),
+      holder: (cell, m) => void run.holders.set(cell, m),
     };
     const master = t.kind === "dup" && t.master >= 0 ? run.m.tasks[t.master].box : null;
     choreograph(ctx, master);
@@ -862,6 +951,7 @@ export class Director {
     t.slots.forEach(markBuilt);
     t.absorbed.forEach(markBuilt);
     clearTint(t);
+    if (run.holders.size) for (const el of [t.el, ...t.slots]) this.unhold(run, el);
     if (i >= 0 && run.phase !== DONE) {
       run.recent = run.recent.filter((r) => r !== i);
       run.recent.push(i);
@@ -870,14 +960,26 @@ export class Director {
     if (i >= 0 && this.brains[i].task === t) this.release(i);
   }
 
+  /** Fades the grid placeholder of the cell containing el (once the cell is built). */
+  private unhold(run: Run, el: Element): void {
+    for (let e: Element | null = el; e && e !== run.m.el; e = e.parentElement) {
+      const m = run.holders.get(e);
+      if (!m) continue;
+      run.holders.delete(e);
+      gsap.killTweensOf(m);
+      this.anim(run, gsap.to(m, { a: 0, duration: 0.3, ease: "power1.out", onComplete: () => void (m.dead = true) }));
+      return;
+    }
+  }
+
   // ----------------------------------------------------------- live log
 
   /** One live-log line from agent i, timed from the section's start. */
-  private say(run: Run, i: number, what: string, force = false): void {
+  private say(run: Run, i: number, what: string, force = false, bare = false): void {
     if (!this.log.live || (!force && run.phase === DONE)) return;
     const who = i >= 0 ? this.o.profile.labels[i] : "swarm";
     const color = i >= 0 ? ROLE_COLOR[this.roles[i]] : COLORS.accent;
-    const prefix = this.log.inside(run.m.el) ? "" : `${run.m.name} · `;
+    const prefix = bare || this.log.inside(run.m.el) ? "" : `${run.m.name} · `;
     this.log.push(who, color, prefix + what, `${Math.max(0, this.clock - run.t0).toFixed(2)}s`);
   }
 
@@ -1069,8 +1171,10 @@ export class Director {
     s.flag[i] = 0;
     s.tool[i] = TOOL.arrow;
     s.speed[i] = this.o.profile.speed;
-    b.hx = s.x[i];
-    b.hy = s.y[i];
+    // Park near where it finished, or just inside the viewport if that is offscreen.
+    b.hx = clamp(s.x[i], 30, this.vw - 30);
+    b.hy = clamp(s.y[i], this.sy + 30, this.sy + this.vh - 30);
+    b.idleAt = -1;
   }
 
   /** Releases agent i only if it is still busy with this run/task. */
@@ -1114,7 +1218,10 @@ export class Director {
     // to the budget; physics is sub-stepped for stability.
     const dt = clamp(deltaMs / 1000, 0.001, 0.25);
     this.clock += dt;
-    if (this.busy) this.elapsed += dt;
+    if (this.busy) {
+      this.elapsed += dt;
+      this.lastBusy = this.clock;
+    }
     this.sy = this.o.getScroll();
     this.update(dt);
     const steps = Math.min(4, Math.ceil(dt * 60));
@@ -1135,7 +1242,7 @@ export class Director {
     for (const run of this.runs) {
       if (run.phase === PLAN && this.clock > run.t0 + this.handoff) this.beginBuild(run);
       if (run.phase === BUILD) {
-        if (run.m.tasks.every((t) => t.state === TASK_DONE)) this.review(run);
+        if (this.wrapping(run)) this.review(run);
         else if (this.paceTick) this.pace(run);
       }
       if (run.catchUp !== run.cuApplied) {
@@ -1150,6 +1257,17 @@ export class Director {
     for (let i = 0; i < s.n; i++) {
       const b = this.brains[i];
       if (s.pop[i] < 1) s.pop[i] = Math.min(1, s.pop[i] + dt * 3.4);
+      if (b.mode !== IDLE) {
+        b.idleAt = -1;
+        // Ease the cursor back to its own heading after a loop.
+        if (s.spin[i]) {
+          let a = s.spin[i] % (Math.PI * 2);
+          if (a > Math.PI) a -= Math.PI * 2;
+          else if (a < -Math.PI) a += Math.PI * 2;
+          a *= Math.exp(-dt * 12);
+          s.spin[i] = Math.abs(a) < 0.003 ? 0 : a;
+        }
+      }
       if (b.mode === SLEEP) {
         if (!this.busy) this.release(i);
         else if (this.clock >= b.until) this.wake(i);
@@ -1165,7 +1283,8 @@ export class Director {
           go?.(i);
         } else if (this.clock > b.until + 1.2 && !s.follow[i]) s.follow[i] = 9;
       } else if (b.mode === IDLE) {
-        if (!this.busy) {
+        // Loop in place while anything builds (or inspect is on), then leave.
+        if (!this.busy && !this.inspecting && this.clock - this.lastBusy > IDLE_LINGER) {
           this.exit(i);
           continue;
         }
@@ -1175,8 +1294,19 @@ export class Director {
           b.hx = clamp(box.x + 28, 20, this.vw - 70);
           b.hy = clamp(this.sy + 40, box.y + 20, Math.max(box.y + 20, box.y + box.h - 20));
         }
-        s.tx[i] = b.hx + Math.sin(this.clock * 1.7 + i * 1.3) * 7;
-        s.ty[i] = b.hy + Math.cos(this.clock * 1.3 + i * 2.1) * 5;
+        // A small personal loop around the agent's own parking point (never a
+        // shared target). It starts at the park point with the cursor's own
+        // heading, eases its radius in over 0.3 s, and the cursor turns with it.
+        if (b.idleAt < 0) b.idleAt = this.clock;
+        const age = this.clock - b.idleAt;
+        const ease = age >= 0.3 ? 1 : easeInOut(age / 0.3);
+        const dir = this.loopDir[i];
+        const th0 = -0.75 * Math.PI - dir * 0.5 * Math.PI;
+        const turn = dir * this.loopW[i] * age;
+        const r = this.loopR[i] * ease;
+        s.tx[i] = b.hx + r * (Math.cos(th0 + turn) - Math.cos(th0));
+        s.ty[i] = b.hy + r * (Math.sin(th0 + turn) - Math.sin(th0));
+        s.spin[i] = turn * ease;
       } else if (b.mode === EXIT) {
         const y = s.y[i] - this.sy;
         if (y < -40 || y > this.vh + 40 || s.x[i] < -40 || s.x[i] > this.vw + 40 || this.clock > b.until) {

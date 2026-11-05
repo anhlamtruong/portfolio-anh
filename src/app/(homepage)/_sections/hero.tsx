@@ -177,7 +177,7 @@ export function Hero() {
 
       <div className="bp-container mt-16">
         <DimLine at="left-0 -top-8" width="38%" label="1120 · grid 12" speed={0.1} />
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <dl data-build-grid className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map((m, i) => (
             <div
               key={m.label}
@@ -193,6 +193,7 @@ export function Hero() {
                 data-build-item
                 data-build="type"
                 data-build-color="text"
+                data-build-scale
                 className="bp-h2 order-1 tabular-nums"
                 style={{ color: METRIC_COLORS[i % METRIC_COLORS.length] }}
               >

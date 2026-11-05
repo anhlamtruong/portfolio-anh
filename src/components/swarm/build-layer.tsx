@@ -25,6 +25,12 @@
  *             row. data-build-weight (with -font): afterwards font-weight
  *             sweeps 250 -> computed weight. Phones: only the page's first
  *             data-build-font item (kept items never swap).
+ *             data-build-scale (type or reveal, not kept; desktop/tablet):
+ *             appears small (scale 0.42, origin top-left) and offset, is
+ *             resized to full size with a corner handle, then moved into
+ *             place (readout like "↘ 36 px"); the inline transform is
+ *             removed afterwards. Works with -font/-weight (the draft is
+ *             scaled too); a color pick runs after. Phones skip it.
  *     reveal  text block/list: unmasked line by line.
  *     image   ghost card dragged in from the nearest viewport edge (or
  *             data-build-from="left|right|top|bottom") and dropped on the
@@ -34,7 +40,8 @@
  *     dup     sibling inside a [data-build-list]; the list's first item is the
  *             master (mark it "frame"). Ghost copies fly from master to slot.
  *             In lists of 6+ items containing <img>, a few are dragged in
- *             individually as images.
+ *             individually as images. Phones: one sweep per list, and a
+ *             master with no nested items joins it as the first slot.
  *   Any item: data-build-color="text|fill|stroke" -> after the item appears
  *   in a neutral color, a color wheel picks its real computed color (one per
  *   section on phones).
@@ -42,11 +49,19 @@
  *   data-build-keep (never hidden, still annotated; ="mobile" only on the
  *   phone profile, below 768px), data-build-label (tag text),
  *   data-build-order="n", data-build-role="coder|designer|...".
+ * - Grid: data-build-grid on the section element itself or on a container
+ *   inside it (it may also be the data-build-list). Its direct element
+ *   children are the cells. A layout agent (lime, layout·NN) draws dashed
+ *   column/row lines from the cells' rects, then sweeps a hatched
+ *   placeholder box over each cell row by row; the outermost items inside
+ *   the grid wait for the lines, and each cell's placeholder fades once its
+ *   items are built. The container itself is never hidden. Grids in no
+ *   section are ignored.
  * - Hiding only applies under html[data-build="on"] (BuildFlagScript sets it
  *   before paint). Finished items and sections get [data-built].
  *
  * Grand-pass hooks (all optional)
- * - [data-swarm-spawn="planner|coder|designer|tester|reviewer|deployer"]:
+ * - [data-swarm-spawn="planner|coder|designer|layout|tester|reviewer|deployer"]:
  *   mesh nodes in the hero (>= 1024 px). At boot/Replay they get [data-lit]
  *   one by one and agents pop out of a node of their role; [data-lit] is
  *   removed when the hero finishes. Hidden or zero-size nodes are ignored.
@@ -60,6 +75,11 @@
  * - HUD "inspect" toggle (desktop, fine pointer, >= 1024 px, after the hero
  *   is built): hover or Tab to a built frame/image to see its real values.
  *   Esc turns it off. The overlay never takes pointer events.
+ *
+ * Crew: planner, coders, designers, layout (grids first, then card frames),
+ * tester, deployer, reviewer; 15 on desktop, 11 on tablet, 8 on phones
+ * (no deployer). Agents with nothing to do loop in place while anything
+ * builds and for ~6 s after, then leave; the ticker stops once they are gone.
  */
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";

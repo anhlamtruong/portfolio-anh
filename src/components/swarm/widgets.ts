@@ -25,7 +25,7 @@ export const CARD_PAD = 18;
 /** Hotspot of each cursor glyph inside its 26 px sprite. */
 export const GLYPH_SIZE = 26;
 export const GLYPH_HOT: readonly (readonly [number, number])[] = [
-  [3, 3], [13, 13], [13, 13], [13, 13], [13, 13], [13, 13], [6, 20],
+  [3, 3], [13, 13], [13, 13], [13, 13], [13, 13], [13, 13], [6, 20], [13, 13],
 ];
 
 export function roundRect(g: G, x: number, y: number, w: number, h: number, r: number): void {
@@ -140,6 +140,21 @@ export function paintGlyph(g: G, tool: number, color: string): void {
       }, 1.6);
       break;
     }
+    case TOOL.move:
+      // Four-way arrow: grab and position.
+      duo(() => {
+        g.beginPath();
+        g.moveTo(-8, 0);
+        g.lineTo(8, 0);
+        g.moveTo(0, -8);
+        g.lineTo(0, 8);
+        for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          g.moveTo(a * 8 + b * 2.6 - a * 2.6, b * 8 + a * 2.6 - b * 2.6);
+          g.lineTo(a * 8, b * 8);
+          g.lineTo(a * 8 - b * 2.6 - a * 2.6, b * 8 - a * 2.6 - b * 2.6);
+        }
+      }, 1.5);
+      break;
     case TOOL.picker:
       // A dropper leaning right: tip at the hotspot, bulb up and to the right.
       g.rotate(Math.PI / 4);
@@ -281,6 +296,22 @@ export function paintChecklist(g: G, family: string, done: number): void {
     text(g, family, 10, ok ? COLORS.accent : COLORS.dim, ok ? "✓" : "○", 10, y);
     text(g, family, 10, ok ? COLORS.text : COLORS.muted, s, 24, y);
   });
+}
+
+/** 8 px tile of faint diagonal hatching, used as a pattern for grid placeholders. */
+export function paintHatch(g: G, color: string): void {
+  g.strokeStyle = color;
+  g.globalAlpha = 0.22;
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(-2, 10);
+  g.lineTo(10, -2);
+  g.moveTo(-2, 2);
+  g.lineTo(2, -2);
+  g.moveTo(6, 10);
+  g.lineTo(10, 6);
+  g.stroke();
+  g.globalAlpha = 1;
 }
 
 /** A rounded card for a dragged image: thumbnail (or hatched placeholder) and a baked shadow. */

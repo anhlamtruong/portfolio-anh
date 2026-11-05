@@ -62,6 +62,7 @@ function makeTask(id: number, el: HTMLElement, kind: TaskKind, phone: boolean): 
     order: Number.isFinite(order) ? order : null,
     rank: id, deps: [], slots: [el], absorbed: [], master: -1, tints: [],
     font: false, sweep: false, weight: 0, fontName2: "", logName: el.dataset.buildLabel ?? "", lead: false, tl: null, ready: false, est: 0,
+    cells: [], cellBoxes: [], cols: [], rows: [], dims: [0, 0], scale: false, sdx: 0, sdy: 0,
     tune: false, inspect: false, drag: false,
     from: EDGES.includes(from) ? from : null, tint: null,
     box: { x: 0, y: 0, w: 0, h: 0 }, lines: [], chars: [], slotBoxes: [],
@@ -85,10 +86,16 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
     (Array.from(list.children) as HTMLElement[]).find((c) => isItem.has(c)) ?? null;
   // A dup needs a list and a master that is not itself; otherwise it is a frame.
   const isDup = (el: HTMLElement) => {
-    if (kindOf(el) !== "dup") return false;
+    const k = kindOf(el);
+    if (k !== "dup" && !(o.phone && k === "frame")) return false;
     const list = listOf(el);
-    const master = list && masterOf(list);
-    return !!master && master !== el;
+    const master = list ? masterOf(list) : null;
+    if (!list || !master) return false;
+    if (master !== el) return k === "dup";
+    // Phones: a plain master (nothing nested) joins its list's single sweep as
+    // the first slot, one task fewer per list.
+    return o.phone && !el.querySelector("[data-build-item]") &&
+      (Array.from(list.children) as HTMLElement[]).some((c) => c !== el && isItem.has(c) && kindOf(c) === "dup");
   };
 
   const tasks: Task[] = [];
@@ -131,7 +138,7 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
     // Batch the rest: one agent duplicates several slots in a single sweep
     // (chip clouds, logo grids), so big lists need few hand-offs.
     const n2 = slots.length;
-    // Phones: one sweep per list, flown from the master's slot while it is framed.
+    // Phones: one sweep per list, flown from the master's slot (its first slot).
     const size = o.phone ? Math.min(24, n2) : n2 <= 3 ? 1 : Math.min(8, Math.max(2, Math.ceil(n2 / 3)));
     for (let i = 0; i < slots.length; i += size) {
       const t = add(slots[i], "dup");
@@ -144,6 +151,29 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
   });
 
   nestedInDup.forEach((slot, el) => taskOf.get(slot)?.absorbed.push(el));
+
+  // Grid containers (data-build-grid): the section itself or a container in
+  // it. A layout agent boxes the cells first; everything filling a cell waits.
+  const gridOf = new Map<Element, Task>();
+  const contents = tasks.slice();
+  for (const g of [section, ...Array.from(section.querySelectorAll<HTMLElement>("[data-build-grid]"))]) {
+    if (!g.hasAttribute("data-build-grid") || g.closest(SECTION) !== section || gridOf.has(g)) continue;
+    const t = add(g, "grid");
+    t.label = "grid";
+    t.slots = []; // the container itself is never hidden or marked built
+    t.keep = true;
+    gridOf.set(g, t);
+  }
+  if (gridOf.size) {
+    for (const t of [...contents, ...Array.from(gridOf.values())]) {
+      const host = (t.slots[0] ?? t.el).parentElement?.closest("[data-build-grid]");
+      const grid = host ? gridOf.get(host) : undefined;
+      if (!grid || grid === t || !host) continue;
+      // Only the outermost item inside the grid waits for it (nested ones wait for their parent).
+      const parent = parentItem(t.slots[0] ?? t.el);
+      if (!parent || !host.contains(parent)) t.deps.push(grid.id);
+    }
+  }
   for (const t of tasks) t.logName ||= t.label;
 
   // Items nested inside another item wait for it.
@@ -156,6 +186,11 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
     t.sweep = t.font && el.hasAttribute("data-build-weight");
     t.tune = t.kind === "frame" && o.detail.panels && el.hasAttribute("data-build-tune");
     t.drag = t.kind === "image" && !t.keep;
+    t.scale = !o.phone && (t.kind === "type" || t.kind === "reveal") && !t.keep && el.hasAttribute("data-build-scale");
+    if (t.scale) {
+      t.sdx = 24 + Math.random() * 24;
+      t.sdy = -10 + Math.random() * 26;
+    }
   }
 
   // Color-wheel follow-ups run after the item that shows the element.
@@ -389,6 +424,34 @@ function measureStyle(t: Task, cs: CSSStyleDeclaration): void {
   }
 }
 
+/** Distinct values (sorted), merging ones closer than 3 px. */
+function distinct(vals: number[]): number[] {
+  const out: number[] = [];
+  for (const v of vals.sort((a, b) => a - b)) if (!out.length || v - out[out.length - 1] > 3) out.push(v);
+  return out;
+}
+
+/** Cells of a grid container and its column/row lines, from the cells' rects. */
+function measureGrid(t: Task, sy: number): void {
+  const cells: HTMLElement[] = [];
+  const boxes: Box[] = [];
+  for (const c of Array.from(t.el.children)) {
+    if (!(c instanceof HTMLElement)) continue;
+    const r = c.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    cells.push(c);
+    boxes.push(toDoc(r, sy));
+  }
+  t.cells = cells;
+  t.cellBoxes = boxes;
+  const lefts = distinct(boxes.map((b) => b.x));
+  const tops = distinct(boxes.map((b) => b.y));
+  t.dims = [lefts.length, tops.length];
+  // Irregular flex-wrap rows (chip clouds) get only the outer columns.
+  t.cols = lefts.length > 10 ? [t.box.x, t.box.x + t.box.w] : distinct(boxes.flatMap((b) => [b.x, b.x + b.w]));
+  t.rows = distinct(boxes.flatMap((b) => [b.y, b.y + b.h])).slice(0, 24);
+}
+
 /**
  * Reads every rect and style the section's build needs, one task per step
  * (all reads, no writes), so it can run in idle time in small chunks.
@@ -422,7 +485,8 @@ export function* measureSteps(m: SectionModel, autoTune: number, phone = false):
         h: Math.max(...xs.map((b) => b.y + b.h)) - y,
       };
     }
-    if (t.kind !== "dup" && t.kind !== "reveal") measureStyle(t, getComputedStyle(t.el));
+    if (t.kind === "grid") measureGrid(t, sy);
+    else if (t.kind !== "dup" && t.kind !== "reveal") measureStyle(t, getComputedStyle(t.el));
   }
 
   // Default order: rows top-to-bottom, then left-to-right; data-build-order overrides.

@@ -18,7 +18,11 @@ export function Credentials() {
           }
         />
 
-        <div data-build-section="education" className="mt-14 grid gap-4 md:grid-cols-2">
+        <div
+          data-build-section="education"
+          data-build-grid
+          className="mt-14 grid gap-4 md:grid-cols-2"
+        >
           {education.map((school, i) => (
             <article
               key={school.school}
@@ -65,7 +69,7 @@ export function Credentials() {
           <p data-build-item data-build="type" className="bp-eyebrow">
             certifications
           </p>
-          <ul data-build-list className="mt-5 grid gap-3 md:grid-cols-2">
+          <ul data-build-list data-build-grid className="mt-5 grid gap-3 md:grid-cols-2">
             {certifications.map((cert, i) => {
               const body = (
                 <>
