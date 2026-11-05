@@ -1,6 +1,6 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import "server-only";
 import { UserRole } from "@/services/authenticate-service/generated/authenticate/@prisma-authenticate";
-import { db } from "../service-provider";
+import { getFirestoreAdmin } from "../firebase-admin";
 
 export interface FirestoreUserPayload {
   id: string;
@@ -12,27 +12,30 @@ export interface FirestoreUserPayload {
 
 /**
  * Ensures a Firestore user document exists for the given user.
+ *
+ * Uses the Admin SDK: Firestore rules deny the `users` collection to
+ * client SDKs, so this must run on the server with admin credentials.
  */
 export async function ensureFirestoreUserDoc(user: FirestoreUserPayload) {
-  const ref = doc(db, "users", user.id);
-  const snap = await getDoc(ref);
+  const db = await getFirestoreAdmin();
+  const ref = db.collection("users").doc(user.id);
+  const snap = await ref.get();
   const now = new Date();
-  if (!snap.exists()) {
-    await setDoc(ref, {
-      name: user.name,
-      email: user.email,
-      avatarURL: user.image,
+  if (!snap.exists) {
+    await ref.set({
+      name: user.name ?? null,
+      email: user.email ?? null,
+      avatarURL: user.image ?? null,
       role: user.role,
       username: null,
       createdAt: now,
       updatedAt: now,
     });
   } else {
-    await setDoc(
-      ref,
+    await ref.set(
       {
-        name: user.name,
-        avatarURL: user.image,
+        name: user.name ?? null,
+        avatarURL: user.image ?? null,
         updatedAt: now,
       },
       { merge: true }
