@@ -9,6 +9,7 @@ import { Projects } from "./_sections/projects";
 import { Skills } from "./_sections/skills";
 import { Credentials } from "./_sections/credentials";
 import { Contact, SiteFooter } from "./_sections/contact";
+import { Parallax } from "./_sections/parallax";
 
 // Fully static: rendered at build time and refreshed once a day (for the
 // skill logos). All content is in the HTML; the build animation only plays
@@ -36,6 +37,7 @@ export default async function HomePage() {
         <Contact />
       </main>
       <SiteFooter />
+      <Parallax />
       <SwarmRoot />
     </div>
   );

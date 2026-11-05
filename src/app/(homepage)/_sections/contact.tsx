@@ -2,17 +2,21 @@ import Link from "next/link";
 import { profile, socialLinks } from "@/content/profile";
 import { ExternalArrow, SocialIcon, isExternal } from "./shared";
 import { ViewCounter } from "./view-counter";
+import { SectionNumeral, WordBand } from "./decor";
 
 export function Contact() {
   return (
-    <section id="contact" className="bp-section">
-      <div data-build-section="contact" className="bp-container">
+    <section id="contact" className="border-t border-[color:var(--bp-line)]">
+      <WordBand />
+      <div data-build-section="contact" className="bp-container pb-24 pt-16 md:pb-32">
+        <SectionNumeral value="05" />
         <p data-build-item data-build="type" className="bp-eyebrow">
           05 — contact
         </p>
         <h2
           data-build-item
           data-build="type"
+          data-build-font
           className="bp-h1 mt-6 max-w-4xl text-[clamp(2.2rem,6vw,4.5rem)]"
         >
           Let&apos;s build the next system together.
@@ -30,6 +34,7 @@ export function Contact() {
         <a
           data-build-item
           data-build="frame"
+          data-build-color="fill"
           data-build-label="a.email"
           href={`mailto:${profile.email}`}
           className="bp-btn bp-btn-primary mt-8 h-12 px-5 text-base"

@@ -36,7 +36,8 @@ export default function LinksPage() {
           <div
             data-build-item
             data-build="image"
-            data-build-keep
+            data-build-from="top"
+            data-build-keep="mobile"
             className="relative h-24 w-24 overflow-hidden rounded-full border border-[color:var(--bp-line-strong)]"
           >
             <Image
@@ -49,7 +50,14 @@ export default function LinksPage() {
               className="object-cover"
             />
           </div>
-          <h1 data-build-item data-build="frame" data-build-keep data-build-label="h1.name" className="bp-h2 mt-6 text-3xl">
+          <h1
+            data-build-item
+            data-build="type"
+            data-build-font
+            data-build-keep="mobile"
+            data-build-label="h1.name"
+            className="bp-h2 mt-6 text-3xl"
+          >
             {profile.name}
           </h1>
           <p data-build-item data-build="type" className="bp-muted mt-2 text-sm">

@@ -1,4 +1,5 @@
 import { experience } from "@/content/profile";
+import { Bracket, CrossMark } from "./decor";
 import { ExternalArrow, SectionHeader } from "./shared";
 
 function slug(text: string) {
@@ -12,6 +13,8 @@ export function Experience() {
   return (
     <section id="experience" className="bp-section">
       <div className="bp-container">
+        <CrossMark at="-left-6 top-40" label="x 64 · y 1240" speed={0.25} />
+        <Bracket at="-right-2 top-[28rem]" speed={0.4} flip />
         <SectionHeader
           id="experience"
           index="01"
@@ -31,11 +34,17 @@ export function Experience() {
               <article
                 data-build-item
                 data-build="frame"
+                data-build-tune
                 data-build-label="role"
                 className="bp-card grid gap-6 p-6 md:grid-cols-[220px_1fr] md:p-8"
               >
                 <div className="bp-mono text-xs leading-6">
-                  <p data-build-item data-build="type" className="bp-accent">
+                  <p
+                    data-build-item
+                    data-build="type"
+                    data-build-color="text"
+                    className="bp-accent"
+                  >
                     {job.dates}
                   </p>
                   <p data-build-item data-build="type" className="bp-muted">
@@ -44,7 +53,12 @@ export function Experience() {
                 </div>
 
                 <div>
-                  <h3 data-build-item data-build="type" className="bp-h3">
+                  <h3
+                    data-build-item
+                    data-build="type"
+                    data-build-font
+                    className="bp-h3"
+                  >
                     {job.role}{" "}
                     <span className="bp-muted font-normal">· </span>
                     {job.link ? (

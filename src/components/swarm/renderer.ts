@@ -1,14 +1,14 @@
 // Canvas overlay: one fixed full-viewport canvas, drawn in document space with
-// a scroll-offset transform. Agent cursors and text pills are cached sprites.
+// a scroll-offset transform. Cursors, pills and popovers are cached sprites;
+// per frame only positions, knobs and a few cached strings change.
 import { COLORS, monoFamily } from "./palette";
 import type { Sim } from "./sim";
-import { MK, type Mark } from "./types";
-
-interface Sprite {
-  c: HTMLCanvasElement;
-  w: number;
-  h: number;
-}
+import { MK, type Mark, type Sprite } from "./types";
+import {
+  CARD_PAD, CHECK, DROP, GLYPH_HOT, GLYPH_SIZE, INSP, TOOLBAR, WHEEL,
+  CHECK_H, INSP_H, dropH, paintCard, paintChecklist, paintDropdown, paintGlyph,
+  paintInspector, paintToolbar, paintWheel, roundRect,
+} from "./widgets";
 
 type PillStyle = "tag" | "plan" | "badge";
 const PILLS: Record<PillStyle, { size: number; fg: string; bg: string; stroke: string | null }> = {
@@ -16,18 +16,10 @@ const PILLS: Record<PillStyle, { size: number; fg: string; bg: string; stroke: s
   plan: { size: 10, fg: COLORS.guide, bg: COLORS.panel, stroke: COLORS.guide },
   badge: { size: 11, fg: COLORS.ink, bg: COLORS.accent, stroke: null },
 };
-const SCAN_TOP = "rgba(94,234,212,0)";
-const SCAN_BOTTOM = "rgba(94,234,212,0.2)";
-
-function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  g.beginPath();
-  g.moveTo(x + r, y);
-  g.arcTo(x + w, y, x + w, y + h, r);
-  g.arcTo(x + w, y + h, x, y + h, r);
-  g.arcTo(x, y + h, x, y, r);
-  g.arcTo(x, y, x + w, y, r);
-  g.closePath();
-}
+const TAU = Math.PI * 2;
+const NUM = Array.from({ length: 256 }, (_, i) => String(i));
+const HUE = Array.from({ length: 360 }, (_, h) => `hsl(${h},100%,50%)`);
+const CARD_MAX = 420;
 
 export class Renderer {
   private readonly canvas: HTMLCanvasElement;
@@ -36,13 +28,19 @@ export class Renderer {
   private readonly colors: string[];
   private readonly labels: string[];
   private readonly family: string;
+  private readonly font10: string;
   private dpr = 0;
   private vw = 0;
   private vh = 0;
   private dirty = true;
   private shown = false;
-  private agents: (Sprite | undefined)[] = [];
-  private pills = new Map<string, Sprite>();
+  private glyphs: (Sprite | undefined)[][] = [];
+  private names: (Sprite | undefined)[] = [];
+  private cache = new Map<string, Sprite>();
+  private checks: Sprite[] = [];
+  private white: CanvasGradient;
+  private black: CanvasGradient;
+  private band: CanvasGradient;
 
   constructor(canvas: HTMLCanvasElement, dprCap: number, colors: string[], labels: string[]) {
     const ctx = canvas.getContext("2d");
@@ -53,7 +51,19 @@ export class Renderer {
     this.colors = colors;
     this.labels = labels;
     this.family = monoFamily();
+    this.font10 = `500 10px ${this.family}`;
     this.dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+    // Gradients live in user space, so they survive canvas resizes.
+    const sq = WHEEL.sq;
+    this.white = ctx.createLinearGradient(0, 0, sq, 0);
+    this.white.addColorStop(0, "#fff");
+    this.white.addColorStop(1, "rgba(255,255,255,0)");
+    this.black = ctx.createLinearGradient(0, 0, 0, sq);
+    this.black.addColorStop(0, "rgba(0,0,0,0)");
+    this.black.addColorStop(1, "#000");
+    this.band = ctx.createLinearGradient(0, 0, 0, 20);
+    this.band.addColorStop(0, "rgba(94,234,212,0)");
+    this.band.addColorStop(1, "rgba(94,234,212,0.2)");
   }
 
   invalidate(): void {
@@ -79,7 +89,43 @@ export class Renderer {
     return { w: s.w, h: s.h };
   }
 
-  draw(sim: Sim, marks: Mark[], sy: number): void {
+  /** Font menu sprite: rows, with a check on the given row. */
+  dropSprite(rows: string[], checked: number): Sprite {
+    return this.cached(`drop|${checked}|${rows.join("|")}`, DROP.w, dropH(rows.length), (g) =>
+      paintDropdown(g, this.family, rows, checked),
+    );
+  }
+
+  inspectorSprite(title: string): Sprite {
+    return this.cached(`insp|${title}`, INSP.w, INSP_H, (g) => paintInspector(g, this.family, title));
+  }
+
+  toolbarSprite(): Sprite {
+    return this.cached("toolbar", TOOLBAR.w, TOOLBAR.h, paintToolbar);
+  }
+
+  wheelSprite(): Sprite {
+    return this.cached("wheel", WHEEL.w, WHEEL.h, paintWheel);
+  }
+
+  /** Builds the review checklist states up front (drawn by tick count). */
+  prepareChecklist(): void {
+    for (let k = 0; k <= CHECK.items.length; k++) {
+      this.checks[k] = this.cached(`check|${k}`, CHECK.w, CHECK_H, (g) => paintChecklist(g, this.family, k));
+    }
+  }
+
+  /** Card sprite for an image being dragged in (built once per drag). */
+  cardSprite(w: number, h: number, radius: number, img: HTMLImageElement | null, alt: string, fit: string, pos: number[]): Sprite {
+    const k = Math.min(1, CARD_MAX / Math.max(w, h));
+    const cw = Math.max(8, w * k);
+    const ch = Math.max(8, h * k);
+    return this.sprite(cw + CARD_PAD * 2, ch + CARD_PAD * 2, (g) =>
+      paintCard(g, this.family, cw, ch, radius * k, img, alt, fit, pos),
+    );
+  }
+
+  draw(sim: Sim, marks: Mark[], sy: number, now: number): void {
     if (this.dirty) this.fit();
     const { ctx, dpr, vw, vh } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -94,10 +140,10 @@ export class Renderer {
       if (m.dead) continue;
       marks[keep++] = m;
       if (m.a <= 0.003) continue;
-      const alt = m.k === MK.guide ? m.y2 : m.k === MK.ghost ? m.y2 : m.y;
+      const alt = m.k === MK.guide || m.k === MK.ghost ? m.y2 : m.y;
       const altB = m.k === MK.guide ? m.y2 : m.k === MK.ghost ? m.y2 + m.h2 : m.y;
-      if (Math.max(m.y + m.h, altB) < top || Math.min(m.y, alt) > bottom) continue;
-      this.mark(m);
+      if (Math.max(m.y + m.h + 130, altB) < top || Math.min(m.y - 130, alt) > bottom) continue;
+      this.mark(m, top, bottom, now);
     }
     marks.length = keep;
 
@@ -107,17 +153,21 @@ export class Renderer {
       const x = sim.x[i];
       const y = sim.y[i];
       if (y < top || y > bottom || x < -60 || x > vw + 60) continue;
-      const s = this.agent(i);
-      ctx.drawImage(s.c, x - 2, y - 2, s.w, s.h);
+      const tool = sim.tool[i];
+      const hot = GLYPH_HOT[tool] ?? GLYPH_HOT[0];
+      const gl = this.glyph(i, tool);
+      ctx.drawImage(gl.c, x - hot[0], y - hot[1], gl.w, gl.h);
+      const nm = this.name(i);
+      ctx.drawImage(nm.c, x + 12, y + 14, nm.w, nm.h);
       if (sim.flag[i] & 1) {
         // "copy" marker while alt-dragging a duplicate
         ctx.fillStyle = COLORS.accent;
         ctx.beginPath();
-        ctx.arc(x + 17, y + 3, 5, 0, Math.PI * 2);
+        ctx.arc(x + 17, y - 6, 5, 0, TAU);
         ctx.fill();
         ctx.fillStyle = COLORS.ink;
-        ctx.fillRect(x + 14.5, y + 2.4, 5, 1.2);
-        ctx.fillRect(x + 16.4, y + 0.5, 1.2, 5);
+        ctx.fillRect(x + 14.5, y - 6.6, 5, 1.2);
+        ctx.fillRect(x + 16.4, y - 8.5, 1.2, 5);
       }
     }
   }
@@ -126,8 +176,10 @@ export class Renderer {
     const dpr = Math.min(window.devicePixelRatio || 1, this.dprCap);
     if (dpr !== this.dpr) {
       this.dpr = dpr;
-      this.pills.clear();
-      this.agents = [];
+      this.cache.clear();
+      this.checks = [];
+      this.glyphs = [];
+      this.names = [];
     }
     this.vw = window.innerWidth;
     this.vh = window.innerHeight;
@@ -148,16 +200,25 @@ export class Renderer {
     return { c, w, h };
   }
 
+  private cached(key: string, w: number, h: number, paint: (g: CanvasRenderingContext2D) => void): Sprite {
+    let s = this.cache.get(key);
+    if (!s) {
+      s = this.sprite(w, h, paint);
+      this.cache.set(key, s);
+    }
+    return s;
+  }
+
   private pill(text: string, style: PillStyle): Sprite {
-    const key = style + "|" + text;
-    const hit = this.pills.get(key);
-    if (hit) return hit;
     const st = PILLS[style];
     const font = `500 ${st.size}px ${this.family}`;
+    const key = style + "|" + text;
+    const hit = this.cache.get(key);
+    if (hit) return hit;
     this.ctx.font = font;
     const w = Math.ceil(this.ctx.measureText(text).width + 12);
     const h = st.size + 7;
-    const s = this.sprite(w, h, (g) => {
+    return this.cached(key, w, h, (g) => {
       roundRect(g, 0.5, 0.5, w - 1, h - 1, style === "tag" ? 3 : (h - 1) / 2);
       g.fillStyle = st.bg;
       g.fill();
@@ -170,45 +231,29 @@ export class Renderer {
       g.textBaseline = "middle";
       g.fillText(text, 6, h / 2 + 0.5);
     });
-    this.pills.set(key, s);
-    return s;
   }
 
-  /** Cursor glyph (a notched dart, tip at the origin) plus the agent's name pill. */
-  private agent(i: number): Sprite {
-    const hit = this.agents[i];
+  private glyph(i: number, tool: number): Sprite {
+    const row = (this.glyphs[i] ??= []);
+    return (row[tool] ??= this.sprite(GLYPH_SIZE, GLYPH_SIZE, (g) => paintGlyph(g, tool, this.colors[i])));
+  }
+
+  private name(i: number): Sprite {
+    const hit = this.names[i];
     if (hit) return hit;
-    const color = this.colors[i];
     const label = this.labels[i];
-    const font = `500 10px ${this.family}`;
-    this.ctx.font = font;
-    const pw = Math.ceil(this.ctx.measureText(label).width + 12);
-    const px = 12;
-    const py = 14;
-    const ph = 16;
-    const s = this.sprite(px + pw + 4, py + ph + 4, (g) => {
-      g.translate(2, 2);
-      g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(13, 5);
-      g.lineTo(7.2, 7.2);
-      g.lineTo(5, 13);
-      g.closePath();
-      g.fillStyle = color;
+    this.ctx.font = this.font10;
+    const w = Math.ceil(this.ctx.measureText(label).width + 12);
+    const s = this.sprite(w, 16, (g) => {
+      roundRect(g, 0, 0, w, 16, 8);
+      g.fillStyle = this.colors[i];
       g.fill();
-      g.lineJoin = "round";
-      g.lineWidth = 1.25;
-      g.strokeStyle = COLORS.ink;
-      g.stroke();
-      roundRect(g, px, py, pw, ph, ph / 2);
-      g.fillStyle = color;
-      g.fill();
-      g.font = font;
+      g.font = this.font10;
       g.fillStyle = COLORS.ink;
       g.textBaseline = "middle";
-      g.fillText(label, px + 6, py + ph / 2 + 0.5);
+      g.fillText(label, 6, 8.5);
     });
-    this.agents[i] = s;
+    this.names[i] = s;
     return s;
   }
 
@@ -217,7 +262,11 @@ export class Renderer {
     this.ctx.strokeRect(x - 2.5, y - 2.5, 5, 5);
   }
 
-  private mark(m: Mark): void {
+  private blit(s: Sprite, x: number, y: number): void {
+    this.ctx.drawImage(s.c, x, y, s.w, s.h);
+  }
+
+  private mark(m: Mark, top: number, bottom: number, now: number): void {
     const ctx = this.ctx;
     ctx.globalAlpha = m.a;
     ctx.strokeStyle = m.color;
@@ -225,20 +274,41 @@ export class Renderer {
     ctx.lineWidth = 1;
     switch (m.k) {
       case MK.guide: {
+        const dx = (m.x2 - m.x) * m.p;
+        const dy = (m.y2 - m.y) * m.p;
         ctx.globalAlpha = m.a * 0.6;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(m.x + 0.5, m.y + 0.5);
-        ctx.lineTo(m.x + (m.x2 - m.x) * m.p + 0.5, m.y + (m.y2 - m.y) * m.p + 0.5);
+        ctx.lineTo(m.x + dx + 0.5, m.y + dy + 0.5);
         ctx.stroke();
         ctx.setLineDash([]);
+        // Ruler ticks every 24 px, longer every 120 px.
+        const len = Math.hypot(dx, dy);
+        if (len < 1) break;
+        const ux = dx / len;
+        const uy = dy / len;
+        ctx.globalAlpha = m.a * 0.45;
+        ctx.beginPath();
+        for (let d = 24; d < len; d += 24) {
+          const px = m.x + ux * d + 0.5;
+          const py = m.y + uy * d + 0.5;
+          if (py < top || py > bottom) continue;
+          const t = d % 120 === 0 ? 5 : 2.5;
+          ctx.moveTo(px + uy * t, py - ux * t);
+          ctx.lineTo(px - uy * t, py + ux * t);
+        }
+        ctx.stroke();
         break;
       }
       case MK.frame:
       case MK.box: {
         const w = m.w * m.p;
         const h = m.h * m.p;
-        ctx.strokeRect(m.x + 0.5, m.y + 0.5, w, h);
+        if (m.r > 0.5) {
+          roundRect(ctx, m.x + 0.5, m.y + 0.5, w, h, m.r);
+          ctx.stroke();
+        } else ctx.strokeRect(m.x + 0.5, m.y + 0.5, w, h);
         if (m.k === MK.frame && m.p > 0.02) {
           ctx.fillStyle = COLORS.bg;
           this.handle(m.x, m.y);
@@ -246,9 +316,21 @@ export class Renderer {
           this.handle(m.x, m.y + h);
           this.handle(m.x + w, m.y + h);
         }
+        if (m.u > 0.01) {
+          // Padding guide: x2..h2 hold padding top, right, bottom, left.
+          ctx.globalAlpha = m.a * Math.min(1, m.u * 1.5) * 0.8;
+          ctx.strokeStyle = COLORS.guide;
+          ctx.setLineDash([3, 3]);
+          ctx.strokeRect(
+            m.x + m.h2 * m.u + 0.5, m.y + m.x2 * m.u + 0.5,
+            m.w - (m.h2 + m.y2) * m.u, m.h - (m.x2 + m.w2) * m.u,
+          );
+          ctx.setLineDash([]);
+          ctx.globalAlpha = m.a;
+        }
         if (m.label) {
           const s = this.pill(m.label, "tag");
-          ctx.drawImage(s.c, m.x, m.y - s.h - 4, s.w, s.h);
+          this.blit(s, m.x, m.y - s.h - 4);
         }
         break;
       }
@@ -270,24 +352,23 @@ export class Renderer {
         const yy = m.y + m.h * m.p;
         const band = Math.min(20, yy - m.y);
         if (band > 0) {
-          const g = ctx.createLinearGradient(0, yy - band, 0, yy);
-          g.addColorStop(0, SCAN_TOP);
-          g.addColorStop(1, SCAN_BOTTOM);
-          ctx.fillStyle = g;
-          ctx.fillRect(m.x, yy - band, m.w, band);
+          ctx.save();
+          ctx.translate(m.x, yy - 20);
+          ctx.fillStyle = this.band;
+          ctx.fillRect(0, 20 - band, m.w, band);
+          ctx.restore();
           ctx.fillStyle = m.color;
         }
         ctx.fillRect(m.x, yy - 1, m.w, 1.5);
         break;
       }
       case MK.caret:
+        if (m.blink && ((now * 2.4) | 0) % 2) ctx.globalAlpha = m.a * 0.15;
         ctx.fillRect(m.x, m.y, 2, m.h);
         break;
-      case MK.tag: {
-        const s = this.pill(m.label, "plan");
-        ctx.drawImage(s.c, m.x, m.y - (1 - m.p) * 10, s.w, s.h);
+      case MK.tag:
+        this.blit(this.pill(m.label, "plan"), m.x, m.y - (1 - m.p) * 10);
         break;
-      }
       case MK.badge: {
         const s = this.pill(m.label, "badge");
         const w = s.w * m.s;
@@ -309,6 +390,140 @@ export class Renderer {
         ctx.stroke();
         break;
       }
+      case MK.ripple:
+        ctx.globalAlpha = m.a * (1 - m.p);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 3 + 13 * m.p, 0, TAU);
+        ctx.stroke();
+        break;
+      case MK.flash:
+        ctx.globalAlpha = m.a * 0.12;
+        ctx.fillRect(m.x, m.y, m.w, m.h);
+        ctx.globalAlpha = m.a * 0.7;
+        ctx.strokeRect(m.x + 0.5, m.y + 0.5, m.w, m.h);
+        break;
+      case MK.card: {
+        const s = m.img;
+        if (!s) break;
+        const k = (s.w - CARD_PAD * 2) / Math.max(1, m.w);
+        const f = m.s / k;
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.rotate(m.r);
+        ctx.scale(f, f);
+        ctx.drawImage(s.c, -s.w / 2, -s.h / 2, s.w, s.h);
+        ctx.restore();
+        break;
+      }
+      case MK.drop: {
+        const s = m.img;
+        if (!s) break;
+        ctx.globalAlpha = m.a * Math.min(1, m.p * 1.4);
+        const sh = s.c.height * m.p;
+        if (sh >= 1) ctx.drawImage(s.c, 0, 0, s.c.width, sh, m.x, m.y, s.w, s.h * m.p);
+        if (m.p > 0.95 && m.u >= 0) {
+          ctx.globalAlpha = m.a * 0.16;
+          ctx.fillStyle = COLORS.accent;
+          ctx.fillRect(m.x + 3, m.y + DROP.pad + m.u * DROP.row, DROP.w - 6, DROP.row);
+        }
+        break;
+      }
+      case MK.inspector: {
+        const s = m.img;
+        if (!s) break;
+        const oy = m.y + (1 - m.p) * 6;
+        ctx.globalAlpha = m.a * m.p;
+        this.blit(s, m.x, oy);
+        if (m.p < 0.5) break;
+        ctx.font = this.font10;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        for (let k = 0; k < 3; k++) {
+          const t = k === 0 ? m.u : k === 1 ? m.v : m.s;
+          const max = k === 0 ? m.w2 : k === 1 ? m.h2 : 100;
+          const y = oy + INSP.head + k * INSP.row + INSP.row / 2;
+          const x0 = m.x + INSP.trackX;
+          const kx = x0 + t * INSP.trackW;
+          ctx.fillStyle = COLORS.accent;
+          ctx.fillRect(x0, y - 0.75, kx - x0, 1.5);
+          ctx.beginPath();
+          ctx.arc(kx, y, 3.6, 0, TAU);
+          ctx.fillStyle = COLORS.text;
+          ctx.fill();
+          ctx.strokeStyle = COLORS.accent;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.fillStyle = COLORS.muted;
+          ctx.fillText(NUM[Math.min(255, Math.round(t * max))], m.x + INSP.w - 9, y + 0.5);
+        }
+        ctx.textAlign = "start";
+        break;
+      }
+      case MK.toolbar: {
+        ctx.globalAlpha = m.a * m.p;
+        if (m.img) this.blit(m.img, m.x, m.y);
+        if (m.u >= 0) {
+          ctx.strokeStyle = COLORS.accent;
+          roundRect(ctx, m.x + 3 + m.u * TOOLBAR.icon + 1.5, m.y + 3.5, TOOLBAR.icon - 3, TOOLBAR.h - 7, 4);
+          ctx.stroke();
+        }
+        break;
+      }
+      case MK.wheel: {
+        // u: ring hue (deg), x2/y2: saturation/value, h2: readout alpha, label: hex.
+        const oy = m.y + (1 - m.p) * 6;
+        ctx.globalAlpha = m.a * m.p;
+        if (m.img) this.blit(m.img, m.x, oy);
+        const hue = (((m.u % 360) + 360) % 360) | 0;
+        const sq = WHEEL.sq;
+        const sx = m.x + WHEEL.cx - sq / 2;
+        const sy = oy + WHEEL.cy - sq / 2;
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.fillStyle = HUE[hue];
+        ctx.fillRect(0, 0, sq, sq);
+        ctx.fillStyle = this.white;
+        ctx.fillRect(0, 0, sq, sq);
+        ctx.fillStyle = this.black;
+        ctx.fillRect(0, 0, sq, sq);
+        ctx.restore();
+        const ang = ((m.u - 90) * Math.PI) / 180;
+        const rm = (WHEEL.ro + WHEEL.ri) / 2;
+        this.ring(m.x + WHEEL.cx + Math.cos(ang) * rm, oy + WHEEL.cy + Math.sin(ang) * rm, 4.6);
+        this.ring(sx + m.x2 * sq, sy + (1 - m.y2) * sq, 3.4);
+        if (m.h2 > 0.01) {
+          ctx.globalAlpha = m.a * m.p * m.h2;
+          ctx.fillStyle = m.color;
+          ctx.fillRect(m.x + 10, oy + WHEEL.h - 15, 12, 10);
+          ctx.strokeStyle = COLORS.lineStrong;
+          ctx.strokeRect(m.x + 10.5, oy + WHEEL.h - 14.5, 11, 9);
+          ctx.font = this.font10;
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = COLORS.text;
+          ctx.fillText(m.label, m.x + 28, oy + WHEEL.h - 9.5);
+        }
+        break;
+      }
+      case MK.check: {
+        const s = this.checks[Math.max(0, Math.min(CHECK.items.length, Math.floor(m.u)))];
+        if (!s) break;
+        ctx.globalAlpha = m.a * m.p;
+        this.blit(s, m.x, m.y + (1 - m.p) * 6);
+        break;
+      }
     }
+  }
+
+  private ring(x: number, y: number, r: number): void {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = COLORS.ink;
+    ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
   }
 }

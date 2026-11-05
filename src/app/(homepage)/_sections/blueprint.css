@@ -20,6 +20,7 @@
 
   position: relative;
   min-height: 100dvh;
+  overflow-x: clip;
   color: var(--bp-text);
   background: var(--bp-bg);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -243,6 +244,43 @@ body:has(.bp-root) {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.8rem;
   line-height: 1.75;
+}
+
+/* Parallax decoration (see decor.tsx). */
+.bp-numeral {
+  z-index: 0;
+  font-size: clamp(7rem, 17vw, 15rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(120, 140, 170, 0.16);
+  will-change: transform;
+}
+.bp-mark {
+  z-index: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.65rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #3a4657;
+  will-change: transform;
+}
+.bp-band {
+  font-size: clamp(3.5rem, 9vw, 7.5rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(120, 140, 170, 0.22);
+  will-change: transform;
+}
+.bp-band-alt {
+  -webkit-text-stroke: 1px rgba(94, 234, 212, 0.22);
+}
+/* Anchor for the absolutely positioned decoration. */
+.bp-root .bp-container {
+  position: relative;
 }
 
 /* Logo tiles are dark-on-transparent SVG/PNGs from Firebase; lift them. */

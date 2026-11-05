@@ -21,6 +21,8 @@ export class Sim {
   readonly on: Uint8Array;
   /** Render hints: bit 1 = carrying a duplicate. */
   readonly flag: Uint8Array;
+  /** Cursor glyph per agent (TOOL.*). */
+  readonly tool: Uint8Array;
 
   constructor(n: number) {
     this.n = n;
@@ -35,6 +37,7 @@ export class Sim {
     this.follow = f();
     this.on = new Uint8Array(n);
     this.flag = new Uint8Array(n);
+    this.tool = new Uint8Array(n);
   }
 
   place(i: number, x: number, y: number): void {

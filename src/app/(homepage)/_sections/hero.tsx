@@ -1,14 +1,20 @@
+import Image from "next/image";
 import { metrics, profile, socialLinks } from "@/content/profile";
+import avatar from "../../../../public/assets/img/ava.jpg";
+import { Bracket, CrossMark, DimLine, HeroSchematic } from "./decor";
 import { ExternalArrow, SocialIcon, isExternal } from "./shared";
 import { ViewCounter } from "./view-counter";
 
 const RUN_LOG = [
   { who: "planner", color: "var(--bp-violet)", text: "split portfolio into 7 sections" },
   { who: "coder·03", color: "#34d399", text: "experience timeline" },
-  { who: "designer·01", color: "var(--bp-pink)", text: "project cards + art" },
-  { who: "tester", color: "var(--bp-blue)", text: "a11y + reduced motion" },
+  { who: "designer·01", color: "var(--bp-pink)", text: "type, color + images" },
+  { who: "tester", color: "var(--bp-blue)", text: "a11y + layout shift = 0" },
   { who: "reviewer", color: "var(--bp-guide)", text: "approved · 0 regressions" },
 ];
+
+// Each metric gets its own color so the designer agent can pick it.
+const METRIC_COLORS = ["#5eead4", "#a78bfa", "#f472b6", "#60a5fa"];
 
 export function Hero() {
   const links = socialLinks.filter((l) => l.kind !== "web");
@@ -18,9 +24,14 @@ export function Hero() {
       id="top"
       data-build-section="hero"
       data-build-start="load"
-      className="pb-20 pt-28 sm:pt-36"
+      data-parallax-scope
+      className="relative pb-20 pt-28 sm:pt-36"
     >
+      <HeroSchematic />
       <div className="bp-container grid items-end gap-12 lg:grid-cols-[1.3fr_1fr]">
+        <CrossMark at="-left-2 -top-10" label="x 0 · y 0" speed={0.15} />
+        <Bracket at="-right-1 top-0" speed={0.3} flip />
+
         <div>
           <p
             data-build-item
@@ -31,10 +42,15 @@ export function Hero() {
             shipping agents at {profile.company}
           </p>
 
+          {/* Typed first (order -1) in a draft font, then switched to Geist
+              on desktop. Phones keep it visible from the first paint (LCP). */}
           <h1
             data-build-item
-            data-build="frame"
-            data-build-keep
+            data-build="type"
+            data-build-font
+            data-build-keep="mobile"
+            data-build-order="-1"
+            data-build-role="coder"
             data-build-label="h1.name"
             className="bp-h1 mt-6"
           >
@@ -46,6 +62,7 @@ export function Hero() {
           <p
             data-build-item
             data-build="type"
+            data-build-font
             className="mt-6 text-lg font-medium sm:text-xl"
           >
             {profile.role} · Founder of Chuchube
@@ -65,6 +82,7 @@ export function Hero() {
                 key={link.label}
                 data-build-item
                 data-build={i === 0 ? "frame" : "dup"}
+                {...(link.kind === "resume" ? { "data-build-color": "fill" } : {})}
                 href={link.href}
                 {...(isExternal(link.href)
                   ? { target: "_blank", rel: "noopener noreferrer" }
@@ -83,76 +101,114 @@ export function Hero() {
           </div>
         </div>
 
-        <div
-          data-build-item
-          data-build="frame"
-          data-build-label="run.log"
-          className="bp-card bp-terminal overflow-hidden"
-          aria-label="Example orchestration run log"
-        >
-          <div className="flex items-center justify-between border-b border-[color:var(--bp-line)] px-4 py-2.5">
-            <span className="bp-dim">orchestrate://portfolio</span>
-            <span className="flex gap-1.5" aria-hidden="true">
-              <span className="h-2 w-2 rounded-full bg-[#2a3546]" />
-              <span className="h-2 w-2 rounded-full bg-[#2a3546]" />
-              <span className="h-2 w-2 rounded-full bg-[#2a3546]" />
-            </span>
-          </div>
-          <div className="space-y-0.5 px-4 py-4">
-            <p data-build-item data-build="type" className="text-[color:var(--bp-text)]">
-              <span className="bp-accent">$</span> orchestrate build portfolio
-              --agents 14
-            </p>
-            {RUN_LOG.map((line) => (
-              <p
-                key={line.who}
-                data-build-item
-                data-build="type"
-                className="flex gap-3"
-              >
-                <span className="bp-dim">→</span>
-                <span className="w-24 shrink-0" style={{ color: line.color }}>
-                  {line.who}
-                </span>
-                <span className="bp-muted">{line.text}</span>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <div
+              data-build-item
+              data-build="image"
+              data-build-from="right"
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[color:var(--bp-line-strong)] bg-[var(--bp-panel)]"
+            >
+              <Image
+                src={avatar}
+                alt={profile.name}
+                fill
+                priority
+                placeholder="blur"
+                sizes="80px"
+                className="object-cover"
+              />
+            </div>
+            <div className="bp-mono text-xs leading-6">
+              <p data-build-item data-build="type" className="bp-dim">
+                alan.jpg · 1:1
               </p>
-            ))}
-            <p data-build-item data-build="type" className="pt-1">
-              <span className="bp-accent">✓</span>{" "}
-              <span className="text-[color:var(--bp-text)]">
-                shipped · scroll to watch
+              <p data-build-item data-build="type" className="bp-muted">
+                {profile.pronouns} · {profile.location}
+              </p>
+            </div>
+          </div>
+
+          <div
+            data-build-item
+            data-build="frame"
+            data-build-tune
+            data-build-label="run.log"
+            className="bp-card bp-terminal overflow-hidden"
+            aria-label="Example orchestration run log"
+          >
+            <div className="flex items-center justify-between border-b border-[color:var(--bp-line)] px-4 py-2.5">
+              <span className="bp-dim">orchestrate://portfolio</span>
+              <span className="flex gap-1.5" aria-hidden="true">
+                <span className="h-2 w-2 rounded-full bg-[#2a3546]" />
+                <span className="h-2 w-2 rounded-full bg-[#2a3546]" />
+                <span className="h-2 w-2 rounded-full bg-[#2a3546]" />
               </span>
-            </p>
+            </div>
+            <div className="space-y-0.5 px-4 py-4">
+              <p data-build-item data-build="type" className="text-[color:var(--bp-text)]">
+                <span className="bp-accent">$</span> orchestrate build portfolio
+                --agents 14
+              </p>
+              {RUN_LOG.map((line) => (
+                <p
+                  key={line.who}
+                  data-build-item
+                  data-build="type"
+                  className="flex gap-3"
+                >
+                  <span className="bp-dim">→</span>
+                  <span className="w-24 shrink-0" style={{ color: line.color }}>
+                    {line.who}
+                  </span>
+                  <span className="bp-muted">{line.text}</span>
+                </p>
+              ))}
+              <p data-build-item data-build="type" className="pt-1">
+                <span className="bp-accent">✓</span>{" "}
+                <span className="text-[color:var(--bp-text)]">
+                  shipped · scroll to watch
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="bp-container mt-16">
-        <dl data-build-list className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <DimLine at="left-0 -top-8" width="38%" label="1120 · grid 12" speed={0.1} />
+        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {metrics.map((m, i) => (
             <div
               key={m.label}
               data-build-item
-              data-build={i === 0 ? "frame" : "dup"}
+              data-build="frame"
+              {...(i === 0 ? { "data-build-tune": "" } : {})}
               className="bp-card flex flex-col p-5"
             >
               <dt className="bp-muted order-2 mt-1 text-sm leading-5">
                 {m.label}
               </dt>
-              <dd className="bp-h2 order-1 tabular-nums">{m.value}</dd>
+              <dd
+                data-build-item
+                data-build="type"
+                data-build-color="text"
+                className="bp-h2 order-1 tabular-nums"
+                style={{ color: METRIC_COLORS[i % METRIC_COLORS.length] }}
+              >
+                {m.value}
+              </dd>
             </div>
           ))}
         </dl>
 
-        {/* "frame", not "type": the counter is React-managed text and must
-            not be split into characters. */}
+        {/* "frame", not "type": the counter is React-managed text. */}
         <p
           data-build-item
           data-build="frame"
           data-build-label="meta"
           className="bp-mono bp-dim mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs"
         >
-          <span>{profile.location}</span>
           <span>
             visits <ViewCounter className="bp-muted" />
           </span>

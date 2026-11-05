@@ -6,6 +6,16 @@ html[data-build="on"] [data-build-item]:not([data-built]):not([data-build-keep])
   opacity: 0;
 }
 
+/* data-build-keep="mobile": kept (visible from first paint) on phones, built
+   like any other item from 768px up. Same breakpoint as the phone profile in
+   palette.ts (PHONE_QUERY). Plain data-build-keep (any other value, including
+   React's "true") is always kept by the rule above. */
+@media (min-width: 768px) {
+  html[data-build="on"] [data-build-item][data-build-keep="mobile"]:not([data-built]) {
+    opacity: 0;
+  }
+}
+
 /* Element-qualified selectors so `.bp-root > *` cannot override positioning. */
 canvas.swarm-canvas {
   position: fixed;
@@ -15,6 +25,34 @@ canvas.swarm-canvas {
   z-index: var(--swarm-z, 55);
   pointer-events: none;
   visibility: hidden;
+}
+
+/* Layer for draft-font clones: out of the page flow, under the canvas. */
+div.swarm-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  z-index: calc(var(--swarm-z, 55) - 1);
+  pointer-events: none;
+}
+
+.swarm-draft {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.swarm-draft * {
+  color: inherit !important;
+  font-family: inherit !important;
 }
 
 div.swarm-hud {
@@ -98,6 +136,7 @@ div.swarm-hud[data-state="idle"] .swarm-hud__btn:hover {
     clip-path: none !important;
   }
   canvas.swarm-canvas,
+  div.swarm-layer,
   div.swarm-hud {
     display: none;
   }
