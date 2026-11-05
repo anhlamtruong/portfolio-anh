@@ -3,8 +3,17 @@ import { profile, socialLinks } from "@/content/profile";
 import { ExternalArrow, SocialIcon, isExternal } from "./shared";
 import { ViewCounter } from "./view-counter";
 import { SectionNumeral, WordBand } from "./decor";
+import { GlitchCopies } from "./fx/glitch-copies";
+import { ScrambleText } from "./fx/scramble-text";
+
+const HEADLINE = "bp-h1 text-[clamp(2.2rem,6vw,4.5rem)]";
 
 export function Contact() {
+  const headline = (
+    <>
+      Let&apos;s build the next <em className="bp-serif">system</em> together.
+    </>
+  );
   return (
     <section id="contact" className="border-t border-[color:var(--bp-line)]">
       <WordBand />
@@ -17,17 +26,19 @@ export function Contact() {
         <p data-build-item data-build="type" className="bp-eyebrow">
           05 — contact
         </p>
-        <h2
-          data-build-item
-          data-build="type"
-          data-build-font
-          data-build-weight
-          data-build-scale
-          className="bp-h1 mt-6 max-w-4xl text-[clamp(2.2rem,6vw,4.5rem)]"
-        >
-          Let&apos;s build the next <em className="bp-serif">system</em>{" "}
-          together.
-        </h2>
+        <div className="fx-glitch mt-6 max-w-4xl" data-fx-glitch="">
+          <h2
+            data-build-item
+            data-build="type"
+            data-build-font
+            data-build-weight
+            data-build-scale
+            className={`${HEADLINE} fx-glitch__base`}
+          >
+            {headline}
+          </h2>
+          <GlitchCopies className={HEADLINE}>{headline}</GlitchCopies>
+        </div>
         <p
           data-build-item
           data-build="reveal"
@@ -49,7 +60,7 @@ export function Contact() {
           className="bp-btn bp-btn-primary mt-8 h-12 px-5 text-base"
         >
           <SocialIcon kind="email" className="h-4 w-4" />
-          {profile.email}
+          <ScrambleText>{profile.email}</ScrambleText>
         </a>
 
         <ul data-build-list data-build-grid className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -100,7 +111,7 @@ export function SiteFooter() {
             visits <ViewCounter className="bp-muted" />
           </span>
           <Link href="/links" className="bp-link">
-            /links
+            <ScrambleText inline>/links</ScrambleText>
           </Link>
         </p>
       </div>

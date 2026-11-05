@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { SocialLink } from "@/content/profile";
 import { SectionNumeral } from "./decor";
+import { GlitchCopies } from "./fx/glitch-copies";
 
 // Section intro. Each header is its own small build section so the
 // agents type it as soon as it scrolls into view.
@@ -36,15 +37,19 @@ export function SectionHeader({
         <p data-build-item data-build="type" className="bp-eyebrow">
           {index} — {label}
         </p>
-        <h2
-          data-build-item
-          data-build="type"
-          data-build-font
-          data-build-scale
-          className="bp-h2 mt-4"
-        >
-          {title}
-        </h2>
+        {/* Glitch wrapper (fx/glitch.ts): the copies are client-only and aria-hidden. */}
+        <div className="fx-glitch mt-4" data-fx-glitch="">
+          <h2
+            data-build-item
+            data-build="type"
+            data-build-font
+            data-build-scale
+            className="bp-h2 fx-glitch__base"
+          >
+            {title}
+          </h2>
+          <GlitchCopies className="bp-h2">{title}</GlitchCopies>
+        </div>
       </div>
       {children ? (
         <div

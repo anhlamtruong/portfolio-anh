@@ -1,0 +1,87 @@
+/* Looping HyperFrames clips (loop-video.tsx) and the full-width video bands. */
+
+.bp-video {
+  position: relative;
+  overflow: hidden;
+  background: var(--bp-bg);
+}
+.bp-video__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bp-video__toggle {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 6px 10px;
+  border: 1px solid var(--bp-line-strong);
+  border-radius: 999px;
+  background: rgba(7, 9, 13, 0.72);
+  backdrop-filter: blur(6px);
+  color: var(--bp-muted);
+  font: 500 0.66rem/1 var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+.bp-video:hover .bp-video__toggle,
+.bp-video__toggle:focus-visible,
+.bp-video__toggle[aria-pressed="true"] {
+  opacity: 1;
+  transform: none;
+}
+.bp-video__toggle:hover {
+  color: var(--bp-text);
+  border-color: var(--bp-accent);
+}
+@media (hover: none) {
+  .bp-video__toggle {
+    opacity: 0.8;
+    transform: none;
+  }
+}
+
+/* Hero "preview" window around the showreel. */
+.bp-reel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.8);
+  animation: bp-reel-blink 1.6s ease-in-out infinite;
+}
+@keyframes bp-reel-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Full-width video band between sections. */
+.bp-vband {
+  position: relative;
+  border-top: 1px solid var(--bp-line);
+}
+.bp-vband__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.6rem;
+  font: 400 0.68rem/1.4 var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  color: var(--bp-dim);
+}
+.bp-vband__clip {
+  height: clamp(150px, 16.67vw, 320px);
+  border-top: 1px solid var(--bp-line);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}

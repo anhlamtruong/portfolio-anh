@@ -1,6 +1,7 @@
 import { experience } from "@/content/profile";
 import { Bracket, CrossMark } from "./decor";
 import { ExternalArrow, SectionHeader } from "./shared";
+import { ScrambleText } from "./fx/scramble-text";
 
 function slug(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -72,7 +73,7 @@ export function Experience() {
                         rel="noopener noreferrer"
                         className="bp-link inline-flex items-center gap-1"
                       >
-                        {job.company}
+                        <ScrambleText>{job.company}</ScrambleText>
                         <ExternalArrow className="h-3.5 w-3.5" />
                       </a>
                     ) : (

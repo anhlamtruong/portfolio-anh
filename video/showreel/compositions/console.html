@@ -1,0 +1,930 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/GeistVF.woff") format("woff"); font-weight: 100 900; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMonoVF.woff") format("woff"); font-weight: 100 900; }
+    @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Regular.woff2") format("woff2"); }
+    @font-face { font-family: "Instrument Serif"; font-style: italic; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #07090d;
+      color: #e8edf4;
+      font-family: "Geist Mono", monospace;
+    }
+
+    /* Blueprint grid: 80 px major / 20 px minor on the 1280 canvas. */
+    #cs-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+        linear-gradient(rgba(120, 140, 170, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120, 140, 170, 0.035) 1px, transparent 1px);
+      background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+    }
+
+    /* ---------- header ---------- */
+    #cs-tagline {
+      position: absolute;
+      left: 64px;
+      top: 36px;
+      font-family: "Geist", sans-serif;
+      font-weight: 600;
+      font-size: 50px;
+      line-height: 60px;
+      letter-spacing: -0.03em;
+      color: #e8edf4;
+      white-space: nowrap;
+    }
+    #cs-tagline em {
+      font-family: "Instrument Serif", serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 60px;
+      letter-spacing: -0.01em;
+      color: #5eead4;
+      padding-left: 2px;
+    }
+    #cs-status {
+      position: absolute;
+      right: 64px;
+      top: 52px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 22px;
+      line-height: 30px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #8a97a8;
+      white-space: nowrap;
+    }
+    #cs-live {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #5eead4;
+    }
+    #cs-live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #5eead4;
+      box-shadow: 0 0 12px rgba(94, 234, 212, 0.7);
+    }
+    .cs-sep {
+      width: 1px;
+      height: 22px;
+      background: #2a3546;
+    }
+
+    /* ---------- rulers ---------- */
+    #cs-rule {
+      position: absolute;
+      left: 0;
+      top: 112px;
+      width: 1280px;
+      height: 1px;
+      background: #1c2431;
+    }
+    .cs-colhead {
+      position: absolute;
+      top: 128px;
+      width: 200px;
+      margin-left: -100px;
+      text-align: center;
+      font-size: 22px;
+      line-height: 28px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #8a97a8;
+    }
+    .cs-colhead b {
+      font-weight: 400;
+      color: #747e8b;
+      margin-right: 8px;
+    }
+
+    /* ---------- nodes ---------- */
+    .cs-node {
+      position: absolute;
+      height: 52px;
+      margin-top: -26px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border: 1px solid #2a3546;
+      border-radius: 12px;
+      background: #0c1017;
+      font-size: 22px;
+      line-height: 26px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #e8edf4;
+      white-space: nowrap;
+    }
+    .cs-node i {
+      flex: 0 0 auto;
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+    #cs-n-prod {
+      border-color: rgba(94, 234, 212, 0.45);
+      justify-content: center;
+    }
+    #cs-n-prod i {
+      transform: rotate(45deg);
+      border-radius: 1px;
+    }
+
+    #cs-svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1280px;
+      height: 800px;
+      overflow: visible;
+    }
+
+    /* ---------- panels ---------- */
+    .cs-panel {
+      position: absolute;
+      top: 468px;
+      height: 292px;
+      border: 1px solid #2a3546;
+      border-radius: 14px;
+      background: #0c1017;
+      overflow: hidden;
+    }
+    .cs-phead {
+      position: absolute;
+      left: 26px;
+      right: 26px;
+      top: 18px;
+      height: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 22px;
+      line-height: 30px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8a97a8;
+      white-space: nowrap;
+    }
+    .cs-phead span:last-child {
+      color: #747e8b;
+      letter-spacing: 0.06em;
+    }
+    .cs-prule {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 62px;
+      height: 1px;
+      background: #1c2431;
+    }
+
+    /* log */
+    #cs-log {
+      left: 64px;
+      width: 612px;
+    }
+    #cs-log-lines {
+      position: absolute;
+      left: 26px;
+      right: 18px;
+      top: 63px;
+      bottom: 13px; /* clip exactly at the newest row's bottom edge */
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(180deg, transparent 0px, #000 70px, #000 100%);
+      mask-image: linear-gradient(180deg, transparent 0px, #000 70px, #000 100%);
+    }
+    .cs-row {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 38px;
+      font-size: 23px;
+      line-height: 38px;
+      white-space: pre;
+      color: #e8edf4;
+    }
+    .cs-row .cs-tag {
+      display: inline-block;
+      width: 10.5ch;
+    }
+    .cs-row .cs-caret {
+      display: inline-block;
+      width: 0.55em;
+      height: 0.95em;
+      margin-left: 3px;
+      vertical-align: -0.12em;
+      background: #5eead4;
+    }
+
+    /* impact card */
+    #cs-card {
+      left: 700px;
+      width: 516px;
+    }
+    #cs-card-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      border: 1px solid #5eead4;
+      opacity: 0;
+    }
+    .cs-metric {
+      position: absolute;
+      left: 26px;
+      right: 26px;
+      top: 74px;
+      height: 180px;
+    }
+    .cs-num {
+      display: flex;
+      align-items: flex-start;
+      height: 104px;
+      font-size: 104px;
+      line-height: 104px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: #e8edf4;
+      white-space: nowrap;
+    }
+    .cs-col {
+      display: block;
+      height: 1em;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+      mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+    }
+    .cs-strip {
+      display: block;
+    }
+    .cs-strip span,
+    .cs-sym {
+      display: block;
+      height: 1em;
+      line-height: 1em;
+    }
+    .cs-sym.cs-acc {
+      color: #5eead4;
+    }
+    .cs-sym.cs-punct {
+      width: 0.34em;
+      text-align: center;
+      color: #8a97a8;
+    }
+    .cs-mlabel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 118px;
+      font-size: 23px;
+      line-height: 30px;
+      color: #c9d1dc;
+      text-wrap: balance;
+    }
+    #cs-segs {
+      position: absolute;
+      left: 26px;
+      right: 26px;
+      bottom: 20px;
+      height: 3px;
+      display: flex;
+      gap: 8px;
+    }
+    .cs-seg {
+      position: relative;
+      flex: 1 1 0;
+      height: 3px;
+      background: #1c2431;
+      overflow: hidden;
+    }
+    .cs-seg i {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      background: #5eead4;
+      transform-origin: 0 50%;
+      transform: scaleX(0);
+    }
+
+    /* CAD-style coordinate readout on a leader line */
+    #cs-anno {
+      position: absolute;
+      left: 64px;
+      top: 392px;
+      font-size: 22px;
+      line-height: 28px;
+      letter-spacing: 0.04em;
+      color: #747e8b;
+      white-space: pre;
+    }
+
+    .cs-cross {
+      position: absolute;
+      width: 17px;
+      height: 17px;
+      margin: -8px 0 0 -8px;
+    }
+    .cs-cross::before,
+    .cs-cross::after {
+      content: "";
+      position: absolute;
+      background: #2a3546;
+    }
+    .cs-cross::before {
+      left: 8px;
+      top: 0;
+      width: 1px;
+      height: 17px;
+    }
+    .cs-cross::after {
+      left: 0;
+      top: 8px;
+      width: 17px;
+      height: 1px;
+    }
+  </style>
+
+  <div id="root" data-composition-id="console" data-width="1280" data-height="800">
+    <div id="cs-grid"></div>
+
+    <div id="cs-stage" class="clip" data-start="0" data-duration="10" data-track-index="0">
+      <!-- header -->
+      <div id="cs-tagline">agents that <em>ship</em></div>
+      <div id="cs-status">
+        <span>orchestration console</span>
+        <span class="cs-sep"></span>
+        <span id="cs-live"><span id="cs-live-dot"></span>live</span>
+      </div>
+      <div id="cs-rule"></div>
+
+      <!-- column headers (filled in at build) -->
+      <div id="cs-heads"></div>
+
+      <!-- crosshairs at the graph's corners -->
+      <div class="cs-cross" style="left: 32px; top: 176px"></div>
+      <div class="cs-cross" style="left: 1248px; top: 176px"></div>
+      <div class="cs-cross" style="left: 32px; top: 432px"></div>
+      <div class="cs-cross" style="left: 1248px; top: 432px"></div>
+
+      <div id="cs-anno">x 142  y 304</div>
+
+      <!-- edges, trails, packets -->
+      <svg id="cs-svg" viewBox="0 0 1280 800" xmlns="http://www.w3.org/2000/svg">
+        <defs id="cs-defs"></defs>
+        <g id="cs-ruler"></g>
+        <g id="cs-edges"></g>
+        <g id="cs-trails"></g>
+        <g id="cs-packets"></g>
+      </svg>
+
+      <!-- task graph nodes -->
+      <div id="cs-n-planner" class="cs-node"><i></i>planner</div>
+      <div id="cs-n-designer" class="cs-node"><i></i>designer</div>
+      <div id="cs-n-coder" class="cs-node"><i></i>coder</div>
+      <div id="cs-n-layout" class="cs-node"><i></i>layout</div>
+      <div id="cs-n-reviewer" class="cs-node"><i></i>reviewer</div>
+      <div id="cs-n-tester" class="cs-node"><i></i>tester</div>
+      <div id="cs-n-deployer" class="cs-node"><i></i>deployer</div>
+      <div id="cs-n-prod" class="cs-node"><i></i>production</div>
+
+      <!-- agent log -->
+      <div id="cs-log" class="cs-panel">
+        <div class="cs-phead"><span>agent.log</span><span>tail -f</span></div>
+        <div class="cs-prule"></div>
+        <div id="cs-log-lines" data-layout-allow-overflow></div>
+      </div>
+
+      <!-- impact metrics (values from src/content/profile.ts) -->
+      <div id="cs-card" class="cs-panel">
+        <div class="cs-phead"><span>impact</span><span id="cs-idx">01 / 04</span></div>
+        <div class="cs-prule"></div>
+        <div id="cs-metrics"></div>
+        <div id="cs-segs">
+          <div class="cs-seg"><i></i></div>
+          <div class="cs-seg"><i></i></div>
+          <div class="cs-seg"><i></i></div>
+          <div class="cs-seg"><i></i></div>
+        </div>
+        <div id="cs-card-glow"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      window.__timelines = window.__timelines || {};
+
+      // ------------------------------------------------------------------
+      // Everything on screen is a pure function of t mod LOOP, so t = 10
+      // paints exactly what t = 0 paints. One wave of work runs every 2.5 s
+      // (4 waves per loop); each wave ends in a ship to production, whose
+      // packet drops into the impact card and flips the metric.
+      // ------------------------------------------------------------------
+      var LOOP = 10;
+      var WAVE = 2.5;
+      // Wave-local time u = t + SHIFT (mod 2.5). Chosen so that frame 0 sits
+      // mid-wave (packets in flight) with the first metric fully landed.
+      var SHIFT = 1.46;
+      var SVGNS = "http://www.w3.org/2000/svg";
+
+      var C = {
+        planner: "#a78bfa",
+        coder: "#34d399",
+        designer: "#f472b6",
+        tester: "#60a5fa",
+        reviewer: "#fbbf24",
+        deployer: "#fb923c",
+        layout: "#a3e635",
+        prod: "#5eead4",
+        input: "#e8edf4",
+      };
+
+      var NODES = {
+        planner: { x: 142, y: 304, w: 156 },
+        designer: { x: 383, y: 214, w: 156 },
+        coder: { x: 383, y: 304, w: 156 },
+        layout: { x: 383, y: 394, w: 156 },
+        reviewer: { x: 624, y: 259, w: 156 },
+        tester: { x: 624, y: 349, w: 156 },
+        deployer: { x: 865, y: 304, w: 156 },
+        prod: { x: 1122, y: 304, w: 188 },
+      };
+      var NODE_H = 52;
+
+      var COLS = [
+        { x: 142, label: "plan", n: "01" },
+        { x: 383, label: "build", n: "02" },
+        { x: 624, label: "verify", n: "03" },
+        { x: 865, label: "release", n: "04" },
+        { x: 1122, label: "ship", n: "05" },
+      ];
+
+      // From src/content/profile.ts -> metrics (order kept: 837+ is 01/04).
+      var METRICS = [
+        { value: "837+", label: "merged PRs in 45 days" },
+        { value: "8.7×", label: "lower LLM inference cost" },
+        { value: "13,000+", label: "hackathon field: semifinalist + prize" },
+        { value: "2,400+", label: "tests behind an unattended agent pipeline" },
+      ];
+
+      // Agent log: line i lands at 0.58 + 1.25 * (i - 7) (mod 10), so line 7
+      // lands on a ship and the 8 lines fill the loop exactly.
+      var LOG = [
+        ["planner", "split request → 3 tasks"],
+        ["coder", "patch api/orders.ts  +42 −7"],
+        ["designer", "tokens → ui/Button.tsx"],
+        ["tester", "suite passed  ✓"],
+        ["layout", "grid → 12 col · reflow ok"],
+        ["reviewer", "approved · merged"],
+        ["deployer", "build → canary"],
+        ["deployer", "live → production  ✓"],
+      ];
+      var LOG_T0 = 0.58;
+      var LOG_DT = 1.25;
+      var LOG_LH = 38;
+      var LOG_ROWS = 7;
+      var LOG_BOTTOM = 178; // top of the newest row inside #cs-log-lines
+
+      // ---------------- helpers ----------------
+      function mod(a, n) {
+        return ((a % n) + n) % n;
+      }
+      function clamp01(x) {
+        return x < 0 ? 0 : x > 1 ? 1 : x;
+      }
+      function inOut2(p) {
+        return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      }
+      function expoOut(p) {
+        return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
+      }
+      function out3(p) {
+        return 1 - Math.pow(1 - p, 3);
+      }
+      function rgba(hex, a) {
+        var n = parseInt(hex.slice(1), 16);
+        return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a.toFixed(3) + ")";
+      }
+      function mixHex(a, b, f) {
+        var x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+        function ch(sh) {
+          var u = (x >> sh) & 255, w = (y >> sh) & 255;
+          return Math.round(u + (w - u) * f);
+        }
+        return "rgb(" + ch(16) + "," + ch(8) + "," + ch(0) + ")";
+      }
+      // Attack-decay envelope of an event dt seconds ago (dt in [0, LOOP)).
+      function env(dt, decay) {
+        if (dt < 0.06) return dt / 0.06;
+        return Math.exp(-(dt - 0.06) / decay);
+      }
+      function el(tag, attrs, parent) {
+        var e = document.createElementNS(SVGNS, tag);
+        for (var k in attrs) e.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(e);
+        return e;
+      }
+
+      // ---------------- nodes ----------------
+      var nodeEls = {};
+      Object.keys(NODES).forEach(function (id) {
+        var n = NODES[id];
+        var d = document.getElementById("cs-n-" + id);
+        d.style.left = n.x - n.w / 2 + "px";
+        d.style.top = n.y + "px";
+        d.style.width = n.w + "px";
+        d.querySelector("i").style.background = C[id];
+        nodeEls[id] = d;
+      });
+
+      // ---------------- column heads + ruler ----------------
+      var heads = document.getElementById("cs-heads");
+      var ruler = document.getElementById("cs-ruler");
+      el("line", { x1: 64, y1: 170.5, x2: 1216, y2: 170.5, stroke: "#1c2431", "stroke-width": 1 }, ruler);
+      [64, 1216].forEach(function (x) {
+        el("line", { x1: x + 0.5, y1: 163, x2: x + 0.5, y2: 178, stroke: "#2a3546", "stroke-width": 1 }, ruler);
+      });
+      COLS.forEach(function (c) {
+        var h = document.createElement("div");
+        h.className = "cs-colhead";
+        h.style.left = c.x + "px";
+        h.innerHTML = "<b>" + c.n + "</b>" + c.label;
+        heads.appendChild(h);
+        el("line", { x1: c.x + 0.5, y1: 165, x2: c.x + 0.5, y2: 176, stroke: "#2a3546", "stroke-width": 1 }, ruler);
+      });
+      // leader from the planner node down to its coordinate readout
+      el("path", { d: "M100.5 331 V384.5 H64", fill: "none", stroke: "#2a3546", "stroke-width": 1 }, ruler);
+      el("circle", { cx: 100.5, cy: 331, r: 2.5, fill: "#2a3546" }, ruler);
+      // half ticks between columns
+      for (var hc = 0; hc < COLS.length - 1; hc++) {
+        var mx = Math.round((COLS[hc].x + COLS[hc + 1].x) / 2) + 0.5;
+        el("line", { x1: mx, y1: 168, x2: mx, y2: 173, stroke: "#2a3546", "stroke-width": 1 }, ruler);
+      }
+
+      // ---------------- edges ----------------
+      function rightOf(id) {
+        var n = NODES[id];
+        return [n.x + n.w / 2, n.y];
+      }
+      function leftOf(id) {
+        var n = NODES[id];
+        return [n.x - n.w / 2, n.y];
+      }
+      var EDGES = [
+        { id: "in", a: [0, 304], b: leftOf("planner"), color: C.input, dash: true },
+        { id: "pd", a: rightOf("planner"), b: leftOf("designer"), color: C.planner, src: "planner", dst: "designer" },
+        { id: "pc", a: rightOf("planner"), b: leftOf("coder"), color: C.planner, src: "planner", dst: "coder" },
+        { id: "pl", a: rightOf("planner"), b: leftOf("layout"), color: C.planner, src: "planner", dst: "layout" },
+        { id: "dr", a: rightOf("designer"), b: leftOf("reviewer"), color: C.designer, src: "designer", dst: "reviewer", dash: true },
+        { id: "cr", a: rightOf("coder"), b: leftOf("reviewer"), color: C.coder, src: "coder", dst: "reviewer", dash: true },
+        { id: "ct", a: rightOf("coder"), b: leftOf("tester"), color: C.coder, src: "coder", dst: "tester", dash: true },
+        { id: "lt", a: rightOf("layout"), b: leftOf("tester"), color: C.layout, src: "layout", dst: "tester", dash: true },
+        { id: "rd", a: rightOf("reviewer"), b: leftOf("deployer"), color: C.reviewer, src: "reviewer", dst: "deployer" },
+        { id: "td", a: rightOf("tester"), b: leftOf("deployer"), color: C.tester, src: "tester", dst: "deployer" },
+        { id: "dp", a: rightOf("deployer"), b: leftOf("prod"), color: C.deployer, src: "deployer", dst: "prod" },
+        { id: "pm", a: [1122, 304 + NODE_H / 2], b: [1122, 468], color: C.prod, src: "prod", dst: "card", vertical: true, dash: true },
+      ];
+      var EDGE = {};
+
+      var defs = document.getElementById("cs-defs");
+      var gEdges = document.getElementById("cs-edges");
+      var gTrails = document.getElementById("cs-trails");
+      var gPackets = document.getElementById("cs-packets");
+
+      // one soft halo gradient per colour
+      Object.keys(C).forEach(function (k) {
+        var g = el("radialGradient", { id: "cs-halo-" + k }, defs);
+        el("stop", { offset: "0%", "stop-color": C[k], "stop-opacity": 0.55 }, g);
+        el("stop", { offset: "45%", "stop-color": C[k], "stop-opacity": 0.18 }, g);
+        el("stop", { offset: "100%", "stop-color": C[k], "stop-opacity": 0 }, g);
+      });
+      function colorKey(hex) {
+        for (var k in C) if (C[k] === hex) return k;
+        return "prod";
+      }
+
+      EDGES.forEach(function (e) {
+        var x0 = e.a[0], y0 = e.a[1], x3 = e.b[0], y3 = e.b[1];
+        var p1, p2;
+        if (e.vertical) {
+          var ky = (y3 - y0) * 0.5;
+          p1 = [x0, y0 + ky];
+          p2 = [x3, y3 - ky];
+        } else {
+          var k = (x3 - x0) * 0.55;
+          p1 = [x0 + k, y0];
+          p2 = [x3 - k, y3];
+        }
+        e.P = [[x0, y0], p1, p2, [x3, y3]];
+        var d =
+          "M" + x0 + " " + y0 + " C" + p1[0] + " " + p1[1] + " " + p2[0] + " " + p2[1] + " " + x3 + " " + y3;
+        e.base = el(
+          "path",
+          {
+            d: d,
+            fill: "none",
+            stroke: e.id === "pm" ? "rgba(94,234,212,0.35)" : "#2a3546",
+            "stroke-width": 1.5,
+            "stroke-dasharray": e.dash ? "6 7" : "none",
+          },
+          gEdges
+        );
+        e.trail = el(
+          "path",
+          {
+            d: d,
+            fill: "none",
+            stroke: e.color,
+            "stroke-width": 2,
+            "stroke-linecap": "round",
+            pathLength: 1000,
+            "stroke-dasharray": "0 2000",
+            opacity: 0,
+          },
+          gTrails
+        );
+        var key = colorKey(e.color);
+        e.halo = el("circle", { cx: 0, cy: 0, r: 22, fill: "url(#cs-halo-" + key + ")", opacity: 0 }, gPackets);
+        e.dot = el("circle", { cx: 0, cy: 0, r: 6, fill: e.color, opacity: 0 }, gPackets);
+        EDGE[e.id] = e;
+      });
+
+      function bez(P, q) {
+        var m = 1 - q;
+        var a = m * m * m, b = 3 * m * m * q, c = 3 * m * q * q, d = q * q * q;
+        return [
+          a * P[0][0] + b * P[1][0] + c * P[2][0] + d * P[3][0],
+          a * P[0][1] + b * P[1][1] + c * P[2][1] + d * P[3][1],
+        ];
+      }
+
+      // ---------------- schedule ----------------
+      var WAVES = [
+        { s1: ["pd", "pc"], s2: ["dr", "ct"] },
+        { s1: ["pc", "pl"], s2: ["cr", "lt"] },
+        { s1: ["pd", "pc", "pl"], s2: ["dr", "cr", "lt"] },
+        { s1: ["pd", "pl"], s2: ["dr", "lt"] },
+      ];
+      var TRAVELS = []; // { e, d: depart (abs, mod 10), dur }
+      var GLOWS = []; // { node, at (abs, mod 10), s }
+      function travel(id, u, dur, w) {
+        var d = mod(u + WAVE * w - SHIFT, LOOP);
+        TRAVELS.push({ e: id, d: d, dur: dur });
+        var e = EDGE[id];
+        if (e.src) GLOWS.push({ node: e.src, at: mod(d - 0.04, LOOP), s: 0.4 });
+        if (e.dst) GLOWS.push({ node: e.dst, at: mod(d + dur, LOOP), s: 1 });
+        if (id === "in") GLOWS.push({ node: "planner", at: mod(d + dur, LOOP), s: 1 });
+      }
+      WAVES.forEach(function (wv, w) {
+        travel("in", -0.34, 0.3, w);
+        wv.s1.forEach(function (id, i) { travel(id, 0.0 + 0.07 * i, 0.5, w); });
+        wv.s2.forEach(function (id, i) { travel(id, 0.62 + 0.07 * i, 0.5, w); });
+        travel("rd", 1.22, 0.42, w);
+        travel("td", 1.28, 0.42, w);
+        travel("dp", 1.66, 0.38, w);
+        travel("pm", 2.06, 0.3, w); // lands at u = 2.36 -> metric phase start
+      });
+      // metric phase k starts at M_k = 2.36 - SHIFT + 2.5k = 0.9 + 2.5k
+      var M0 = mod(2.36 - SHIFT, WAVE);
+
+      // ---------------- log rows ----------------
+      var logBox = document.getElementById("cs-log-lines");
+      var rows = [];
+      for (var r = 0; r < LOG_ROWS; r++) {
+        var row = document.createElement("div");
+        row.className = "cs-row";
+        row.id = "cs-row-" + r;
+        var pr = document.createElement("span");
+        pr.textContent = "› ";
+        pr.style.color = "#747e8b";
+        var tag = document.createElement("span");
+        tag.className = "cs-tag";
+        var msg = document.createElement("span");
+        var caret = document.createElement("span");
+        caret.className = "cs-caret";
+        row.appendChild(pr);
+        row.appendChild(tag);
+        row.appendChild(msg);
+        row.appendChild(caret);
+        logBox.appendChild(row);
+        rows.push({ row: row, tag: tag, msg: msg, caret: caret });
+      }
+
+      // ---------------- metrics ----------------
+      var mBox = document.getElementById("cs-metrics");
+      var metricEls = METRICS.map(function (m, mi) {
+        var wrap = document.createElement("div");
+        wrap.className = "cs-metric";
+        wrap.id = "cs-metric-" + mi;
+        var num = document.createElement("div");
+        num.className = "cs-num";
+        var cols = [];
+        var syms = [];
+        for (var i = 0; i < m.value.length; i++) {
+          var ch = m.value.charAt(i);
+          if (/\d/.test(ch)) {
+            var col = document.createElement("span");
+            col.className = "cs-col";
+            // the drum is clipped by its column; its off-window digits are
+            // not on screen, so keep them out of the layout audit
+            col.setAttribute("data-layout-allow-overflow", "");
+            var strip = document.createElement("span");
+            strip.className = "cs-strip";
+            strip.setAttribute("data-layout-ignore", "");
+            var stops = 10 + Number(ch); // one full turn, then land
+            for (var s = 0; s <= stops; s++) {
+              var dg = document.createElement("span");
+              dg.textContent = String(s % 10);
+              strip.appendChild(dg);
+            }
+            col.appendChild(strip);
+            num.appendChild(col);
+            cols.push({ col: col, strip: strip, stops: stops });
+          } else {
+            var sy = document.createElement("span");
+            sy.className = "cs-sym " + (ch === "+" || ch === "×" ? "cs-acc" : "cs-punct");
+            sy.textContent = ch;
+            num.appendChild(sy);
+            syms.push(sy);
+          }
+        }
+        var lab = document.createElement("div");
+        lab.className = "cs-mlabel";
+        lab.textContent = m.label;
+        wrap.appendChild(num);
+        wrap.appendChild(lab);
+        mBox.appendChild(wrap);
+        return { wrap: wrap, cols: cols, syms: syms, label: lab };
+      });
+      var segs = Array.prototype.slice.call(document.querySelectorAll("#cs-segs .cs-seg i"));
+      var idxEl = document.getElementById("cs-idx");
+      var cardGlow = document.getElementById("cs-card-glow");
+      var liveDot = document.getElementById("cs-live-dot");
+
+      // ---------------- paint(t) ----------------
+      function paint(tRaw) {
+        var t = mod(tRaw, LOOP);
+
+        // node glow
+        var glow = {};
+        for (var i = 0; i < GLOWS.length; i++) {
+          var G = GLOWS[i];
+          var v = G.s * env(mod(t - G.at, LOOP), G.node === "card" ? 0.6 : 0.5);
+          glow[G.node] = (glow[G.node] || 0) + v;
+        }
+        Object.keys(nodeEls).forEach(function (id) {
+          var g = Math.min(1, glow[id] || 0);
+          var col = C[id];
+          var d = nodeEls[id];
+          d.style.borderColor = id === "prod" ? rgba(col, 0.45 + 0.55 * g) : mixHex("#2a3546", col, g);
+          d.style.boxShadow =
+            g > 0.002 ? "0 0 " + (10 + 26 * g).toFixed(1) + "px " + rgba(col, 0.5 * g) : "none";
+          d.style.background = g > 0.002 ? "linear-gradient(" + rgba(col, 0.1 * g) + "," + rgba(col, 0.1 * g) + "), #0c1017" : "#0c1017";
+        });
+
+        // packets + trails
+        EDGES.forEach(function (e) {
+          var p = -1, after = 99;
+          for (var j = 0; j < TRAVELS.length; j++) {
+            var T = TRAVELS[j];
+            if (T.e !== e.id) continue;
+            var dt = mod(t - T.d, LOOP);
+            if (dt < T.dur) p = dt / T.dur;
+            else after = Math.min(after, dt - T.dur);
+          }
+          if (p >= 0) {
+            var q = inOut2(p);
+            var pt = bez(e.P, q);
+            var a = clamp01(p / 0.1) * (1 - clamp01((p - 0.9) / 0.1));
+            e.dot.setAttribute("cx", pt[0].toFixed(2));
+            e.dot.setAttribute("cy", pt[1].toFixed(2));
+            e.halo.setAttribute("cx", pt[0].toFixed(2));
+            e.halo.setAttribute("cy", pt[1].toFixed(2));
+            e.dot.setAttribute("opacity", a.toFixed(3));
+            e.halo.setAttribute("opacity", a.toFixed(3));
+            e.trail.setAttribute("stroke-dasharray", (q * 1000).toFixed(1) + " 2000");
+            e.trail.setAttribute("opacity", "0.7");
+          } else {
+            e.dot.setAttribute("opacity", "0");
+            e.halo.setAttribute("opacity", "0");
+            var fa = after < 0.9 ? 0.7 * Math.pow(1 - after / 0.9, 2) : 0;
+            e.trail.setAttribute("stroke-dasharray", "1000 2000");
+            e.trail.setAttribute("opacity", fa.toFixed(3));
+          }
+          if (e.dash) {
+            // dash period 13; 8 periods per loop -> seamless
+            e.base.setAttribute("stroke-dashoffset", (-t * 10.4).toFixed(2));
+          }
+        });
+
+        // live dot
+        liveDot.style.opacity = (0.35 + 0.65 * (0.5 + 0.5 * Math.cos((2 * Math.PI * t) / 1.25))).toFixed(3);
+
+        // ---- log ----
+        var tau = (t - LOG_T0) / LOG_DT;
+        var base = Math.floor(tau);
+        var elapsed = (tau - base) * LOG_DT;
+        var newest = base + 7;
+        var e3 = out3(clamp01(elapsed / 0.38));
+        for (var r2 = 0; r2 < rows.length; r2++) {
+          var R = rows[r2];
+          var line = LOG[mod(newest - r2, LOG.length)];
+          var slot = r2 - 1 + e3;
+          var y = LOG_BOTTOM - slot * LOG_LH;
+          R.row.style.transform = "translate3d(0," + y.toFixed(2) + "px,0)";
+          R.tag.textContent = line[0];
+          R.tag.style.color = C[line[0]];
+          if (r2 === 0) {
+            var n = Math.floor(line[1].length * clamp01((elapsed - 0.06) / 0.42));
+            R.msg.textContent = line[1].slice(0, n);
+            var typing = n < line[1].length;
+            var blinkOn = typing || mod(t, 0.625) < 0.3125;
+            R.caret.style.opacity = blinkOn ? "1" : "0";
+            R.row.style.opacity = "1";
+            R.msg.style.color = "#e8edf4";
+          } else {
+            R.msg.textContent = line[1];
+            R.caret.style.opacity = "0";
+            R.row.style.opacity = Math.max(0.28, 1 - 0.16 * slot).toFixed(3);
+            R.msg.style.color = "#aeb8c5";
+          }
+        }
+
+        // ---- metrics ----
+        var v2 = (t - M0) / WAVE;
+        var k = Math.floor(v2);
+        var l = (v2 - k) * WAVE; // seconds into this metric's phase
+        // align so the phase that holds frame 0 shows 837+ (01 / 04)
+        var show = mod(k - Math.floor(-M0 / WAVE), 4);
+        idxEl.textContent = "0" + (show + 1) + " / 04";
+        for (var m = 0; m < metricEls.length; m++) {
+          var ME = metricEls[m];
+          if (m !== show) {
+            ME.wrap.style.opacity = "0";
+            continue;
+          }
+          var exitP = clamp01((l - (WAVE - 0.2)) / 0.2);
+          ME.wrap.style.opacity = (1 - exitP).toFixed(3);
+          ME.wrap.style.filter = exitP > 0 ? "blur(" + (8 * exitP).toFixed(2) + "px)" : "none";
+          for (var c = 0; c < ME.cols.length; c++) {
+            var CC = ME.cols[c];
+            var lc = l - 0.07 * c;
+            var qn = clamp01(lc / 0.95);
+            var qq = expoOut(qn);
+            CC.strip.style.transform = "translate3d(0," + (-qq * CC.stops).toFixed(4) + "em,0)";
+            // roll blur from the drum's speed (em per frame at 30 fps)
+            var vel = qn > 0 && qn < 1 ? (CC.stops * 10 * Math.LN2 * Math.pow(2, -10 * qn)) / 0.95 / 30 : 0;
+            var bl = Math.min(6, vel * 104 * 0.3);
+            CC.strip.style.filter = bl > 0.15 ? "blur(" + bl.toFixed(2) + "px)" : "none";
+            CC.col.style.opacity = clamp01(lc / 0.12).toFixed(3);
+          }
+          var so = clamp01((l - 0.05) / 0.2).toFixed(3);
+          for (var s2 = 0; s2 < ME.syms.length; s2++) ME.syms[s2].style.opacity = so;
+          var lp = clamp01((l - 0.25) / 0.25);
+          ME.label.style.opacity = lp.toFixed(3);
+          ME.label.style.filter = lp < 1 ? "blur(" + (6 * (1 - lp)).toFixed(2) + "px)" : "none";
+        }
+        for (var sg = 0; sg < segs.length; sg++) {
+          segs[sg].style.transform = "scaleX(" + (sg === show ? clamp01(l / WAVE) : 0).toFixed(4) + ")";
+        }
+        var cg = Math.min(1, glow.card || 0);
+        cardGlow.style.opacity = cg.toFixed(3);
+        cardGlow.style.boxShadow = cg > 0.002 ? "0 0 " + (28 * cg).toFixed(1) + "px " + rgba(C.prod, 0.35 * cg) : "none";
+      }
+
+      // GSAP suppresses callbacks on seek(); a setter on the tweened driver
+      // always runs, so the frame is painted from the timeline's own time.
+      var driverT = 0;
+      var driver = {};
+      Object.defineProperty(driver, "t", {
+        configurable: true,
+        get: function () {
+          return driverT;
+        },
+        set: function (value) {
+          driverT = value;
+          paint(value);
+        },
+      });
+
+      var tl = gsap.timeline({ paused: true });
+      tl.to(driver, { t: LOOP, duration: LOOP, ease: "none" }, 0);
+      paint(0);
+      window.__timelines["console"] = tl;
+    })();
+  </script>
+</template>

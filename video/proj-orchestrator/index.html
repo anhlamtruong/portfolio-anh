@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=800" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/GeistVF.woff") format("woff"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMonoVF.woff") format("woff"); font-weight: 100 900; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Regular.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); }
+
+      :root {
+        --ground: #07090d;
+        --panel: #0c1017;
+        --line: #1c2431;
+        --line-strong: #2a3546;
+        --text: #e8edf4;
+        --muted: #8a97a8;
+        --dim: #5b6676;
+        --accent: #5eead4;
+        --guide: #fbbf24;
+        --planner: #a78bfa;
+        --coder: #34d399;
+        --designer: #f472b6;
+        --tester: #60a5fa;
+        --reviewer: #fbbf24;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        position: relative;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: var(--ground);
+        font-family: "Geist", sans-serif;
+        color: var(--text);
+      }
+      .mono { font-family: "Geist Mono", monospace; }
+
+      /* ---- shared frame language (all four project clips) ---- */
+      #grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(to right, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+          linear-gradient(to right, rgba(120, 140, 170, 0.035) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(120, 140, 170, 0.035) 1px, transparent 1px);
+        background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+      }
+      #foot {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 736px;
+        height: 64px;
+      }
+      #foot-rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 10px;
+        border-top: 1px solid var(--line-strong);
+        background-image:
+          repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 80px),
+          repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px 20px);
+        background-size: 100% 10px, 100% 5px;
+        background-repeat: no-repeat;
+      }
+      #foot-tag {
+        position: absolute;
+        left: 0;
+        top: 22px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Geist Mono", monospace;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #foot-tag .idx { color: var(--accent); }
+      #foot-tag .sep { color: var(--dim); }
+      #foot-readout {
+        position: absolute;
+        right: 0;
+        top: 24px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      /* ---- git graph ---- */
+      #graph {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1280px;
+        height: 800px;
+        overflow: visible;
+        -webkit-mask-image: linear-gradient(to right, transparent 0, transparent 128px, #000 250px, #000 1150px, transparent 1272px);
+        mask-image: linear-gradient(to right, transparent 0, transparent 128px, #000 250px, #000 1150px, transparent 1272px);
+      }
+      .dim-path { fill: none; stroke: var(--line-strong); stroke-width: 2; stroke-dasharray: 6 7; }
+      .dim-main { fill: none; stroke: var(--line-strong); stroke-width: 3; }
+      .lit-path { fill: none; stroke-width: 3.5; stroke-linecap: round; }
+      .lane-label {
+        position: absolute;
+        left: 40px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .lane-label i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: block;
+      }
+      .pill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 40px;
+        padding: 0 16px 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 10px;
+        border: 1.5px solid;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        font-weight: 500;
+        white-space: nowrap;
+        transform-origin: 0% 50%;
+      }
+      .pill b {
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        background: currentColor;
+        display: block;
+      }
+      #head-label {
+        position: absolute;
+        left: 792px;
+        top: 128px;
+        transform: translateX(-50%);
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        font-weight: 500;
+        color: var(--accent);
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+      }
+
+      /* ---- tests counter ---- */
+      #tests {
+        position: absolute;
+        left: 40px;
+        top: 524px;
+        width: 440px;
+      }
+      #tests .lbl {
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+      #tests-num {
+        margin-top: 6px;
+        font-family: "Geist Mono", monospace;
+        font-size: 68px;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      #tests-num .plus { color: var(--accent); }
+      #tests-bar {
+        margin-top: 18px;
+        width: 360px;
+        height: 4px;
+        background: var(--line);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #tests-fill {
+        width: 100%;
+        height: 100%;
+        background: var(--accent);
+        transform-origin: 0 50%;
+      }
+      #tests-status {
+        margin-top: 14px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        white-space: nowrap;
+      }
+
+      /* ---- terminal tail ---- */
+      #term {
+        position: absolute;
+        left: 700px;
+        top: 532px;
+        width: 540px;
+        height: 172px;
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      #term-head {
+        height: 44px;
+        padding: 0 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #term-head .live { color: var(--accent); }
+      #term-win {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 52px;
+        height: 108px;
+        overflow: hidden;
+      }
+      #term-lines {
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        top: 0;
+      }
+      .tl {
+        height: 36px;
+        line-height: 36px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .tl .p { color: var(--accent); }
+      .tl .ok { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="6"
+      data-width="1280"
+      data-height="800"
+    >
+      <div id="grid"></div>
+
+      <svg id="graph" viewBox="0 0 1280 800" data-layout-allow-overflow>
+        <defs>
+          <clipPath id="clip-lit" clipPathUnits="userSpaceOnUse">
+            <rect x="-10" y="0" width="802" height="800" />
+          </clipPath>
+          <clipPath id="clip-dim" clipPathUnits="userSpaceOnUse">
+            <rect x="792" y="0" width="600" height="800" />
+          </clipPath>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b" />
+            <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.55 0" result="bb" />
+            <feMerge><feMergeNode in="bb" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <g clip-path="url(#clip-dim)"><g id="dim-layer"></g></g>
+        <g clip-path="url(#clip-lit)"><g id="lit-layer" filter="url(#glow)"></g></g>
+        <g id="checks-layer"></g>
+        <!-- HEAD: the orchestrator's "now" -->
+        <line x1="792" y1="166" x2="792" y2="476" stroke="#5eead4" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.75" />
+        <path d="M784 160 L800 160 L792 170 Z" fill="#5eead4" />
+        <g id="head-nodes"></g>
+      </svg>
+
+      <div class="lane-label" style="top: 181px"><i style="background: var(--designer)"></i>wt/3</div>
+      <div class="lane-label" style="top: 265px"><i style="background: var(--coder)"></i>wt/2</div>
+      <div class="lane-label" style="top: 349px"><i style="background: var(--tester)"></i>wt/1</div>
+      <div class="lane-label" style="top: 437px; color: var(--text)"><i style="background: var(--accent)"></i>main</div>
+      <div id="head-label">HEAD</div>
+
+      <div id="pill-3" class="pill" style="color: #f9a8d4; border-color: var(--designer); background: rgba(244, 114, 182, 0.1)"><b></b>design</div>
+      <div id="pill-2" class="pill" style="color: #6ee7b7; border-color: var(--coder); background: rgba(52, 211, 153, 0.1)"><b></b>code</div>
+      <div id="pill-1" class="pill" style="color: #93c5fd; border-color: var(--tester); background: rgba(96, 165, 250, 0.1)"><b></b>test</div>
+
+      <div id="tests">
+        <div class="lbl">TESTS · CI</div>
+        <div id="tests-num">2,400<span class="plus">+</span></div>
+        <div id="tests-bar"><div id="tests-fill"></div></div>
+        <div id="tests-status" style="color: var(--accent)">✓ passing</div>
+      </div>
+
+      <div id="term">
+        <div id="term-head"><span>tail -f run.log</span><span class="live">● live</span></div>
+        <div id="term-win" data-layout-allow-overflow><div id="term-lines"></div></div>
+      </div>
+
+      <div id="foot">
+        <div id="foot-rule"></div>
+        <div id="foot-tag">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 1v16M1 9h16" stroke="#5b6676" stroke-width="1.5" /><circle cx="9" cy="9" r="4" fill="none" stroke="#5eead4" stroke-width="1.5" /></svg>
+          <span><span class="idx">01</span><span class="sep"> / </span>orchestrator</span>
+        </div>
+        <div id="foot-readout">main ← 3 worktrees · unattended</div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        // ---------- geometry (canvas px) ----------
+        var LOOP = 6;          // seconds
+        var S = 480;           // one run (fork → fan-in) per tile; graph shifts one tile per loop
+        var V = S / LOOP;      // 80 px/s
+        var HEAD = 792;        // screen x of HEAD
+        var U0 = 262;          // tile phase under HEAD at t = 0 (poster)
+        var MAIN = 452;
+        var LANES = [
+          // j, y, fan-out width, merge start, merge width, colour, commit dots
+          { id: 1, y: 364, wOut: 48, mStart: 264, wIn: 48, color: "#60a5fa", dots: [128, 208] },
+          { id: 2, y: 280, wOut: 64, mStart: 296, wIn: 64, color: "#34d399", dots: [144, 224] },
+          { id: 3, y: 196, wOut: 80, mStart: 328, wIn: 80, color: "#f472b6", dots: [160, 248] },
+        ];
+        var TILES = [-2, -1, 0, 1, 2];
+        var X0 = HEAD - U0;    // screen x of tile 0's origin at t = 0
+        var NS = "http://www.w3.org/2000/svg";
+
+        function el(tag, attrs, parent) {
+          var e = document.createElementNS(NS, tag);
+          for (var k in attrs) e.setAttribute(k, attrs[k]);
+          if (parent) parent.appendChild(e);
+          return e;
+        }
+        function sCurve(x0, y0, x1, y1) {
+          var mx = (x0 + x1) / 2;
+          return "M" + x0 + " " + y0 + " C" + mx + " " + y0 + " " + mx + " " + y1 + " " + x1 + " " + y1;
+        }
+        // y on an S-curve (control points at the horizontal midpoint) at a given x
+        function sCurveY(x0, y0, x1, y1, x) {
+          var lo = 0, hi = 1, w = x1 - x0;
+          for (var i = 0; i < 28; i++) {
+            var m = (lo + hi) / 2;
+            var bx = x0 + w * (1.5 * m * (1 - m) * (1 - m) * 1 + 1.5 * (1 - m) * m * m + m * m * m);
+            // x(t) for P1.x = P2.x = mid: 3(1-t)^2 t * w/2 + 3(1-t) t^2 * w/2 + t^3 * w
+            if (bx < x) lo = m; else hi = m;
+          }
+          var t = (lo + hi) / 2;
+          return y0 + (y1 - y0) * (3 * t * t - 2 * t * t * t);
+        }
+
+        // ---------- build the periodic graph (two copies: dim plan, lit history) ----------
+        var dim = document.getElementById("dim-layer");
+        var lit = document.getElementById("lit-layer");
+        var checksLayer = document.getElementById("checks-layer");
+        var x0 = TILES[0] * S - 40, x1 = TILES[TILES.length - 1] * S + S + 40;
+        el("line", { x1: x0, y1: MAIN, x2: x1, y2: MAIN, class: "dim-main" }, dim);
+        el("line", { x1: x0, y1: MAIN, x2: x1, y2: MAIN, class: "lit-path", stroke: "#5eead4" }, lit);
+
+        var checks = [];
+        TILES.forEach(function (k) {
+          var o = k * S;
+          LANES.forEach(function (L) {
+            var d =
+              sCurve(o, MAIN, o + L.wOut, L.y) +
+              " L" + (o + L.mStart) + " " + L.y + " " +
+              sCurve(o + L.mStart, L.y, o + L.mStart + L.wIn, MAIN).replace(/^M[^C]+/, "");
+            el("path", { d: d, class: "dim-path" }, dim);
+            el("path", { d: d, class: "lit-path", stroke: L.color }, lit);
+            L.dots.forEach(function (u) {
+              el("circle", { cx: o + u, cy: L.y, r: 5, fill: "#07090d", stroke: "#2a3546", "stroke-width": 2 }, dim);
+              el("circle", { cx: o + u, cy: L.y, r: 6, fill: L.color }, lit);
+            });
+            // merge node (dim hollow) + lit check that pops when it passes HEAD
+            var mx = o + L.mStart + L.wIn;
+            el("circle", { cx: mx, cy: MAIN, r: 12, fill: "#07090d", stroke: "#2a3546", "stroke-width": 2 }, dim);
+            var g = el("g", {}, checksLayer);
+            el("circle", { cx: 0, cy: 0, r: 15, fill: "#5eead4" }, g);
+            el("path", { d: "M-6.5 0.5 L-2 5 L7 -5", fill: "none", stroke: "#07090d", "stroke-width": 3.2, "stroke-linecap": "round", "stroke-linejoin": "round" }, g);
+            checks.push({ g: g, u: mx });
+          });
+          // plan commit (fork point)
+          el("circle", { cx: o, cy: MAIN, r: 9, fill: "#07090d", stroke: "#2a3546", "stroke-width": 2 }, dim);
+          el("circle", { cx: o, cy: MAIN, r: 11, fill: "#a78bfa" }, lit);
+          el("circle", { cx: o, cy: MAIN, r: 4, fill: "#07090d" }, lit);
+        });
+
+        // head nodes: a lit dot where each active lane crosses HEAD
+        var headLayer = document.getElementById("head-nodes");
+        LANES.forEach(function (L) {
+          L.node = el("circle", { cx: HEAD, cy: L.y, r: 8, fill: L.color, stroke: "#07090d", "stroke-width": 3 }, headLayer);
+          L.pill = document.getElementById("pill-" + L.id);
+        });
+
+        // ---------- terminal: 5 log events per run, periodic ----------
+        var EVENTS = [
+          { u: 8, html: '<span class="p">›</span> plan → fan-out wt/1 wt/2 wt/3' },
+          { u: 236, html: '<span class="p">›</span> tests 2,400+ passed <span class="ok">✓</span>' },
+          { u: 312, html: '<span class="p">›</span> merge wt/1 → main <span class="ok">✓</span>' },
+          { u: 360, html: '<span class="p">›</span> merge wt/2 → main <span class="ok">✓</span>' },
+          { u: 408, html: '<span class="p">›</span> merge wt/3 → main <span class="ok">✓</span>' },
+        ];
+        var LINE_H = 36, VISIBLE = 3;
+        var termLines = document.getElementById("term-lines");
+        var lineEls = [];
+        for (var c = 0; c < 3; c++) {
+          EVENTS.forEach(function (ev) {
+            var d = document.createElement("div");
+            d.className = "tl";
+            d.innerHTML = ev.html;
+            termLines.appendChild(d);
+            lineEls.push(d);
+          });
+        }
+
+        var ease = gsap.parseEase("power3.out");
+        var easeIO = gsap.parseEase("power2.inOut");
+        var expo = gsap.parseEase("expo.out");
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function fmt(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+        var dimLayer = dim, litLayer = lit;
+        var numEl = document.getElementById("tests-num");
+        var fillEl = document.getElementById("tests-fill");
+        var statusEl = document.getElementById("tests-status");
+        var lastNum = null, lastStatus = null;
+
+        function render(t) {
+          var shift = X0 - V * t;
+          var tr = "translate(" + shift.toFixed(3) + " 0)";
+          dimLayer.setAttribute("transform", tr);
+          litLayer.setAttribute("transform", tr);
+
+          var uRaw = U0 + V * t;
+          var u = ((uRaw % S) + S) % S; // tile phase under HEAD
+
+          // lanes at HEAD: node + pill ride the branch (fan-out, lane, fan-in)
+          LANES.forEach(function (L) {
+            var y = null;
+            if (u >= 0 && u <= L.wOut) y = sCurveY(0, MAIN, L.wOut, L.y, u);
+            else if (u > L.wOut && u < L.mStart) y = L.y;
+            else if (u >= L.mStart && u <= L.mStart + L.wIn) y = sCurveY(L.mStart, L.y, L.mStart + L.wIn, MAIN, u);
+            if (y === null) {
+              L.node.setAttribute("opacity", 0);
+              gsap.set(L.pill, { opacity: 0, x: HEAD + 18, y: MAIN - 20, scale: 0.4 });
+              return;
+            }
+            var rise = (MAIN - y) / (MAIN - L.y); // 0 on main, 1 on the lane
+            var n = ease(clamp(rise / 0.35, 0, 1));
+            var s = ease(clamp((rise - 0.78) / 0.22, 0, 1));
+            L.node.setAttribute("cy", y.toFixed(2));
+            L.node.setAttribute("opacity", n.toFixed(3));
+            L.node.setAttribute("r", (3 + 5 * n).toFixed(2));
+            gsap.set(L.pill, { opacity: s, x: HEAD + 18, y: y - 20, scale: 0.7 + 0.3 * s });
+          });
+
+          // checks pop as their merge commit passes HEAD
+          checks.forEach(function (c) {
+            var sx = shift + c.u;
+            var d = HEAD - sx;
+            if (d <= 0 || sx < -40 || sx > 1320) {
+              c.g.setAttribute("opacity", 0);
+              return;
+            }
+            var p = expo(clamp(d / 34, 0, 1));
+            c.g.setAttribute("opacity", Math.min(1, d / 6).toFixed(3));
+            c.g.setAttribute("transform", "translate(" + sx.toFixed(2) + " " + MAIN + ") scale(" + (0.3 + 0.7 * p).toFixed(3) + ")");
+          });
+
+          // tests: queued at the fork, run while the worktrees work, green before the merges
+          var html, status, fill, fillColor;
+          if (u < 40) {
+            html = '<span style="color:#8a97a8">0</span>'; status = "queued"; fill = 0; fillColor = "#fbbf24";
+            statusEl.style.color = "#8a97a8";
+          } else if (u < 236) {
+            var p = gsap.parseEase("power1.inOut")((u - 40) / 196);
+            html = fmt(Math.round(2400 * p)); status = "● running"; fill = p; fillColor = "#fbbf24";
+            statusEl.style.color = "#fbbf24";
+          } else {
+            html = '2,400<span class="plus">+</span>'; status = "✓ passing"; fill = 1; fillColor = "#5eead4";
+            statusEl.style.color = "#5eead4";
+          }
+          if (html !== lastNum) { numEl.innerHTML = html; lastNum = html; }
+          if (status !== lastStatus) { statusEl.textContent = status; lastStatus = status; }
+          fillEl.style.background = fillColor;
+          gsap.set(fillEl, { scaleX: fill });
+
+          // terminal tail: newest line at the bottom, scrolls up on each event
+          var passed = 0;
+          EVENTS.forEach(function (ev) { passed += ease(clamp((u - ev.u) / 22, 0, 1)); });
+          var newest = EVENTS.length + passed - 1; // index of the newest line (fractional while scrolling)
+          var top = (newest - (VISIBLE - 1)) * LINE_H;
+          gsap.set(termLines, { y: -top });
+          lineEls.forEach(function (d, i) {
+            var age = newest - i; // 0 = newest
+            var o = i > newest + 0.001 ? 0 : age < 0.5 ? 1 : age < 1.5 ? 0.72 : 0.5;
+            d.style.opacity = o;
+            d.style.color = age < 0.5 ? "#e8edf4" : "#8a97a8";
+          });
+        }
+
+        var proxy = { t: 0 };
+        var tl = gsap.timeline({ paused: true });
+        tl.to(proxy, { t: LOOP, duration: LOOP, ease: "none", onUpdate: function () { render(proxy.t); } }, 0);
+        render(0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

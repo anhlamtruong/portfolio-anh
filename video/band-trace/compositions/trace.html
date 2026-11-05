@@ -1,0 +1,440 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Geist Mono";
+      src: url("assets/fonts/GeistMonoVF.woff") format("woff");
+      font-weight: 100 900;
+    }
+
+    /* Blueprint palette (video/DESIGN.md) */
+    #root {
+      --ground: #07090d;
+      --line: #1c2431;
+      --line-strong: #2a3546;
+      --ink: #e8edf4;
+      --muted: #8a97a8;
+      --label: #7a8697; /* dim mono labels, kept above 4.5:1 on the ground */
+      --accent: #5eead4;
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: var(--ground);
+      font-family: "Geist Mono", monospace;
+    }
+
+    /* Everything fades to the ground at the far left and right. */
+    #tr-stage {
+      position: absolute;
+      inset: 0;
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0px,
+        rgba(0, 0, 0, 0.08) 65px,
+        rgba(0, 0, 0, 0.45) 198px,
+        #000 360px,
+        #000 1560px,
+        rgba(0, 0, 0, 0.45) 1722px,
+        rgba(0, 0, 0, 0.08) 1855px,
+        transparent 1920px
+      );
+      mask-image: linear-gradient(
+        to right,
+        transparent 0px,
+        rgba(0, 0, 0, 0.08) 65px,
+        rgba(0, 0, 0, 0.45) 198px,
+        #000 360px,
+        #000 1560px,
+        rgba(0, 0, 0, 0.45) 1722px,
+        rgba(0, 0, 0, 0.08) 1855px,
+        transparent 1920px
+      );
+    }
+
+    /* Grid: 96 px major, 24 px minor; a major line runs under the ruler (y = 64). */
+    .tr-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+        linear-gradient(to right, rgba(120, 140, 170, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120, 140, 170, 0.035) 1px, transparent 1px);
+      background-size:
+        96px 96px,
+        96px 96px,
+        24px 24px,
+        24px 24px;
+      background-position: 0 64px;
+    }
+
+    /* Ruler: time relative to the playhead, 1 s = 96 px. */
+    .tr-ruler {
+      position: absolute;
+      left: 0;
+      width: 1920px;
+    }
+    #tr-ruler-line {
+      top: 64px;
+      height: 1px;
+      background: var(--line-strong);
+    }
+    #tr-ruler-minor {
+      top: 65px;
+      height: 6px;
+      background-image: repeating-linear-gradient(
+        to right,
+        var(--line-strong) 0 1px,
+        transparent 1px 24px
+      );
+    }
+    #tr-ruler-major {
+      top: 65px;
+      height: 12px;
+      background-image: repeating-linear-gradient(
+        to right,
+        var(--line-strong) 0 1px,
+        transparent 1px 96px
+      );
+    }
+    .tr-tick-label {
+      position: absolute;
+      top: 30px;
+      transform: translateX(-50%);
+      font-size: 18px;
+      line-height: 22px;
+      letter-spacing: 0.06em;
+      color: var(--label);
+      white-space: nowrap;
+    }
+
+    /* Spans: bars under the playhead, labels over it */
+    #tr-bars,
+    #tr-labels {
+      position: absolute;
+      inset: 0;
+    }
+    .tr-dim {
+      position: absolute;
+      left: 0;
+      height: 13px;
+      will-change: transform;
+    }
+    .tr-dim-line {
+      position: absolute;
+      left: 0;
+      top: 6px;
+      width: 100%;
+      height: 1px;
+    }
+    .tr-dim-end {
+      position: absolute;
+      top: 0;
+      width: 1px;
+      height: 13px;
+    }
+    .tr-dim-end.l {
+      left: 0;
+    }
+    .tr-dim-end.r {
+      right: 0;
+    }
+    .tr-bar {
+      position: absolute;
+      left: 0;
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      overflow: hidden;
+      will-change: transform;
+    }
+    .tr-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: 0 50%;
+      will-change: transform;
+    }
+    .tr-label {
+      position: absolute;
+      left: 0;
+      height: 22px;
+      font-size: 18px;
+      line-height: 22px;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      will-change: transform;
+    }
+    .tr-label .tr-v {
+      margin-left: 0.6em;
+    }
+
+    /* Playhead ("now") */
+    #tr-scan {
+      position: absolute;
+      left: 900px;
+      top: 64px;
+      width: 120px;
+      height: 230px;
+      background: radial-gradient(
+        60px 160px at 50% 50%,
+        rgba(94, 234, 212, 0.07),
+        rgba(94, 234, 212, 0)
+      );
+    }
+    #tr-playhead {
+      position: absolute;
+      left: 959px;
+      top: 64px;
+      width: 2px;
+      height: 226px;
+      background: linear-gradient(
+        to bottom,
+        rgba(94, 234, 212, 0.95),
+        rgba(94, 234, 212, 0.55) 80%,
+        rgba(94, 234, 212, 0)
+      );
+      box-shadow: 0 0 10px rgba(94, 234, 212, 0.35);
+    }
+    #tr-caret {
+      position: absolute;
+      left: 953px;
+      top: 56px;
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 9px solid var(--accent);
+    }
+    #tr-now {
+      position: absolute;
+      left: 960px;
+      top: 30px;
+      transform: translateX(-50%);
+      font-size: 18px;
+      line-height: 22px;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+  </style>
+
+  <div id="root" data-composition-id="trace" data-width="1920" data-height="320">
+    <div id="tr-stage" data-layout-allow-overflow>
+      <div class="tr-grid"></div>
+
+      <div id="tr-ruler-line" class="tr-ruler"></div>
+      <div id="tr-ruler-minor" class="tr-ruler"></div>
+      <div id="tr-ruler-major" class="tr-ruler"></div>
+      <div id="tr-ticks"></div>
+
+      <div id="tr-scan"></div>
+      <div id="tr-bars"></div>
+
+      <div id="tr-playhead"></div>
+      <div id="tr-caret"></div>
+      <div id="tr-now">now</div>
+
+      <div id="tr-labels"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Everything on screen is a pure function of t (seconds, 0..8).
+      // The trace scrolls left past a fixed playhead at real time (1 s = 96 px),
+      // and two traces repeat every LOOP seconds, so the state at 8 s equals 0 s.
+      const LOOP = 8;
+      const PX = 96; // px per second on the ruler
+      const NOW_X = 960;
+
+      const INK = [232, 237, 244];
+      const MUTED = [138, 151, 168];
+      const LABEL = [122, 134, 151];
+      const LINE = [42, 53, 70];
+      const ROLE = {
+        root: [138, 151, 168],
+        planner: [167, 139, 250],
+        retrieval: [244, 114, 182],
+        coder: [52, 211, 153],
+        tester: [96, 165, 250],
+        reviewer: [251, 191, 36],
+      };
+
+      // Rows of the waterfall (y = row centre). Row 0 is the root span, drawn as a dimension line.
+      const ROW_Y = [100, 136, 168, 200, 232, 264];
+
+      // Two traces per loop. t: start (s, relative to trace), d: duration (s).
+      const TRACES = [
+        {
+          at: -1.6, // trace start relative to t = 0 (puts tests.run under the playhead on frame 0)
+          spans: [
+            { row: 0, role: "root", name: "agent.run", value: "3.16s", t: 0, d: 3.16 },
+            { row: 1, role: "planner", name: "planner.route", value: "12ms", t: 0.02, d: 0.012 },
+            { row: 2, role: "retrieval", name: "retrieval.search", value: "48ms", t: 0.04, d: 0.048 },
+            { row: 3, role: "coder", name: "llm.generate", value: "820ms", t: 0.1, d: 0.82 },
+            { row: 4, role: "tester", name: "tests.run", value: "2.1s", t: 0.94, d: 2.1, inside: true },
+            { row: 5, role: "reviewer", name: "review.approve", value: "90ms", t: 3.06, d: 0.09 },
+          ],
+        },
+        {
+          at: 2.4,
+          spans: [
+            { row: 0, role: "root", name: "agent.run", value: "2.82s", t: 0, d: 2.82 },
+            { row: 1, role: "planner", name: "planner.route", value: "9ms", t: 0.02, d: 0.009 },
+            { row: 2, role: "retrieval", name: "retrieval.search", value: "61ms", t: 0.04, d: 0.061 },
+            { row: 3, role: "coder", name: "llm.generate", value: "640ms", t: 0.12, d: 0.64 },
+            { row: 4, role: "tester", name: "tests.run", value: "1.9s", t: 0.78, d: 1.9, inside: true },
+            { row: 5, role: "reviewer", name: "review.approve", value: "110ms", t: 2.7, d: 0.11 },
+          ],
+        },
+      ];
+      const COPIES = [-2, -1, 0, 1, 2]; // loop copies, enough to cover 1920 px either way
+      const CHAR_W = 18 * 0.6; // Geist Mono advance at 18 px
+      const GAP_PAD = 12; // clear space around a dimension label
+
+      const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+      const mix = (a, b, k) => a + (b - a) * k;
+      const mixRGB = (a, b, k) => [mix(a[0], b[0], k), mix(a[1], b[1], k), mix(a[2], b[2], k)];
+      const rgba = (c, a) =>
+        `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a.toFixed(3)})`;
+      const el = (tag, cls, id) => {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (id) e.id = id;
+        return e;
+      };
+
+      // Static ruler labels every 2 s; the centre one is the "now" marker.
+      const tickHost = document.getElementById("tr-ticks");
+      for (let k = -8; k <= 8; k += 2) {
+        if (k === 0) continue;
+        const tick = el("div", "tr-tick-label", `tr-tick-${k < 0 ? "m" : "p"}${Math.abs(k)}`);
+        tick.style.left = `${NOW_X + k * PX}px`;
+        tick.textContent = `${k < 0 ? "−" : "+"}${Math.abs(k)}s`;
+        tickHost.appendChild(tick);
+      }
+
+      // Build bars and labels once (synchronously, before the timeline is registered).
+      const barHost = document.getElementById("tr-bars");
+      const labelHost = document.getElementById("tr-labels");
+      const items = [];
+      TRACES.forEach((trace, ti) => {
+        trace.spans.forEach((s, si) => {
+          const dim = s.row === 0;
+          const w = Math.max(4, s.d * PX);
+          const labelW = (s.name.length + s.value.length + 1.6) * CHAR_W;
+          // Label offset from the left edge of the span.
+          const lOff = dim ? (w - labelW) / 2 : s.inside ? 10 : w + 10;
+          COPIES.forEach((k) => {
+            const id = `tr-${ti}-${si}-${k < 0 ? "m" : "p"}${Math.abs(k)}`;
+            const it = { s, dim, w, labelW, lOff, c: ROLE[s.role], start: trace.at + s.t + k * LOOP };
+            if (dim) {
+              it.bar = el("div", "tr-dim", `${id}-dim`);
+              it.bar.style.width = `${w}px`;
+              it.bar.style.top = `${ROW_Y[0] - 6}px`;
+              it.line = el("div", "tr-dim-line");
+              it.endL = el("div", "tr-dim-end l");
+              it.endR = el("div", "tr-dim-end r");
+              it.bar.append(it.line, it.endL, it.endR);
+              it.gapA = ((lOff - GAP_PAD) / w) * 100;
+              it.gapB = ((lOff + labelW + GAP_PAD) / w) * 100;
+            } else {
+              it.bar = el("div", "tr-bar", `${id}-bar`);
+              it.bar.style.width = `${w}px`;
+              it.bar.style.top = `${ROW_Y[s.row] - 11}px`;
+              it.fill = el("div", "tr-fill");
+              it.bar.appendChild(it.fill);
+            }
+            it.label = el("div", "tr-label", `${id}-label`);
+            // Span labels are scrolling texture in a seamless loop: there is no "last line"
+            // to hold, so they opt out of the closing-line audit (contrast was verified without it).
+            it.label.setAttribute("data-layout-ignore", "");
+            it.label.style.top = `${ROW_Y[s.row] - 11}px`;
+            it.n = el("span", "tr-n");
+            it.n.textContent = s.name;
+            it.v = el("span", "tr-v");
+            it.v.textContent = s.value;
+            it.label.append(it.n, it.v);
+            barHost.appendChild(it.bar);
+            labelHost.appendChild(it.label);
+            items.push(it);
+          });
+        });
+      });
+
+      function renderAt(t) {
+        for (const it of items) {
+          const xl = NOW_X + (it.start - t) * PX;
+          const xr = xl + it.w;
+          const lx = xl + it.lOff;
+          const onScreen = xr > -40 && xl < 1960;
+          const labelOn = lx + it.labelW > -40 && lx < 1960;
+          it.bar.style.visibility = onScreen ? "visible" : "hidden";
+          it.label.style.visibility = labelOn ? "visible" : "hidden";
+          if (!onScreen && !labelOn) continue;
+
+          // Activity: 1 while the playhead is inside the span, decays after it ends.
+          let glow;
+          if (xl <= NOW_X && xr >= NOW_X) glow = 1;
+          else if (xl > NOW_X) glow = clamp(1 - (xl - NOW_X) / 6);
+          else glow = Math.exp(-(NOW_X - xr) / (PX * 0.5));
+          const done = clamp((NOW_X - xl) / it.w); // share of the span left of the playhead
+          const past = xl <= NOW_X ? 1 : 0;
+          const c = it.c;
+          // Colour concentrates around the playhead; the sides stay quiet grey.
+          const focus = clamp(1 - (Math.abs(lx + it.labelW / 2 - NOW_X) - 360) / 360);
+
+          it.bar.style.transform = `translate3d(${xl.toFixed(2)}px,0,0)`;
+          it.label.style.transform = `translate3d(${lx.toFixed(2)}px,0,0)`;
+
+          if (it.dim) {
+            // Root span: a dimension line with a gap for its label.
+            const lc = rgba(mixRGB(mixRGB(LINE, MUTED, 0.35 * past), INK, 0.55 * glow), 1);
+            it.line.style.background = `linear-gradient(to right, ${lc} 0 ${it.gapA}%, transparent ${it.gapA}% ${it.gapB}%, ${lc} ${it.gapB}% 100%)`;
+            it.endL.style.background = lc;
+            it.endR.style.background = lc;
+            it.n.style.color = rgba(mixRGB(past ? MUTED : LABEL, INK, glow), 1);
+            it.v.style.color = rgba(mixRGB(past ? MUTED : LABEL, INK, glow), 1);
+            continue;
+          }
+
+          it.bar.style.borderColor = rgba(c, (0.3 + 0.2 * past) * (0.7 + 0.3 * focus) + 0.5 * glow);
+          it.bar.style.background = rgba(c, 0.05);
+          it.bar.style.boxShadow = glow > 0.01 ? `0 0 ${16 * glow}px ${rgba(c, 0.4 * glow)}` : "none";
+          it.fill.style.transform = `scaleX(${done.toFixed(4)})`;
+          it.fill.style.background = rgba(c, 0.12 + 0.06 * focus + 0.24 * glow);
+
+          if (it.s.inside) {
+            // Text over the coloured fill stays light.
+            it.n.style.color = rgba(mixRGB(MUTED, INK, 0.35 + 0.65 * glow), 1);
+            it.v.style.color = rgba(mixRGB(INK, c, 0.45 - 0.15 * glow), 1);
+          } else {
+            it.n.style.color = rgba(mixRGB(LABEL, INK, glow), 1);
+            it.v.style.color = rgba(mixRGB(LABEL, c, (0.3 + 0.15 * past) * focus + 0.55 * glow), 1);
+          }
+        }
+      }
+
+      const clock = { t: 0 };
+      const tl = gsap.timeline({ paused: true });
+      tl.to(
+        clock,
+        {
+          t: LOOP,
+          duration: LOOP,
+          ease: "none",
+          onUpdate: () => renderAt(clock.t),
+        },
+        0,
+      );
+      window.addEventListener("hf-seek", (e) =>
+        renderAt(Math.min(LOOP, Math.max(0, Number(e.detail.time) || 0))),
+      );
+      renderAt(0);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["trace"] = tl;
+    })();
+  </script>
+</template>

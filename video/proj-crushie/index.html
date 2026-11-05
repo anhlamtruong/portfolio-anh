@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1280, height=800" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/GeistVF.woff") format("woff"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMonoVF.woff") format("woff"); font-weight: 100 900; }
+      @font-face { font-family: "Instrument Serif"; src: url("assets/fonts/InstrumentSerif-Regular.woff2") format("woff2"); }
+      @font-face { font-family: "Instrument Serif"; font-style: italic; src: url("assets/fonts/InstrumentSerif-Italic.woff2") format("woff2"); }
+
+      :root {
+        --ground: #07090d;
+        --panel: #0c1017;
+        --line: #1c2431;
+        --line-strong: #2a3546;
+        --text: #e8edf4;
+        --muted: #8a97a8;
+        --dim: #5b6676;
+        --accent: #5eead4;
+        --pink: #f472b6;
+        --pink-soft: #f9a8d4;
+        --blue-soft: #93c5fd;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1280px; height: 800px; overflow: hidden; background: var(--ground); }
+      #root {
+        position: relative;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: var(--ground);
+        font-family: "Geist", sans-serif;
+        color: var(--text);
+      }
+
+      /* ---- shared frame language (all four project clips) ---- */
+      #grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(to right, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(120, 140, 170, 0.07) 1px, transparent 1px),
+          linear-gradient(to right, rgba(120, 140, 170, 0.035) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(120, 140, 170, 0.035) 1px, transparent 1px);
+        background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+      }
+      #foot { position: absolute; left: 40px; right: 40px; top: 736px; height: 64px; }
+      #foot-rule {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 10px;
+        border-top: 1px solid var(--line-strong);
+        background-image:
+          repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 80px),
+          repeating-linear-gradient(to right, var(--line) 0 1px, transparent 1px 20px);
+        background-size: 100% 10px, 100% 5px;
+        background-repeat: no-repeat;
+      }
+      #foot-tag {
+        position: absolute;
+        left: 0;
+        top: 22px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Geist Mono", monospace;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #foot-tag .idx { color: var(--accent); }
+      #foot-tag .sep { color: var(--dim); }
+      #foot-readout {
+        position: absolute;
+        right: 0;
+        top: 24px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      /* ---- product window (real screenshot) ---- */
+      #win {
+        position: absolute;
+        left: 56px;
+        top: 148px;
+        width: 900px;
+        height: 554px;
+        border-radius: 14px;
+        border: 1px solid var(--line-strong);
+        background: var(--panel);
+        overflow: hidden;
+        box-shadow: 0 0 70px -18px rgba(244, 114, 182, 0.35);
+      }
+      #win-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line-strong);
+      }
+      #win-bar .d { width: 11px; height: 11px; border-radius: 50%; background: var(--line-strong); }
+      #win-bar .url {
+        margin-left: 18px;
+        height: 28px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 8px;
+        background: #121925;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #win-bar .rec {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--pink-soft);
+        white-space: nowrap;
+      }
+      #win-bar .rec i { width: 10px; height: 10px; border-radius: 50%; background: var(--pink); display: block; }
+      #shot {
+        position: absolute;
+        left: 0;
+        top: 42px;
+        width: 900px;
+        height: 512px;
+        object-fit: cover;
+        object-position: 50% 0%;
+      }
+
+      /* ---- live waveform ---- */
+      #wave {
+        position: absolute;
+        left: 92px;
+        top: 606px;
+        width: 470px;
+        height: 104px;
+        border-radius: 14px;
+        border: 1px solid var(--line-strong);
+        background: var(--panel);
+      }
+      #wave-lbl {
+        position: absolute;
+        left: 20px;
+        top: 18px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #wave-lbl .live { color: var(--accent); }
+      #wave-who {
+        position: absolute;
+        left: 20px;
+        top: 54px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      #bars {
+        position: absolute;
+        left: 160px;
+        top: 14px;
+        width: 290px;
+        height: 76px;
+      }
+      .bar {
+        position: absolute;
+        top: 0;
+        width: 5px;
+        height: 76px;
+        border-radius: 3px;
+        transform-origin: 50% 50%;
+      }
+
+      /* ---- transcript + coaching ---- */
+      .bub {
+        position: absolute;
+        width: 340px;
+        padding: 14px 18px;
+        border-radius: 16px;
+        font-size: 24px;
+        font-weight: 450;
+        line-height: 32px;
+        letter-spacing: -0.01em;
+      }
+      #bub-them {
+        left: 878px;
+        top: 176px;
+        background: #121925;
+        border: 1px solid var(--line-strong);
+        border-bottom-left-radius: 4px;
+        color: var(--text);
+        transform-origin: 0% 100%;
+      }
+      #bub-you {
+        left: 902px;
+        top: 290px;
+        background: #2b1a2b;
+        border: 1px solid rgba(244, 114, 182, 0.6);
+        border-bottom-right-radius: 4px;
+        color: #fde7f3;
+        transform-origin: 100% 100%;
+      }
+      .who {
+        position: absolute;
+        top: -30px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      #bub-them .who { left: 4px; }
+      #bub-you .who { right: 4px; }
+      .w { display: inline-block; }
+      #tip {
+        position: absolute;
+        left: 878px;
+        top: 410px;
+        width: 364px;
+        padding: 18px 22px 20px;
+        border-radius: 14px;
+        border: 1px solid var(--line-strong);
+        background: var(--panel);
+        transform-origin: 50% 100%;
+      }
+      #tip .edge {
+        position: absolute;
+        inset: -1px;
+        border-radius: 14px;
+        border: 1.5px solid rgba(244, 114, 182, 0.75);
+        box-shadow: 0 0 36px -10px rgba(244, 114, 182, 0.7);
+      }
+      #tip-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 48px;
+      }
+      #tip-top .k {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Geist Mono", monospace;
+        font-size: 22px;
+        color: var(--pink-soft);
+        white-space: nowrap;
+      }
+      #tip-top .k i { width: 10px; height: 10px; border-radius: 3px; background: var(--pink); display: block; }
+      #siq {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      #siq-n {
+        font-family: "Geist Mono", monospace;
+        font-size: 46px;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+      }
+      #siq .u { font-family: "Geist Mono", monospace; font-size: 22px; color: var(--muted); }
+      #tip-txt {
+        margin-top: 10px;
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 32px;
+        letter-spacing: -0.02em;
+      }
+      #tip-txt em {
+        font-family: "Instrument Serif", serif;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 30px;
+        letter-spacing: 0;
+        color: var(--pink-soft);
+      }
+      .fb {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 22px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .fb .ck {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: rgba(94, 234, 212, 0.14);
+        border: 1px solid rgba(94, 234, 212, 0.6);
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .fb b { color: var(--text); font-weight: 500; }
+      .fb + .fb { margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="6"
+      data-width="1280"
+      data-height="800"
+    >
+      <div id="grid"></div>
+
+      <div id="win">
+        <div id="win-bar">
+          <div class="d"></div><div class="d"></div><div class="d"></div>
+          <div class="url">crushie · practice session</div>
+        </div>
+        <img id="shot" src="assets/crushie.jpg" alt="Crushie landing page" />
+      </div>
+
+      <div id="wave">
+        <div id="wave-lbl"><span class="live">●</span> voice</div>
+        <div id="wave-who">listening</div>
+        <div id="bars"></div>
+      </div>
+
+      <div id="bub-them" class="bub"><span id="txt-them">I just got back from a solo trip to Japan.</span></div>
+      <div id="bub-you" class="bub"><span id="txt-you">No way! What was the best part?</span></div>
+
+      <div id="tip">
+        <div class="edge"></div>
+        <div id="tip-top">
+          <div class="k"><i></i>coach tip</div>
+          <div id="siq"><span id="siq-n">+4</span><span class="u">SIQ</span></div>
+        </div>
+        <div id="tip-txt">Great follow-up: <em>open questions</em> keep it flowing.</div>
+        <div class="fb" id="fb-1"><span class="ck">✓</span><span><b>voice</b> · warm, steady pace</span></div>
+        <div class="fb" id="fb-2"><span class="ck">✓</span><span><b>vision</b> · good eye contact</span></div>
+      </div>
+
+      <div id="foot">
+        <div id="foot-rule"></div>
+        <div id="foot-tag">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 1v16M1 9h16" stroke="#5b6676" stroke-width="1.5" /><circle cx="9" cy="9" r="4" fill="none" stroke="#5eead4" stroke-width="1.5" /></svg>
+          <span><span class="idx">03</span><span class="sep"> / </span>crushie</span>
+        </div>
+        <div id="foot-readout">real-time coaching · voice + vision</div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var LOOP = 6;
+        var W = (2 * Math.PI) / LOOP;
+        // beats (seconds); frame 0 is the finished exchange + tip (poster)
+        var T = {
+          tipOut: 2.2,      // tip leaves
+          bubOut: 2.3,      // bubbles scroll away
+          themIn: 2.65,     // "them" speaks, transcript streams
+          youIn: 3.95,      // "you" answer
+          tipIn: 5.0,       // coach tip pops in
+        };
+
+        // split transcript into word spans (static layout, words fade in)
+        function words(id) {
+          var el = document.getElementById(id);
+          var parts = el.textContent.split(" ");
+          el.innerHTML = parts.map(function (w) { return '<span class="w">' + w + "</span>"; }).join(" ");
+          return Array.prototype.slice.call(el.querySelectorAll(".w"));
+        }
+        var wThem = words("txt-them");
+        var wYou = words("txt-you");
+
+        // waveform bars
+        var N = 44, bars = [];
+        var host = document.getElementById("bars");
+        for (var i = 0; i < N; i++) {
+          var b = document.createElement("div");
+          b.className = "bar";
+          b.style.left = (i * 6.6).toFixed(1) + "px";
+          host.appendChild(b);
+          bars.push({
+            el: b,
+            k1: 7 + ((i * 5) % 11),          // integer cycles per loop -> periodic
+            k2: 3 + ((i * 3) % 7),
+            p1: (i * 2.399) % (2 * Math.PI),
+            p2: (i * 1.13) % (2 * Math.PI),
+            shape: 0.55 + 0.45 * Math.sin((i / (N - 1)) * Math.PI),
+          });
+        }
+
+        var $ = function (id) { return document.getElementById(id); };
+        var win = $("win"), wave = $("wave"), tip = $("tip"), bThem = $("bub-them"), bYou = $("bub-you");
+        var who = $("wave-who"), siqN = $("siq-n"), fb1 = $("fb-1"), fb2 = $("fb-2");
+        var E = {
+          o3: gsap.parseEase("power3.out"),
+          expo: gsap.parseEase("expo.out"),
+          i2: gsap.parseEase("power2.in"),
+          io: gsap.parseEase("sine.inOut"),
+        };
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function seg(t, a, d) { return clamp((t - a) / d, 0, 1); }
+        function mix(a, b, p) {
+          return [0, 1, 2].map(function (k) { return Math.round(a[k] + (b[k] - a[k]) * p); });
+        }
+        var C = { idle: [90, 102, 120], them: [147, 197, 253], you: [244, 114, 182] };
+        var lastWho = "";
+
+        // bubble state: visible from entry until it scrolls away (wraps through t = 0)
+        function bubble(el, ws, tIn, t) {
+          var out = seg(t, T.bubOut, 0.32);
+          var inn = E.expo(seg(t, tIn, 0.4));
+          var shown = t >= tIn ? inn : 1 - E.i2(out); // before entry in this loop: still the previous exchange, leaving
+          if (t >= T.bubOut + 0.32 && t < tIn) shown = 0;
+          var y = t >= tIn ? 10 * (1 - inn) : -26 * E.i2(out);
+          var sc = t >= tIn ? 0.94 + 0.06 * inn : 1;
+          gsap.set(el, { opacity: shown, y: y, scale: sc });
+          // words stream in as they are transcribed
+          ws.forEach(function (w, i) {
+            var o = t >= tIn ? E.o3(seg(t, tIn + 0.12 + i * 0.1, 0.18)) : 1;
+            w.style.opacity = o;
+          });
+        }
+
+        function render(t) {
+          // gentle drift (one sine per loop)
+          gsap.set(win, { x: 3 * Math.sin(W * t), y: 7 * Math.sin(W * t + 0.6) });
+          gsap.set(wave, { x: -2 * Math.sin(W * t), y: -4 * Math.sin(W * t + 0.6) });
+
+          bubble(bThem, wThem, T.themIn, t);
+          bubble(bYou, wYou, T.youIn, t);
+
+          // coach tip
+          var tipIn = E.expo(seg(t, T.tipIn, 0.5));
+          var tipOut = E.i2(seg(t, T.tipOut, 0.24));
+          var tv, ty, ts, tb;
+          if (t >= T.tipIn) { tv = tipIn; ty = 18 * (1 - tipIn); ts = 0.95 + 0.05 * tipIn; tb = 8 * (1 - tipIn); }
+          else if (t >= T.tipOut) { tv = 1 - tipOut; ty = -10 * tipOut; ts = 1; tb = 6 * tipOut; }
+          else { tv = 1; ty = 0; ts = 1; tb = 0; }
+          gsap.set(tip, { opacity: tv, y: ty, scale: ts, filter: "blur(" + tb.toFixed(2) + "px)" });
+          var n = t >= T.tipIn ? Math.round(4 * E.o3(seg(t, T.tipIn + 0.1, 0.5))) : 4;
+          siqN.textContent = "+" + n;
+          [fb1, fb2].forEach(function (f, i) {
+            var p = t >= T.tipIn ? E.o3(seg(t, T.tipIn + 0.25 + i * 0.12, 0.3)) : 1;
+            gsap.set(f, { opacity: p, x: -10 * (1 - p) });
+          });
+
+          // who is speaking -> waveform energy + colour
+          var them = Math.min(seg(t, T.themIn - 0.05, 0.15), 1 - seg(t, T.themIn + 1.05, 0.2));
+          var you = Math.min(seg(t, T.youIn - 0.05, 0.15), 1 - seg(t, T.youIn + 0.95, 0.2));
+          var energy = 0.3 + 0.7 * Math.max(them, you);
+          var col = mix(mix(C.idle, C.them, them), C.you, you);
+          var colStr = "rgb(" + col.join(",") + ")";
+          var label = you > 0.5 ? "you" : them > 0.5 ? "them" : "listening";
+          if (label !== lastWho) {
+            who.textContent = label;
+            who.style.color = label === "you" ? "#f9a8d4" : label === "them" ? "#93c5fd" : "#8a97a8";
+            lastWho = label;
+          }
+          bars.forEach(function (b) {
+            var a = 0.5 + 0.5 * Math.sin(W * b.k1 * t + b.p1);
+            var c = 0.5 + 0.5 * Math.sin(W * b.k2 * t + b.p2);
+            var h = 0.08 + energy * b.shape * (0.25 + 0.75 * a * (0.4 + 0.6 * c));
+            gsap.set(b.el, { scaleY: clamp(h, 0.06, 1) });
+            b.el.style.background = colStr;
+          });
+        }
+
+        var proxy = { t: 0 };
+        var tl = gsap.timeline({ paused: true });
+        tl.to(proxy, { t: LOOP, duration: LOOP, ease: "none", onUpdate: function () { render(proxy.t); } }, 0);
+        render(0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

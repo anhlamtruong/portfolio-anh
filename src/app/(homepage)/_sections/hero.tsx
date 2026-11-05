@@ -2,6 +2,9 @@ import Image from "next/image";
 import { metrics, profile, socialLinks } from "@/content/profile";
 import avatar from "../../../../public/assets/img/ava.jpg";
 import { Bracket, CrossMark, DimLine, HeroSchematic } from "./decor";
+import { HeroShader } from "./fx/hero-shader";
+import { ScrambleText } from "./fx/scramble-text";
+import { LoopVideo } from "./loop-video";
 import { ExternalArrow, SocialIcon, isExternal } from "./shared";
 import { ViewCounter } from "./view-counter";
 
@@ -27,6 +30,7 @@ export function Hero() {
       data-parallax-scope
       className="relative pb-20 pt-28 sm:pt-36"
     >
+      <HeroShader />
       <HeroSchematic />
       <div className="bp-container grid items-end gap-12 lg:grid-cols-[1.3fr_1fr]">
         <CrossMark at="-left-2 -top-10" label="x 0 · y 0" speed={0.15} />
@@ -94,7 +98,7 @@ export function Hero() {
                 }
               >
                 <SocialIcon kind={link.kind} className="h-4 w-4" />
-                {link.label}
+                <ScrambleText>{link.label}</ScrambleText>
                 {link.kind === "resume" ? (
                   <ExternalArrow className="h-3.5 w-3.5 opacity-70" />
                 ) : null}
@@ -128,6 +132,38 @@ export function Hero() {
               <p data-build-item data-build="type" className="bp-muted">
                 {profile.pronouns} · {profile.location}
               </p>
+            </div>
+          </div>
+
+          {/* Showreel rendered with HyperFrames (video/showreel). */}
+          <div
+            data-build-item
+            data-build="frame"
+            data-build-label="preview"
+            className="bp-card overflow-hidden"
+          >
+            <div className="bp-mono flex items-center justify-between border-b border-[color:var(--bp-line)] px-4 py-2.5 text-xs">
+              <span className="bp-dim">preview://showreel.mp4</span>
+              <span className="bp-dim inline-flex items-center gap-2">
+                <span className="bp-reel-dot" aria-hidden="true" />
+                live · loop
+              </span>
+            </div>
+            <div
+              data-build-item
+              data-build="image"
+              data-build-from="right"
+              data-build-label="showreel.mp4"
+              className="aspect-[16/10]"
+            >
+              <LoopVideo
+                name="showreel"
+                label="Showreel: AI agents plan, code, test, review and ship software"
+                width={1280}
+                height={800}
+                toggle
+                className="h-full w-full"
+              />
             </div>
           </div>
 
