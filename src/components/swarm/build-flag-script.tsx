@@ -1,18 +1,12 @@
 import { SESSION_KEY } from "./palette";
-import { OPT_IN_KEY } from "./motion";
 
 // Runs in <head> before first paint. Sets html[data-build="on"] (which hides
-// unbuilt items) unless the visitor prefers reduced motion (and has not opted
-// in with ?build=force or the "watch" button), the URL has ?build=off, or this
-// tab already watched the whole build. Failsafe: if the engine has not
-// started 3 s after load (or 8 s after this ran), the flag is removed so all
-// content shows.
+// unbuilt items) unless the URL has ?build=off or this tab already watched
+// the whole build (?build=force plays it again). Failsafe: if the engine has
+// not started 3 s after load (or 8 s after this ran), the flag is removed so
+// all content shows.
 const CODE = `(function(){try{var d=document.documentElement,w=window,q=location.search;
 if(/[?&]build=off(&|$)/.test(q))return;
-var force=/[?&]build=force(&|$)/.test(q);
-if(!force){try{force=sessionStorage.getItem('${OPT_IN_KEY}')==='1'}catch(e){}}
-if(!force&&w.matchMedia&&w.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-if(force)d.setAttribute('data-build-force','');
 if(!/[?&]build=force(&|$)/.test(q)){try{if(sessionStorage.getItem('${SESSION_KEY}')==='all')return}catch(e){}}
 d.setAttribute('data-build','on');
 var fail=function(){if(!w.__swarmReady)d.removeAttribute('data-build')};

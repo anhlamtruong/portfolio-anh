@@ -257,11 +257,3 @@ body:has(.bp-root) {
   filter: none;
   opacity: 1;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .bp-root *,
-  .bp-root *::before,
-  .bp-root *::after {
-    transition-duration: 0.01ms !important;
-  }
-}
