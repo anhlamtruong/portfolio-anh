@@ -3,6 +3,8 @@
 /**
  * BuildLayer: agent-swarm "build the page" animation. Loaded lazily by
  * SwarmRoot (next/dynamic, ssr: false), so it never blocks first paint.
+ * It plays for every visitor (including reduced-motion systems, by the site
+ * owner's choice); the HUD always offers Skip, and ?build=off disables it.
  *
  * DOM contract
  * - Section: [data-build-section="name"]. Optional data-build-start="load"
@@ -32,13 +34,11 @@ import { useLenis } from "lenis/react";
 import { Director } from "./director";
 import { Hud } from "./hud";
 import { detectProfile } from "./palette";
-import { forcedByUser, offByUrl, rememberOptIn } from "./motion";
+import { offByUrl } from "./motion";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-// "offer": reduced motion is on, so content shows at once and a button lets
-// the visitor choose to watch the build anyway.
-type Status = "off" | "offer" | "idle" | "building";
+type Status = "off" | "idle" | "building";
 type SwarmWindow = Window & { __swarmReady?: boolean; __swarmLive?: number };
 
 export default function BuildLayer() {
@@ -47,7 +47,6 @@ export default function BuildLayer() {
   const lenisRef = useRef(lenis);
   const [status, setStatus] = useState<Status>("off");
   const [director, setDirector] = useState<Director | null>(null);
-  const [optedIn, setOptedIn] = useState(false);
 
   useEffect(() => {
     lenisRef.current = lenis;
@@ -58,19 +57,10 @@ export default function BuildLayer() {
     const root = document.documentElement;
     const canvas = canvasRef.current;
     w.__swarmReady = true; // disarms the head script's failsafe
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const forced = optedIn || forcedByUser();
     if (!canvas || offByUrl()) {
       root.removeAttribute("data-build");
       return;
     }
-    if (reduce.matches && !forced) {
-      root.removeAttribute("data-build");
-      setStatus("offer");
-      return;
-    }
-    // Lets swarm.css show the canvas despite reduced motion.
-    if (forced) root.setAttribute("data-build-force", "");
 
     let alive = true;
     let d: Director;
@@ -92,9 +82,7 @@ export default function BuildLayer() {
       if (!alive) return;
       try {
         d.start(root.dataset.build === "on");
-        setStatus((s) => (s === "off" || s === "offer" ? "idle" : s));
-        // Content is already visible; rebuild what is on screen now.
-        if (optedIn) d.replay();
+        setStatus((s) => (s === "off" ? "idle" : s));
       } catch (err) {
         root.removeAttribute("data-build");
         console.error("[swarm]", err);
@@ -103,16 +91,8 @@ export default function BuildLayer() {
     // Measure only after web fonts settle (capped so content is never held hostage).
     Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 1500))]).then(begin, begin);
 
-    const onMotion = () => {
-      if (!reduce.matches || forced) return;
-      d.skip();
-      setStatus("off");
-    };
-    reduce.addEventListener("change", onMotion);
-
     return () => {
       alive = false;
-      reduce.removeEventListener("change", onMotion);
       d.destroy();
       w.__swarmLive = (w.__swarmLive ?? 1) - 1;
       // A real unmount (not a StrictMode re-run) must never leave content hidden.
@@ -120,27 +100,12 @@ export default function BuildLayer() {
         if (!w.__swarmLive) root.removeAttribute("data-build");
       }, 0);
     };
-  }, { dependencies: [optedIn], revertOnUpdate: true });
-
-  const watch = () => {
-    rememberOptIn();
-    setStatus("off");
-    setOptedIn(true);
-  };
+  }, []);
 
   return (
     <>
       <canvas ref={canvasRef} className="swarm-canvas" aria-hidden="true" />
-      {status === "offer" ? (
-        <div className="swarm-hud" data-state="idle" role="group" aria-label="Page build animation">
-          <button type="button" className="swarm-hud__btn" onClick={watch}>
-            ▶ watch the agents build
-          </button>
-        </div>
-      ) : null}
-      {director && (status === "idle" || status === "building") ? (
-        <Hud controls={director} building={status === "building"} />
-      ) : null}
+      {director && status !== "off" ? <Hud controls={director} building={status === "building"} /> : null}
     </>
   );
 }

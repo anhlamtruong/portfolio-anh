@@ -91,18 +91,7 @@ div.swarm-hud[data-state="idle"] .swarm-hud__btn:hover {
   }
 }
 
-/* Belt and braces: never hide content when motion is reduced or printing,
-   unless the visitor chose to watch (html[data-build-force]). */
-@media (prefers-reduced-motion: reduce) {
-  html[data-build]:not([data-build-force]) [data-build-item] {
-    opacity: 1 !important;
-    clip-path: none !important;
-  }
-  html:not([data-build-force]) canvas.swarm-canvas {
-    display: none;
-  }
-}
-
+/* Never hide content when printing. */
 @media print {
   html[data-build] [data-build-item] {
     opacity: 1 !important;

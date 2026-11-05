@@ -1,31 +1,10 @@
-// When the build animation may play.
-// - ?build=off always disables it.
-// - ?build=force, or a visitor who pressed "watch the agents build" this
-//   session, plays it even when the system asks for reduced motion.
-// - Otherwise it follows prefers-reduced-motion.
-
-export const OPT_IN_KEY = "swarm-motion-optin";
+// The build animation plays for every visitor, including systems set to
+// reduced motion (the site owner's choice; a Skip button is always shown).
+// - ?build=off turns it off for that page view.
+// - ?build=force replays it even if this tab already watched it.
 
 const OFF_RE = /[?&]build=off(&|$)/;
-const FORCE_RE = /[?&]build=force(&|$)/;
 
 export function offByUrl(): boolean {
   return OFF_RE.test(window.location.search);
-}
-
-export function forcedByUser(): boolean {
-  if (FORCE_RE.test(window.location.search)) return true;
-  try {
-    return sessionStorage.getItem(OPT_IN_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function rememberOptIn(): void {
-  try {
-    sessionStorage.setItem(OPT_IN_KEY, "1");
-  } catch {
-    // Private mode: the opt-in just lasts for this page view.
-  }
 }
