@@ -9,6 +9,8 @@ export const publicRoutes = [
   "/theme-editor",
   "/auth/new-verification",
   "/creata",
+  // Link-preview image fetched by LinkedIn, Messenger, X, etc.
+  "/opengraph-image",
 ];
 
 /**
