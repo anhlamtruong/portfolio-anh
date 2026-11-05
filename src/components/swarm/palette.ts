@@ -21,6 +21,7 @@ export const COLORS = {
 } as const;
 
 export const ROLE_COLOR: Record<Role, string> = {
+  layout: "#a3e635",
   planner: "#a78bfa",
   coder: "#34d399",
   designer: "#f472b6",
@@ -30,8 +31,8 @@ export const ROLE_COLOR: Record<Role, string> = {
 };
 
 const LIKES: Partial<Record<Role, readonly TaskKind[]>> = {
-  coder: ["type", "reveal", "frame"],
-  designer: ["image", "frame", "dup"],
+  coder: ["type", "reveal"],
+  designer: ["image", "dup"],
   tester: ["reveal", "type"],
   deployer: ["dup", "image"],
 };
@@ -39,13 +40,17 @@ const LIKES: Partial<Record<Role, readonly TaskKind[]>> = {
 /** Score bonus (px, lower wins) when a role picks up a task kind. */
 export function rolePref(role: Role, kind: TaskKind): number {
   if (kind === "color") return role === "designer" ? -260 : 40;
+  // Layout agents own structure: grids first, then card frames.
+  if (kind === "grid") return role === "layout" ? -900 : 140;
+  if (kind === "frame") return role === "layout" ? -260 : 60;
+  if (role === "layout") return 160;
   return LIKES[role]?.includes(kind) ? -60 : 0;
 }
 
 const ROSTERS: Record<Profile["kind"], Record<Role, number>> = {
-  desktop: { planner: 1, coder: 7, designer: 3, tester: 1, deployer: 1, reviewer: 1 },
-  tablet: { planner: 1, coder: 4, designer: 2, tester: 1, deployer: 1, reviewer: 1 },
-  phone: { planner: 1, coder: 3, designer: 1, tester: 1, deployer: 0, reviewer: 1 },
+  desktop: { planner: 1, coder: 6, designer: 3, layout: 2, tester: 1, deployer: 1, reviewer: 1 },
+  tablet: { planner: 1, coder: 4, designer: 2, layout: 1, tester: 1, deployer: 1, reviewer: 1 },
+  phone: { planner: 1, coder: 3, designer: 1, layout: 1, tester: 1, deployer: 0, reviewer: 1 },
 };
 
 const DETAIL: Record<Profile["kind"], Detail> = {
@@ -63,22 +68,22 @@ export function detectProfile(): Profile {
   for (const role of Object.keys(counts) as Role[]) {
     for (let i = 0; i < counts[role]; i++) {
       roles.push(role);
-      const numbered = role === "coder" || role === "designer";
+      const numbered = role === "coder" || role === "designer" || role === "layout";
       labels.push(numbered ? `${role}·${String(i + 1).padStart(2, "0")}` : role);
     }
   }
   return {
     kind,
     // Planning targets (nothing is forced to finish). Real runs land a little
-    // later than planned, so these sit just under the limits: hero <= 5 s,
-    // sections <= 3.6 s, phones <= 2.2 s.
-    budget: kind === "phone" ? 2.1 : kind === "tablet" ? 3 : 3.45,
-    heroBudget: kind === "phone" ? 2.1 : kind === "tablet" ? 4 : 4.8,
+    // later than planned, so these sit just under the limits: hero <= 5.5 s,
+    // sections <= 4 s, phones <= 2.4 s.
+    budget: kind === "phone" ? 2.2 : kind === "tablet" ? 3.4 : 3.85,
+    heroBudget: kind === "phone" ? 2.2 : kind === "tablet" ? 4.6 : 5.25,
     dprCap: kind === "phone" ? 1.5 : 2,
     roles,
     labels,
     speed: kind === "phone" ? 1215 : kind === "tablet" ? 1640 : 1725,
-    accel: kind === "phone" ? 1.35 : kind === "tablet" ? 1.43 : 1.5,
+    accel: kind === "phone" ? 1.8 : kind === "tablet" ? 1.6 : 1.5,
     detail: DETAIL[kind],
   };
 }

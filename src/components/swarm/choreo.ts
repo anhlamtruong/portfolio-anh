@@ -8,7 +8,7 @@
 // >= ~120 ms and typing steps >= 16 ms. taskTime() mirrors the timelines for
 // the planner's estimate.
 import { gsap } from "gsap";
-import { COLORS } from "./palette";
+import { COLORS, ROLE_COLOR } from "./palette";
 import type { Renderer } from "./renderer";
 import { keeps, measureText } from "./scan";
 import type { Sim } from "./sim";
@@ -41,7 +41,12 @@ export const T = {
   ghost: 0.36, ghostGap: 0.06, slotFade: 0.16, ghostFade: 0.14,
   wheelOpen: 0.14, ring: 0.42, square: 0.26, readout: 0.12, tint: 0.34,
   wheelClose: 0.12, wheelHold: 0.08,
+  gridLine: 0.26, rowSweep: 0.3, cellGrow: 0.16,
+  selIn: 0.16, grow: 0.36, seize: 0.15, slide: 0.42,
 } as const;
+
+/** Scale items start this small (transform only; layout never changes). */
+const SMALL = 0.42;
 
 /** Everything a task timeline needs, bound to one run, task and agent. */
 export interface Ctx {
@@ -62,8 +67,10 @@ export interface Ctx {
   layer: HTMLElement | null;
   mark(k: MarkKind, p: Partial<Mark>): Mark;
   fx(a: Anim): void;
-  /** Live-log line from this agent, timed from the section start. */
-  log(what: string): void;
+  /** Live-log line from this agent, timed from the section start (bare: no section prefix). */
+  log(what: string, bare?: boolean): void;
+  /** Registers a grid cell's placeholder (faded when the cell is built). */
+  holder(cell: Element, m: Mark): void;
 }
 
 // ------------------------------------------------------------------ helpers
@@ -187,8 +194,12 @@ export function taskTime(t: Task, s: number, dragTime: number): number {
       const e = (x: number) => Math.max(MIN_T, x * s * dragTime);
       return e(T.grab) + e(T.drag) + e(T.over) + e(T.settle) + e(T.cardFade);
     }
+    case "grid": {
+      const rows = Math.max(1, Math.round(t.dims[1]));
+      return gridLead(t, s) + Math.min(0.08, 0.3 / rows) * s * (rows - 1) + d(T.rowSweep);
+    }
     case "type": {
-      let v = typeDur(t.chars.length, s);
+      let v = typeDur(t.chars.length, s) + (t.scale ? scaleTime(d) : 0);
       if (t.font) {
         v += d(T.pause) + d(T.menuOpen) + d(T.menuHover) + T.menuHold * s;
         if (t.fontName2) v += d(T.menuHover);
@@ -197,7 +208,7 @@ export function taskTime(t: Task, s: number, dragTime: number): number {
       return v;
     }
     case "reveal":
-      return revealDur(t.lines.length, s);
+      return revealDur(t.lines.length, s) + (t.scale ? scaleTime(d) : 0);
     case "color":
       return d(T.wheelOpen) + d(T.ring) + d(T.square) + Math.max(d(T.readout), d(T.tint)) + d(T.wheelClose) +
         T.wheelHold * s;
@@ -208,8 +219,130 @@ export function taskTime(t: Task, s: number, dragTime: number): number {
   }
 }
 
+const scaleTime = (d: (x: number) => number) => d(T.selIn) + d(T.grow) + d(T.seize) + d(T.slide);
+
+/**
+ * Seconds until a grid's lines are drawn. Cell content may start then (the
+ * task is `ready`) while the placeholders are still being swept out.
+ */
+export function gridLead(t: Task, s: number): number {
+  const n = t.cols.length + t.rows.length;
+  return Math.max(MIN_T, T.gridLine * s) + Math.min(0.025, 0.2 / Math.max(1, n)) * s * (n - 1);
+}
+
+// ----------------------------------------------------- scale-then-move items
+
+/** Temporary transform of a scale item: offset and scale, origin top-left. */
+interface Tf {
+  dx: number;
+  dy: number;
+  s: number;
+}
+
+function applyTf(el: HTMLElement, f: Tf): void {
+  el.style.transformOrigin = "0 0";
+  el.style.transform = `translate(${f.dx.toFixed(1)}px, ${f.dy.toFixed(1)}px) scale(${f.s.toFixed(4)})`;
+}
+
+/** Remembers the author's inline transform; the returned function restores it (also on cut-short builds). */
+function holdTf(c: Ctx, el: HTMLElement): () => void {
+  const t0 = el.style.transform;
+  const o0 = el.style.transformOrigin;
+  let done = false;
+  const restore = () => {
+    if (done) return;
+    done = true;
+    el.style.transform = t0;
+    el.style.transformOrigin = o0;
+    if (el.getAttribute("style") === "") el.removeAttribute("style");
+  };
+  c.run.undo.push(restore);
+  return restore;
+}
+
+/** Local (element-relative) bounding box of text lines. */
+function localBox(lines: LineBox[], w: number, h: number): Box {
+  if (!lines.length) return { x: 0, y: 0, w, h };
+  let x = Infinity;
+  let y = Infinity;
+  let r = -Infinity;
+  let bt = -Infinity;
+  for (const l of lines) {
+    x = Math.min(x, l.x);
+    y = Math.min(y, l.y);
+    r = Math.max(r, l.r);
+    bt = Math.max(bt, l.b);
+  }
+  return { x, y, w: r - x, h: bt - y };
+}
+
+const ARROWS = ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"];
+const arrowFor = (vx: number, vy: number) => ARROWS[((Math.round(Math.atan2(vy, vx) / (Math.PI / 4)) % 8) + 8) % 8];
+
+/**
+ * (b) Drag the bottom-right handle of the selection out: scale -> 1.
+ * (c) Move tool: drag the text to its true place (translate -> 0) with a
+ *     small settle, showing the distance in the outline label.
+ * (d) The outline fades; the inline transform is removed.
+ */
+function settle(c: Ctx, el: HTMLElement, f: Tf, lb: Box, restore: () => void): void {
+  const { tl, t } = c;
+  const b = t.box;
+  const sel = c.mark(MK.frame, { p: 1, a: 0 });
+  const place = () => {
+    sel.x = b.x + f.dx + f.s * lb.x - 3;
+    sel.y = b.y + f.dy + f.s * lb.y - 2;
+    sel.w = f.s * lb.w + 6;
+    sel.h = f.s * lb.h + 4;
+    applyTf(el, f);
+  };
+  place();
+  tl.call(() => {
+    tool(c, TOOL.resize, 16);
+    aim(c, sel.x + sel.w, sel.y + sel.h);
+  });
+  tl.to(sel, { a: 1, duration: D(c, T.selIn) });
+  tl.call(() => void (c.sim.follow[c.i] = 36));
+  tl.to(f, {
+    s: 1,
+    duration: D(c, T.grow),
+    ease: "power2.inOut",
+    onUpdate: () => {
+      place();
+      aim(c, sel.x + sel.w, sel.y + sel.h);
+    },
+  });
+  const dist = Math.round(Math.hypot(f.dx, f.dy));
+  const label = `${arrowFor(-f.dx, -f.dy)} ${dist} px`;
+  tl.call(() => {
+    tool(c, TOOL.move, 18);
+    sel.label = label;
+    aim(c, sel.x + sel.w / 2, sel.y + sel.h / 2);
+  });
+  wait(c, T.seize);
+  tl.call(() => void (c.sim.follow[c.i] = 34));
+  tl.to(f, {
+    dx: 0,
+    dy: 0,
+    duration: D(c, T.slide),
+    ease: "back.out(1.15)",
+    onUpdate: () => {
+      place();
+      aim(c, sel.x + sel.w / 2, sel.y + sel.h / 2);
+    },
+  });
+  tl.call(() => {
+    restore();
+    fade(c, [sel], D(c, T.dim));
+    tool(c, TOOL.arrow, 18);
+  });
+}
+
 /** Typing/reveal driver: advances a staircase clip on `target` behind a caret. */
-function typer(c: Ctx, target: HTMLElement | null, lines: LineBox[], chars: CharBox[], typing: boolean, b: Box, caret: Mark): void {
+function typer(
+  c: Ctx, target: HTMLElement | null, lines: LineBox[], chars: CharBox[], typing: boolean, b: Box, caret: Mark,
+  f: Tf | null = null,
+): void {
   const n = typing ? chars.length : lines.length;
   const st = { v: 0 };
   let last = "";
@@ -228,9 +361,10 @@ function typer(c: Ctx, target: HTMLElement | null, lines: LineBox[], chars: Char
       cx = lines[L].x + (lines[L].r - lines[L].x) * Math.min(1, q - L);
     }
     const ln = lines[L];
-    caret.x = b.x + cx;
-    caret.y = b.y + ln.y;
-    caret.h = ln.b - ln.y;
+    const k = f ? f.s : 1;
+    caret.x = b.x + (f ? f.dx : 0) + k * cx;
+    caret.y = b.y + (f ? f.dy : 0) + k * ln.y;
+    caret.h = k * (ln.b - ln.y);
     aim(c, caret.x + 2, caret.y + caret.h);
     if (!target) return;
     const end = typing ? st.v >= n : st.v >= 1;
@@ -334,18 +468,29 @@ function inspector(c: Ctx, f: Mark): void {
 function typeText(c: Ctx): void {
   const { t, tl } = c;
   const typing = t.kind === "type";
-  const caret = c.mark(MK.caret, { color: c.color });
-  const box = typing ? c.mark(MK.box, { ...textBox(t.box, t.lines), label: t.label, a: 0.5, p: 1 }) : null;
-  if (box) [box.x, box.y, box.w, box.h] = [box.x - 3, box.y - 2, box.w + 6, box.h + 4];
   const target = t.keep ? null : t.el;
+  // Scale items are typed small and offset (transform only), then settled.
+  const f: Tf | null = t.scale && target ? { dx: t.sdx, dy: t.sdy, s: SMALL } : null;
+  const restore = f && target ? holdTf(c, target) : null;
+  if (f && target) applyTf(target, f);
+  const caret = c.mark(MK.caret, { color: c.color });
+  const lb = localBox(t.lines, t.box.w, t.box.h);
+  const k = f ? f.s : 1;
+  const box = typing
+    ? c.mark(MK.box, {
+        x: t.box.x + (f ? f.dx : 0) + k * lb.x - 3, y: t.box.y + (f ? f.dy : 0) + k * lb.y - 2,
+        w: k * lb.w + 6, h: k * lb.h + 4, label: t.label, a: 0.5, p: 1,
+      })
+    : null;
   if (target) {
     target.style.opacity = "1";
     target.style.clipPath = EMPTY_CLIP;
   }
   tool(c, TOOL.beam, typing ? 28 : 14);
-  typer(c, target, t.lines, t.chars, typing, t.box, caret);
+  typer(c, target, t.lines, t.chars, typing, t.box, caret, f);
   // The caret and box fade on their own, so the agent is free as soon as the text is in.
   tl.call(() => fade(c, box ? [caret, box] : [caret], D(c, T.boxFade)));
+  if (f && target && restore) settle(c, target, f, lb, restore);
 }
 
 /** Fire-and-forget fade of canvas marks (follows catch-up; never holds the agent). */
@@ -418,11 +563,20 @@ function typeFont(c: Ctx): boolean {
   if (!draft) return false;
   c.run.nodes.push(draft.node);
   const b = t.box;
+  // Scale items: the draft (and later the real element) are typed small and offset.
+  const f: Tf | null = t.scale ? { dx: t.sdx, dy: t.sdy, s: SMALL } : null;
+  const restore = f ? holdTf(c, t.el) : null;
+  if (f) {
+    applyTf(draft.node, f);
+    applyTf(t.el, f);
+  }
   const caret = c.mark(MK.caret, { color: c.color });
-  const tb = textBox(b, draft.lines);
+  const dl = localBox(draft.lines, b.w, b.h);
+  const k = f ? f.s : 1;
+  const tb: Box = { x: b.x + (f ? f.dx : 0) + k * dl.x, y: b.y + (f ? f.dy : 0) + k * dl.y, w: k * dl.w, h: k * dl.h };
   const box = c.mark(MK.box, { x: tb.x - 3, y: tb.y - 2, w: tb.w + 6, h: tb.h + 4, label: t.label, a: 0.5, p: 1 });
   tool(c, TOOL.beam, 28);
-  typer(c, draft.node, draft.lines, draft.chars, true, b, caret);
+  typer(c, draft.node, draft.lines, draft.chars, true, b, caret, f);
   tl.call(() => {
     caret.blink = true;
     tool(c, TOOL.arrow, 14);
@@ -473,6 +627,7 @@ function typeFont(c: Ctx): boolean {
     tl.fromTo(t.el, { opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", duration: d, ease: "power1.inOut" }, "<");
     tl.to(box, { a: 0, duration: D(c, T.boxFade) }, "<");
     tl.call(() => draft.node.remove());
+    if (f && restore) settle(c, t.el, f, localBox(t.lines, b.w, b.h), restore);
     return true;
   }
 
@@ -481,6 +636,7 @@ function typeFont(c: Ctx): boolean {
   const face = makeClone(c, true);
   if (!face) return true;
   c.run.nodes.push(face.node);
+  if (f) applyTf(face.node, f);
   const d1 = D(c, T.toFace);
   tl.to(draft.node, { opacity: 0, filter: "blur(4px)", duration: d1, ease: "power1.inOut" }, "<");
   tl.fromTo(face.node, { opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", duration: d1, ease: "power1.inOut" }, "<");
@@ -500,7 +656,66 @@ function typeFont(c: Ctx): boolean {
     face.node.remove();
     c.log(`weight 250 → ${t.weight}`);
   });
+  if (f && restore) settle(c, t.el, f, localBox(t.lines, b.w, b.h), restore);
   return true;
+}
+
+/**
+ * Grid (data-build-grid): dashed column/row structure from the cells' edges,
+ * then one crosshair sweep per row drags out a hatched placeholder per cell.
+ */
+function grid(c: Ctx): void {
+  const { t, tl, s } = c;
+  const b = t.box;
+  const lime = ROLE_COLOR.layout;
+  const ext = 10;
+  tool(c, TOOL.cross, 26);
+  const lines: Mark[] = [];
+  for (const x of t.cols) lines.push(c.mark(MK.guide, { x, y: b.y - ext, x2: x, y2: b.y + b.h + ext, color: lime }));
+  for (const y of t.rows) lines.push(c.mark(MK.guide, { x: b.x - ext, y, x2: b.x + b.w + ext, y2: y, color: lime }));
+  const n = lines.length;
+  const lineDur = D(c, T.gridLine);
+  const gap = Math.min(0.025, 0.2 / Math.max(1, n)) * s;
+  const ride = { q: 0 };
+  tl.to(ride, { q: 1, duration: lineDur + gap * Math.max(0, n - 1), ease: "power1.inOut", onUpdate: () => aim(c, b.x + b.w * ride.q, b.y) }, 0);
+  lines.forEach((m, k) => tl.to(m, { p: 1, duration: lineDur, ease: "power2.out" }, k * gap));
+  // Group cells into rows by their top edge, left to right.
+  const rows: number[][] = [];
+  t.cellBoxes
+    .map((cb, i) => i)
+    .sort((a, z) => t.cellBoxes[a].y - t.cellBoxes[z].y || t.cellBoxes[a].x - t.cellBoxes[z].x)
+    .forEach((i) => {
+      const row = rows[rows.length - 1];
+      if (row && Math.abs(t.cellBoxes[row[0]].y - t.cellBoxes[i].y) <= 3) row.push(i);
+      else rows.push([i]);
+    });
+  const start = tl.duration();
+  // Lines drawn: cell content may be claimed now (agents arrive as the boxes grow).
+  tl.call(() => void (t.ready = true), undefined, start);
+  const sweep = D(c, T.rowSweep);
+  const rgap = Math.min(0.08, 0.3 / Math.max(1, rows.length)) * s;
+  const grow = D(c, T.cellGrow);
+  rows.forEach((row, r) => {
+    const at = start + r * rgap;
+    row.forEach((ci, k) => {
+      const cb = t.cellBoxes[ci];
+      const h = c.mark(MK.holder, { x: cb.x, y: cb.y, w: cb.w, h: cb.h, color: lime });
+      c.holder(t.cells[ci], h);
+      tl.to(h, { p: 1, duration: grow, ease: "power2.out" }, at + (k / row.length) * Math.max(0, sweep - grow));
+    });
+    if (r !== rows.length - 1) return;
+    // The agent rides the last row's sweep along its bottom edge.
+    const x0 = t.cellBoxes[row[0]].x;
+    const last = t.cellBoxes[row[row.length - 1]];
+    const y = Math.max(...row.map((i) => t.cellBoxes[i].y + t.cellBoxes[i].h));
+    const st = { q: 0 };
+    tl.to(st, { q: 1, duration: sweep, ease: "none", onUpdate: () => aim(c, x0 + (last.x + last.w - x0) * st.q, y) }, at);
+  });
+  tl.call(() => {
+    c.log(`grid ${t.dims[0]}×${t.dims[1]} · ${c.run.m.name}`, true);
+    c.log(`boxed ${t.cells.length} cell${t.cells.length === 1 ? "" : "s"}`, true);
+    c.fx(gsap.to(lines, { a: 0.45, duration: D(c, T.dim) }));
+  });
 }
 
 /** Outline + scan for images that must stay visible. */
@@ -647,7 +862,9 @@ const plural = (s: string) => (/^[a-z]+$/i.test(s) && !s.endsWith("s") ? s + "s"
 export function choreograph(c: Ctx, master: Box | null): void {
   const t = c.t;
   let what = "";
-  if (t.kind === "frame") {
+  if (t.kind === "grid") {
+    grid(c);
+  } else if (t.kind === "frame") {
     frame(c);
     what = t.inspect
       ? `tuned radius ${Math.round(t.radius)} · padding ${Math.round(Math.max(...t.pad))}`
@@ -666,7 +883,7 @@ export function choreograph(c: Ctx, master: Box | null): void {
     what = `${t.kind === "type" ? "typed" : "revealed"} ${t.logName}`;
   }
   c.tl.call(() => {
-    flash(c, t.box);
+    if (t.kind !== "grid") flash(c, t.box);
     if (what) c.log(what);
   });
 }

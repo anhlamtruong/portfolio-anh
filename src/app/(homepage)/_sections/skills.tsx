@@ -21,6 +21,7 @@ export function Skills({ logos }: { logos: StorageLogo[] }) {
 
         <div
           data-build-section="skill-groups"
+          data-build-grid
           className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3"
         >
           {skillGroups.map((group, gi) => (
@@ -65,6 +66,7 @@ export function Skills({ logos }: { logos: StorageLogo[] }) {
             </p>
             <ul
               data-build-list
+              data-build-grid
               className="mt-5 grid grid-cols-5 gap-2 sm:grid-cols-7 md:grid-cols-10 lg:grid-cols-[repeat(13,minmax(0,1fr))]"
             >
               {logos.map((logo, i) => (

@@ -40,6 +40,7 @@ export function SectionHeader({
           data-build-item
           data-build="type"
           data-build-font
+          data-build-scale
           className="bp-h2 mt-4"
         >
           {title}

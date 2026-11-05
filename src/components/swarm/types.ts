@@ -1,11 +1,11 @@
 // Shared types for the agent-swarm build engine.
 import type { ScrollTrigger } from "gsap/ScrollTrigger";
 
-export type Role = "planner" | "coder" | "designer" | "reviewer" | "tester" | "deployer";
+export type Role = "planner" | "coder" | "designer" | "layout" | "reviewer" | "tester" | "deployer";
 /** Kinds authors put in data-build. */
 export type BuildKind = "frame" | "type" | "reveal" | "image" | "dup";
 /** Internal task kinds: DOM kinds plus the color-wheel follow-up. */
-export type TaskKind = BuildKind | "color";
+export type TaskKind = BuildKind | "color" | "grid";
 export type Edge = "left" | "right" | "top" | "bottom";
 export type Tint = "text" | "fill" | "stroke";
 
@@ -71,6 +71,19 @@ export interface Task {
   ready: boolean;
   /** Planned seconds at the section's scale (longest-first claiming). */
   est: number;
+  // Grid task (data-build-grid): direct child cells, their boxes, structure lines.
+  cells: HTMLElement[];
+  cellBoxes: Box[];
+  /** x positions of column lines and y positions of row lines (document coords). */
+  cols: number[];
+  rows: number[];
+  /** Grid size for the log: columns x rows. */
+  dims: number[];
+  /** data-build-scale: appear small and offset, get scaled up, then moved in. */
+  scale: boolean;
+  /** Initial offset (px) for the scale/move. */
+  sdx: number;
+  sdy: number;
   tune: boolean;
   inspect: boolean;
   drag: boolean;
@@ -152,6 +165,7 @@ export const MK = {
   packet: 17,
   props: 18,
   deploy: 19,
+  holder: 20,
 } as const;
 export type MarkKind = (typeof MK)[keyof typeof MK];
 
@@ -190,6 +204,7 @@ export const TOOL = {
   resize: 4,
   slide: 5,
   picker: 6,
+  move: 7,
 } as const;
 
 export interface Detail {
@@ -235,6 +250,8 @@ export interface Run {
   scale: number;
   speedMul: number;
   joinGate: number;
+  /** When the build phase began (clock). */
+  buildAt: number;
   stagger: number;
   /** Catch-up speed (1 = planned pace), ramped smoothly when running late. */
   catchUp: number;
@@ -248,6 +265,10 @@ export interface Run {
   anims: Anim[];
   /** Temporary DOM (draft-font clones) to remove when the section ends. */
   nodes: HTMLElement[];
+  /** Restores temporary inline styles (e.g. a scale transform) if a task is cut short. */
+  undo: (() => void)[];
+  /** Placeholder box per grid cell, faded as the cell gets built. */
+  holders: Map<Element, Mark>;
   /** Agents that finished tasks most recently (for the review acks). */
   recent: number[];
   /** Seconds from start to approval (0 if finished instantly). */

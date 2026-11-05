@@ -25,6 +25,8 @@ export class Sim {
   readonly tool: Uint8Array;
   /** Spawn pop 0..1 (cursor scales in); 1 when settled. */
   readonly pop: Float32Array;
+  /** Cursor rotation (rad) while looping idle; eased back to 0 otherwise. */
+  readonly spin: Float32Array;
 
   private readonly gain: number;
   private readonly maxAcc: number;
@@ -46,6 +48,7 @@ export class Sim {
     this.flag = new Uint8Array(n);
     this.tool = new Uint8Array(n);
     this.pop = new Float32Array(n).fill(1);
+    this.spin = new Float32Array(n);
   }
 
   place(i: number, x: number, y: number): void {

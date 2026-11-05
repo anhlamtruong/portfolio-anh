@@ -6,7 +6,7 @@ import type { Sim } from "./sim";
 import { MK, type Mark, type Sprite } from "./types";
 import {
   CARD_PAD, CHECK, DEPLOY, DROP, GLYPH_HOT, GLYPH_SIZE, INSP, PROPS, TOOLBAR, WHEEL,
-  CHECK_H, INSP_H, dropH, paintCard, paintChecklist, paintDeploy, paintDropdown, paintGlyph,
+  CHECK_H, INSP_H, dropH, paintCard, paintChecklist, paintDeploy, paintDropdown, paintGlyph, paintHatch,
   paintInspector, paintProps, paintToolbar, paintWheel, propsH, roundRect,
 } from "./widgets";
 
@@ -40,6 +40,7 @@ export class Renderer {
   private names: (Sprite | undefined)[] = [];
   private cache = new Map<string, Sprite>();
   private checks: Sprite[] = [];
+  private hatch: CanvasPattern | null = null;
   private white: CanvasGradient;
   private black: CanvasGradient;
   private band: CanvasGradient;
@@ -176,8 +177,19 @@ export class Renderer {
       const nm = this.name(i);
       const k = sim.pop[i] < 1 ? backOut(sim.pop[i]) : 1;
       if (k <= 0.01) continue;
-      ctx.drawImage(gl.c, x - hot[0] * k, y - hot[1] * k, gl.w * k, gl.h * k);
-      ctx.drawImage(nm.c, x + 12 * k, y + 14 * k, nm.w * k, nm.h * k);
+      const spin = sim.spin[i];
+      if (spin > 0.005 || spin < -0.005) {
+        // Idle loop: the cursor heads along its circle.
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(spin);
+        ctx.drawImage(gl.c, -hot[0] * k, -hot[1] * k, gl.w * k, gl.h * k);
+        ctx.restore();
+      } else ctx.drawImage(gl.c, x - hot[0] * k, y - hot[1] * k, gl.w * k, gl.h * k);
+      // The name pill trails the motion slightly.
+      const lx = Math.max(-8, Math.min(8, -sim.vx[i] * 0.02));
+      const ly = Math.max(-8, Math.min(8, -sim.vy[i] * 0.02));
+      ctx.drawImage(nm.c, x + (12 + lx) * k, y + (14 + ly) * k, nm.w * k, nm.h * k);
       if (sim.flag[i] & 1) {
         // "copy" marker while alt-dragging a duplicate
         ctx.fillStyle = COLORS.accent;
@@ -197,6 +209,7 @@ export class Renderer {
       this.dpr = dpr;
       this.cache.clear();
       this.checks = [];
+      this.hatch = null;
       this.glyphs = [];
       this.names = [];
     }
@@ -438,6 +451,21 @@ export class Renderer {
         }
         break;
       }
+      case MK.holder: {
+        // Grid placeholder: thin outline grown from the top-left, faint hatching inside.
+        const w = m.w * m.p;
+        const h = m.h * m.p;
+        if (w < 1 || h < 1) break;
+        this.hatch ??= this.pattern(m.color);
+        if (this.hatch) {
+          ctx.fillStyle = this.hatch;
+          ctx.fillRect(m.x, m.y, w, h);
+        }
+        ctx.globalAlpha = m.a * 0.7;
+        ctx.strokeStyle = m.color;
+        ctx.strokeRect(m.x + 0.5, m.y + 0.5, w - 1, h - 1);
+        break;
+      }
       case MK.props: {
         if (!m.img) break;
         ctx.globalAlpha = m.a * m.p;
@@ -569,6 +597,14 @@ export class Renderer {
         break;
       }
     }
+  }
+
+  private pattern(color: string): CanvasPattern | null {
+    const tile = this.sprite(8, 8, (g) => paintHatch(g, color));
+    const pat = this.ctx.createPattern(tile.c, "repeat");
+    // The tile is drawn at device resolution; map it back to CSS px.
+    pat?.setTransform?.(new DOMMatrix().scaleSelf(1 / this.dpr, 1 / this.dpr));
+    return pat;
   }
 
   private ring(x: number, y: number, r: number): void {

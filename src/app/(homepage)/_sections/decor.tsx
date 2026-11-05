@@ -104,12 +104,13 @@ const ROLE_COLOR = {
   tester: "#60a5fa",
   reviewer: "#fbbf24",
   deployer: "#fb923c",
+  layout: "#a3e635",
 } as const;
 type Role = keyof typeof ROLE_COLOR;
 
 // Ring nodes clockwise from the top. The engine spawns each agent from a
 // node of its role (data-swarm-spawn) and lights them up (data-lit).
-const RING: Role[] = ["coder", "designer", "coder", "tester", "reviewer", "coder", "deployer", "designer"];
+const RING: Role[] = ["coder", "designer", "layout", "tester", "reviewer", "coder", "deployer", "layout"];
 
 // Faint agent-mesh schematic behind the hero (≥1024 px).
 export function HeroSchematic() {

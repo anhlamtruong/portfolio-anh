@@ -22,6 +22,7 @@ export function Contact() {
           data-build="type"
           data-build-font
           data-build-weight
+          data-build-scale
           className="bp-h1 mt-6 max-w-4xl text-[clamp(2.2rem,6vw,4.5rem)]"
         >
           Let&apos;s build the next <em className="bp-serif">system</em>{" "}
@@ -51,7 +52,7 @@ export function Contact() {
           {profile.email}
         </a>
 
-        <ul data-build-list className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ul data-build-list data-build-grid className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {socialLinks
             .filter((link) => link.kind !== "email")
             .map((link, i) => (

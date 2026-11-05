@@ -68,7 +68,7 @@ export default function LinksPage() {
             {profile.location}
           </p>
 
-          <ul data-build-list className="mt-10 flex w-full flex-col gap-3 text-left">
+          <ul data-build-list data-build-grid className="mt-10 flex w-full flex-col gap-3 text-left">
             {LINKS.map((link, i) => {
               const Icon = link.icon;
               const content = (

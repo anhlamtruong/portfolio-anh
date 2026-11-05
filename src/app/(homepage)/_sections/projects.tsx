@@ -71,6 +71,7 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
           data-build-item
           data-build="type"
           data-build-font
+          data-build-scale
           className="bp-h3 mt-2 text-xl"
         >
           {project.title}
@@ -158,7 +159,7 @@ export function Projects() {
           <p data-build-item data-build="type" className="bp-eyebrow">
             more builds
           </p>
-          <ul data-build-list className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul data-build-list data-build-grid className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {more.map((project, i) => (
               <li
                 key={project.title}

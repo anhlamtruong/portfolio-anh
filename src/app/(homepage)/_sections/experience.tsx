@@ -124,7 +124,7 @@ export function Experience() {
           <p data-build-item data-build="type" className="bp-eyebrow">
             earlier
           </p>
-          <ul data-build-list className="mt-5 grid gap-3 md:grid-cols-3">
+          <ul data-build-list data-build-grid className="mt-5 grid gap-3 md:grid-cols-3">
             {earlier.map((job, i) => (
               <li
                 key={`${job.company}-${job.role}`}
