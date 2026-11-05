@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
+import { Suspense, createContext, useContext, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useEditorStore } from "./store";
+import { isStandaloneRoute } from "./standalone-routes";
 import { applyThemeToElement } from "./apply";
 import { useThemePresetFromUrl } from "./hooks";
 import { ThemeMode, LayoutMode } from "./types";
@@ -38,15 +40,18 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     setLayoutMode: storeSetLayoutMode,
   } = useEditorStore();
 
-  // Handle theme preset from URL
-  useThemePresetFromUrl();
+  const standalone = isStandaloneRoute(usePathname());
 
   useEffect(() => {
     const root = document.documentElement;
     if (!root) return;
 
-    applyThemeToElement(themeState, root);
-  }, [themeState]);
+    // The 8-bit layout does not apply to standalone pages.
+    applyThemeToElement(
+      standalone ? { ...themeState, layoutMode: "modern" } : themeState,
+      root,
+    );
+  }, [themeState, standalone]);
 
   const handleThemeChange = (newMode: ThemeMode) => {
     setThemeState({ ...themeState, currentMode: newMode });
@@ -85,9 +90,19 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
+      {/* Reading ?theme= needs search params; isolating it in Suspense lets
+          static pages prerender instead of bailing out to client rendering. */}
+      <Suspense fallback={null}>
+        <ThemePresetFromUrl />
+      </Suspense>
       {children}
     </ThemeProviderContext.Provider>
   );
+}
+
+function ThemePresetFromUrl() {
+  useThemePresetFromUrl();
+  return null;
 }
 
 export const useTheme = () => {

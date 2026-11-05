@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { useEditorStore } from "@/services/theme";
+import { isStandaloneRoute } from "@/services/theme/standalone-routes";
 
 /**
  * PixelTransition — wraps page content with a "screen wipe"
@@ -14,8 +15,8 @@ export function PixelTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const layoutMode = useEditorStore((s) => s.themeState.layoutMode);
 
-  // Skip transition for modern mode
-  if (layoutMode !== "8bit") {
+  // Skip transition for modern mode and for standalone pages
+  if (layoutMode !== "8bit" || isStandaloneRoute(pathname)) {
     return <>{children}</>;
   }
 
