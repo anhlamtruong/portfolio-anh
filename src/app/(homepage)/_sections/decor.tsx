@@ -96,14 +96,28 @@ export function Bracket({
   );
 }
 
-// Faint agent-mesh schematic behind the hero.
+// Role colors, matching the agents' palette in src/components/swarm.
+const ROLE_COLOR = {
+  planner: "#a78bfa",
+  coder: "#34d399",
+  designer: "#f472b6",
+  tester: "#60a5fa",
+  reviewer: "#fbbf24",
+  deployer: "#fb923c",
+} as const;
+type Role = keyof typeof ROLE_COLOR;
+
+// Ring nodes clockwise from the top. The engine spawns each agent from a
+// node of its role (data-swarm-spawn) and lights them up (data-lit).
+const RING: Role[] = ["coder", "designer", "coder", "tester", "reviewer", "coder", "deployer", "designer"];
+
+// Faint agent-mesh schematic behind the hero (≥1024 px).
 export function HeroSchematic() {
-  const ring = [0, 1, 2, 3, 4, 5, 6, 7];
   return (
     <div
       aria-hidden="true"
       data-parallax="0.55"
-      className="pointer-events-none absolute -right-24 top-10 hidden h-[620px] w-[620px] opacity-[0.55] lg:block"
+      className="pointer-events-none absolute -right-24 top-10 hidden h-[620px] w-[620px] opacity-[0.6] lg:block"
     >
       <svg viewBox="0 0 620 620" className="h-full w-full" fill="none">
         <g stroke="#1c2431">
@@ -112,30 +126,46 @@ export function HeroSchematic() {
           <circle cx="310" cy="310" r="140" />
           <path d="M310 0v620M0 310h620" strokeDasharray="4 8" />
         </g>
-        {ring.map((i) => {
-          const a = (i / ring.length) * Math.PI * 2 - Math.PI / 2;
+        {RING.map((role, i) => {
+          const a = (i / RING.length) * Math.PI * 2 - Math.PI / 2;
           const x = 310 + Math.cos(a) * 220;
           const y = 310 + Math.sin(a) * 220;
-          const colors = ["#a78bfa", "#34d399", "#f472b6", "#60a5fa", "#fbbf24", "#34d399", "#fb923c", "#34d399"];
+          const c = ROLE_COLOR[role];
           return (
             <g key={i}>
               <path
                 d={`M310 310 L${x.toFixed(1)} ${y.toFixed(1)}`}
-                stroke={colors[i]}
+                stroke={c}
                 strokeOpacity="0.25"
                 strokeDasharray={i % 2 ? "3 5" : undefined}
               />
-              <circle cx={x} cy={y} r="7" fill="#07090d" stroke={colors[i]} strokeOpacity="0.6" />
-              <circle cx={x} cy={y} r="2" fill={colors[i]} fillOpacity="0.8" />
+              <g data-swarm-spawn={role} style={{ color: c }}>
+                <circle className="bp-node-halo" cx={x} cy={y} r="16" stroke={c} strokeOpacity="0.5" />
+                <circle cx={x} cy={y} r="7" fill="#07090d" stroke={c} strokeOpacity="0.6" />
+                <circle cx={x} cy={y} r="2" fill={c} fillOpacity="0.8" />
+              </g>
+              <text
+                x={x}
+                y={y + (y > 310 ? 30 : -22)}
+                textAnchor="middle"
+                fill="#3a4657"
+                fontSize="9"
+                fontFamily="ui-monospace, monospace"
+              >
+                {role}
+              </text>
             </g>
           );
         })}
-        <rect x="270" y="296" width="80" height="28" rx="6" fill="#07090d" stroke="#5eead4" strokeOpacity="0.5" />
-        <text x="310" y="314" textAnchor="middle" fill="#5eead4" fillOpacity="0.7" fontSize="11" fontFamily="ui-monospace, monospace">
-          planner
-        </text>
+        <g data-swarm-spawn="planner" style={{ color: ROLE_COLOR.planner }}>
+          <circle className="bp-node-halo" cx="310" cy="310" r="52" stroke={ROLE_COLOR.planner} strokeOpacity="0.4" />
+          <rect x="270" y="296" width="80" height="28" rx="6" fill="#07090d" stroke={ROLE_COLOR.planner} strokeOpacity="0.55" />
+          <text x="310" y="314" textAnchor="middle" fill={ROLE_COLOR.planner} fillOpacity="0.8" fontSize="11" fontFamily="ui-monospace, monospace">
+            planner
+          </text>
+        </g>
         <text x="20" y="606" fill="#5b6676" fontSize="10" fontFamily="ui-monospace, monospace">
-          agent-mesh · 14 nodes · r=220
+          agent-mesh · 9 nodes · r=220
         </text>
       </svg>
     </div>

@@ -10,7 +10,11 @@ export function Skills({ logos }: { logos: StorageLogo[] }) {
       <div className="bp-container">
         <Bracket at="-left-3 top-[12rem]" speed={0.3} />
         <CrossMark at="right-0 top-[30rem]" label="x 1120 · y 4410" speed={0.2} />
-        <SectionHeader id="skills" index="03" label="stack" title="Tools I reach for">
+        <SectionHeader id="skills" index="03" label="stack" title={
+            <>
+              Tools I <em className="bp-serif">reach for</em>
+            </>
+          }>
           Agents and LLM infrastructure first, then the TypeScript, Python and
           AWS work that keeps them running in production.
         </SectionHeader>

@@ -19,7 +19,11 @@ export function Experience() {
           id="experience"
           index="01"
           label="experience"
-          title="Where I've shipped"
+          title={
+            <>
+              Where I&apos;ve <em className="bp-serif">shipped</em>
+            </>
+          }
         >
           From AWS&apos;s Tier 0 DNS firewall to a startup shipping 837+ PRs in 45
           days, the common thread is agents doing real work behind tests.

@@ -23,6 +23,8 @@ export class Sim {
   readonly flag: Uint8Array;
   /** Cursor glyph per agent (TOOL.*). */
   readonly tool: Uint8Array;
+  /** Spawn pop 0..1 (cursor scales in); 1 when settled. */
+  readonly pop: Float32Array;
 
   constructor(n: number) {
     this.n = n;
@@ -38,6 +40,7 @@ export class Sim {
     this.on = new Uint8Array(n);
     this.flag = new Uint8Array(n);
     this.tool = new Uint8Array(n);
+    this.pop = new Float32Array(n).fill(1);
   }
 
   place(i: number, x: number, y: number): void {

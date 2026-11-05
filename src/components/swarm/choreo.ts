@@ -36,6 +36,10 @@ export interface Ctx {
   layer: HTMLElement | null;
   mark(k: MarkKind, p: Partial<Mark>): Mark;
   fx(a: Anim): void;
+  /** Live-log line from this agent, timed from the section start. */
+  log(what: string): void;
+  /** Ignore section resizes for a while (a weight sweep reflows text). */
+  quiet(seconds: number): void;
 }
 
 // ------------------------------------------------------------------ helpers
@@ -312,18 +316,22 @@ function typeFont(c: Ctx): boolean {
   tl.call(() => {
     caret.blink = true;
     tool(c, TOOL.arrow, 14);
+    c.log(`typed ${t.logName}`);
   });
   wait(c, 0.22 * s);
 
-  const third = t.fontName === "Inter" ? "Geist" : "Inter";
-  const rows = ["Geist Mono", t.fontName, third];
+  // Menu: the draft face, the real family and either a second family found in
+  // the text (picked too) or a decoy.
+  const two = !!t.fontName2;
+  const rows = ["Geist Mono", t.fontName, two ? t.fontName2 : t.fontName === "Inter" ? "Geist" : "Inter"];
   const h = dropH(rows.length);
   let mx = tb.x + tb.w + 14;
   let my = tb.y;
   if (mx + DROP.w > c.vw - 8) [mx, my] = [clamp(tb.x, 8, c.vw - DROP.w - 8), tb.y + tb.h + 8];
   if (my + h > c.sy + c.vh - 8) my = Math.max(c.sy + 8, tb.y - h - 8);
-  const menu = c.mark(MK.drop, { x: mx, y: my, p: 0, u: 0, v: 0, img: c.r.dropSprite(rows, 0) });
-  const picked = c.r.dropSprite(rows, 1);
+  const menu = c.mark(MK.drop, { x: mx, y: my, p: 0, u: 0, v: 0, img: c.r.dropSprite(rows, 0b001) });
+  const picked = c.r.dropSprite(rows, 0b010);
+  const both = c.r.dropSprite(rows, 0b110);
   const rx = mx + DROP.w - 34;
   const ry = (k: number) => my + DROP.pad + k * DROP.row + DROP.row / 2;
   step(c, rx, ry(0), 0.16 * s);
@@ -335,7 +343,34 @@ function typeFont(c: Ctx): boolean {
     click(c, rx, ry(1));
     menu.img = picked;
   });
+  if (two) {
+    tl.call(() => aim(c, rx, ry(2)));
+    tl.to(menu, { u: 2, duration: 0.16 * s, ease: "power2.inOut" });
+    tl.call(() => {
+      click(c, rx, ry(2));
+      menu.img = both;
+    });
+  }
+  tl.call(() => c.log(`swapped font → ${t.fontName}${two ? ` + ${t.fontName2}` : ""}`));
   tl.to(menu, { p: 0, duration: 0.12 * s, delay: 0.1 * s, ease: "power1.in" });
+
+  // Weight sweep (data-build-weight): the real text arrives light and gains
+  // weight. Resizes are ignored meanwhile; the author's inline value returns.
+  const el = t.el;
+  const prev = el.style.fontWeight;
+  const restore = () => {
+    if (prev) el.style.fontWeight = prev;
+    else el.style.removeProperty("font-weight");
+  };
+  const sweep = { w: 250 };
+  const sweepDur = 0.55 * Math.max(0.7, s);
+  if (t.sweep) {
+    c.run.undo.push(restore);
+    tl.call(() => {
+      c.quiet(0.36 * s + sweepDur + 0.25);
+      el.style.fontWeight = "250";
+    });
+  }
 
   // Morph: the draft blurs out while the real text (real font and color) blurs in.
   tl.call(() => void (caret.a = 0));
@@ -343,6 +378,18 @@ function typeFont(c: Ctx): boolean {
   tl.fromTo(t.el, { opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.36 * s, ease: "power1.inOut" }, "<");
   tl.to(box, { a: 0, duration: 0.2 * s }, "<");
   tl.call(() => draft.node.remove());
+  if (t.sweep) {
+    tl.to(sweep, {
+      w: t.weight,
+      duration: sweepDur,
+      ease: "power2.out",
+      onUpdate: () => void (el.style.fontWeight = String(Math.round(sweep.w))),
+    });
+    tl.call(() => {
+      restore();
+      c.log(`weight 250 → ${t.weight}`);
+    });
+  }
   return true;
 }
 
@@ -482,13 +529,32 @@ function colorPick(c: Ctx): void {
   tl.to(wheel, { p: 0, duration: 0.12 * s, delay: 0.08 * s, ease: "power1.in" });
 }
 
+const plural = (s: string) => (/^[a-z]+$/i.test(s) && !s.endsWith("s") ? s + "s" : s);
+
 /** Builds the task's timeline. */
 export function choreograph(c: Ctx, master: Box | null): void {
   const t = c.t;
-  if (t.kind === "frame") frame(c);
-  else if (t.kind === "image") (t.drag ? dragIn : scanImage)(c);
-  else if (t.kind === "dup") dup(c, master ?? t.slotBoxes[0]);
-  else if (t.kind === "color") colorPick(c);
-  else if (!(t.kind === "type" && t.font && typeFont(c))) typeText(c);
-  c.tl.call(() => flash(c, t.box));
+  let what = "";
+  if (t.kind === "frame") {
+    frame(c);
+    what = t.inspect
+      ? `tuned radius ${Math.round(t.radius)} · padding ${Math.round(Math.max(...t.pad))}`
+      : `framed ${t.logName}`;
+  } else if (t.kind === "image") {
+    (t.drag ? dragIn : scanImage)(c);
+    what = `${t.drag ? "dragged" : "scanned"} ${t.logName}`;
+  } else if (t.kind === "dup") {
+    dup(c, master ?? t.slotBoxes[0]);
+    what = `dup ×${t.slots.length} ${t.slots.length === 1 ? t.label : plural(t.label)}`;
+  } else if (t.kind === "color") {
+    colorPick(c);
+    what = `picked ${t.hex}`;
+  } else if (!(t.kind === "type" && t.font && typeFont(c))) {
+    typeText(c);
+    what = `${t.kind === "type" ? "typed" : "revealed"} ${t.logName}`;
+  }
+  c.tl.call(() => {
+    flash(c, t.box);
+    if (what) c.log(what);
+  });
 }

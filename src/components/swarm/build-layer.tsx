@@ -21,7 +21,10 @@
  *             (no DOM/layout changes; long text falls back to reveal).
  *             data-build-font: type in a mono draft (an aria-hidden clone in
  *             an overlay layer), pick the real font from a menu, cross-fade.
- *             Phones: only the first such item on the page.
+ *             A child in another family (e.g. a serif span) gets its own menu
+ *             row. data-build-weight (with -font): afterwards font-weight
+ *             sweeps 250 -> computed weight. Phones: only the page's first
+ *             data-build-font item (kept items never swap).
  *     reveal  text block/list: unmasked line by line.
  *     image   ghost card dragged in from the nearest viewport edge (or
  *             data-build-from="left|right|top|bottom") and dropped on the
@@ -41,6 +44,22 @@
  *   data-build-order="n", data-build-role="coder|designer|...".
  * - Hiding only applies under html[data-build="on"] (BuildFlagScript sets it
  *   before paint). Finished items and sections get [data-built].
+ *
+ * Grand-pass hooks (all optional)
+ * - [data-swarm-spawn="planner|coder|designer|tester|reviewer|deployer"]:
+ *   mesh nodes in the hero (>= 1024 px). At boot/Replay they get [data-lit]
+ *   one by one and agents pop out of a node of their role; [data-lit] is
+ *   removed when the hero finishes. Hidden or zero-size nodes are ignored.
+ * - [data-swarm-log] (data-swarm-log-lines="6"): static, server-rendered
+ *   container whose children are swapped for live lines while building
+ *   (p.swarm-log__line > span.swarm-log__who / __what / __t), with
+ *   aria-hidden="true"; the fallback lines come back on Skip or unmount.
+ * - [data-build-finale] section + [data-deploy-target][data-deploy-text]
+ *   inside: after approval the deployer clicks the target, a deploy panel
+ *   runs, then the target gets [data-deployed] (Skip jumps there).
+ * - HUD "inspect" toggle (desktop, fine pointer, >= 1024 px, after the hero
+ *   is built): hover or Tab to a built frame/image to see its real values.
+ *   Esc turns it off. The overlay never takes pointer events.
  */
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -64,6 +83,7 @@ export default function BuildLayer() {
   const lenisRef = useRef(lenis);
   const [status, setStatus] = useState<Status>("off");
   const [director, setDirector] = useState<Director | null>(null);
+  const [inspect, setInspect] = useState({ available: false, on: false });
 
   useEffect(() => {
     lenisRef.current = lenis;
@@ -88,6 +108,7 @@ export default function BuildLayer() {
         profile: detectProfile(),
         getScroll: () => lenisRef.current?.animatedScroll ?? window.scrollY,
         onBusy: (busy) => alive && setStatus(busy ? "building" : "idle"),
+        onInspect: (s) => alive && setInspect(s),
       });
     } catch {
       root.removeAttribute("data-build");
@@ -124,7 +145,7 @@ export default function BuildLayer() {
     <>
       <div ref={layerRef} className="swarm-layer" aria-hidden="true" />
       <canvas ref={canvasRef} className="swarm-canvas" aria-hidden="true" />
-      {director && status !== "off" ? <Hud controls={director} building={status === "building"} /> : null}
+      {director && status !== "off" ? <Hud controls={director} building={status === "building"} inspect={inspect} /> : null}
     </>
   );
 }

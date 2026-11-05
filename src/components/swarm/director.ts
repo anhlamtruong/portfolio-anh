@@ -1,9 +1,13 @@
 // Scheduling: section lifecycle (plan -> build -> review), task claiming, the
-// single gsap.ticker loop that steps the simulation and draws the overlay.
-// Per-task timelines live in choreo.ts. Nothing here sets React state per frame.
+// boot from the hero's agent mesh, handoff packets, the live log, inspect mode,
+// the deploy finale, and the single gsap.ticker loop that steps the simulation
+// and draws the overlay. Per-task timelines live in choreo.ts. Nothing here
+// sets React state per frame.
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { type Ctx, choreograph, edgePoint, neutralCss } from "./choreo";
+import { readProps } from "./inspect";
+import { LiveLog } from "./log";
 import { COLORS, ROLE_COLOR, SESSION_KEY, rolePref } from "./palette";
 import { Renderer } from "./renderer";
 import { keeps, measureSection, scanPage } from "./scan";
@@ -12,7 +16,7 @@ import {
   MK, TASK_CLAIMED, TASK_DONE, TASK_PENDING, TASK_RUNNING, TOOL,
   type Anim, type Mark, type MarkKind, type Profile, type Role, type Run, type Task,
 } from "./types";
-import { CHECK, CHECK_H } from "./widgets";
+import { CHECK, CHECK_H, DEPLOY, PROPS } from "./widgets";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -22,6 +26,12 @@ const IDLE = 1;
 const TRAVEL = 2;
 const WORK = 3;
 const EXIT = 4;
+/** Waiting on a lit mesh node to pop in. */
+const SLEEP = 5;
+/** Escorting the inspect-mode property sheet. */
+const INSPECT = 6;
+/** Running the deploy finale. */
+const DEPLOYING = 7;
 // Section phases.
 const WAIT = 0;
 const PLAN = 1;
@@ -30,6 +40,8 @@ const REVIEW = 3;
 const DONE = 4;
 /** Share of a section's budget given to the build phase. */
 const BUILD_SHARE = 0.53;
+/** Seconds over which the mesh nodes light up at boot. */
+const BOOT_LIGHT = 0.45;
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
@@ -43,6 +55,11 @@ interface Brain {
   go: ((i: number) => void) | null;
 }
 
+export interface InspectState {
+  available: boolean;
+  on: boolean;
+}
+
 export interface DirectorOptions {
   canvas: HTMLCanvasElement;
   /** Absolutely positioned layer for draft-font clones (outside the page flow). */
@@ -52,6 +69,8 @@ export interface DirectorOptions {
   getScroll: () => number;
   /** Called when building starts/stops (rare; safe to set React state). */
   onBusy: (busy: boolean) => void;
+  /** Called when inspect mode becomes available or toggles. */
+  onInspect?: (s: InspectState) => void;
 }
 
 function clearInline(el: HTMLElement): void {
@@ -89,7 +108,7 @@ function cost(t: Task, dragTime: number): number {
     case "image":
       return t.drag ? 0.45 + 0.9 * dragTime : 0.8;
     case "type":
-      return clamp(t.chars.length * 0.032, 0.2, 0.8) + 0.12 + (t.font ? 1.35 : 0);
+      return clamp(t.chars.length * 0.032, 0.2, 0.8) + 0.12 + (t.font ? 1.35 + (t.fontName2 ? 0.2 : 0) : 0) + (t.sweep ? 0.55 : 0);
     case "reveal":
       return clamp(t.lines.length * 0.09, 0.28, 0.7) + 0.1;
     case "color":
@@ -109,12 +128,20 @@ export class Director {
   private readonly workers: number[] = [];
   private readonly planner: number;
   private readonly reviewer: number;
+  private readonly log = new LiveLog();
   private runs: Run[] = [];
+  private hero: Run | null = null;
   private byEl = new Map<Element, Run>();
+  private taskByEl = new Map<Element, Task>();
   private marks: Mark[] = [];
   private fx: Anim[] = [];
+  private finales: Anim[] = [];
+  private summaries: Run[] = [];
+  private lit: Element[] = [];
+  private lightTl: Anim | null = null;
   private clock = 0;
   private elapsed = 0;
+  private quietUntil = 0;
   private sy = 0;
   private vw = 0;
   private vh = 0;
@@ -128,6 +155,12 @@ export class Director {
   private ro: ResizeObserver | null = null;
   private roSeen = new WeakSet<Element>();
   private roFrame = 0;
+  private canInspect = false;
+  private inspecting = false;
+  private inspAgent = -1;
+  private inspEl: HTMLElement | null = null;
+  private inspFrame: Mark | null = null;
+  private inspPanel: Mark | null = null;
 
   constructor(o: DirectorOptions) {
     this.o = o;
@@ -150,11 +183,19 @@ export class Director {
     orphans.forEach(markBuilt);
     this.runs = sections.map((m) => ({
       m, phase: WAIT, B: m.onLoad ? p.heroBudget : p.budget, t0: 0, deadline: 0, scale: 1, speedMul: 1,
-      joinGate: 0, stagger: 0.12, flushed: false, marks: [], anims: [], nodes: [], st: null,
+      joinGate: 0, stagger: 0.12, flushed: false, marks: [], anims: [], nodes: [], undo: [], recent: [], took: 0, st: null,
     }));
-    this.runs.forEach((r) => this.byEl.set(r.m.el, r));
+    this.hero = this.runs.find((r) => r.m.onLoad) ?? this.runs[0] ?? null;
+    for (const r of this.runs) {
+      this.byEl.set(r.m.el, r);
+      for (const t of r.m.tasks) if (t.kind === "frame" || t.kind === "image") this.taskByEl.set(t.el, t);
+    }
+    this.canInspect =
+      p.kind !== "phone" && window.innerWidth >= 1024 && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     this.renderer.prepareChecklist();
     document.addEventListener("focusin", this.onFocus);
+    document.addEventListener("pointerover", this.onPointer, { passive: true });
+    document.addEventListener("keydown", this.onKey);
     document.addEventListener("visibilitychange", this.onVisibility);
     window.addEventListener("resize", this.onResize);
     this.ro = new ResizeObserver(this.onSectionResize);
@@ -163,25 +204,38 @@ export class Director {
       for (const r of this.runs) {
         r.phase = DONE;
         r.m.tasks.forEach((t) => (t.state = TASK_DONE));
+        if (r.m.finale) this.finale(r, true);
       }
       this.o.onBusy(false);
+      this.emitInspect();
       return;
     }
+    this.log.start();
     this.arm(true);
+    this.emitInspect();
   }
 
-  /** Finish every section immediately. */
+  /** Finish every section immediately (and jump the finale to deployed). */
   skip(): void {
     this.runs.forEach((r) => this.finish(r, true));
+    this.finales.slice().forEach((a) => a.progress(1));
+    this.unlight();
+    this.log.restore();
   }
 
   /** Reset every section and rebuild the ones in view; re-arm the rest. */
   replay(): void {
     if (!this.alive) return;
+    this.setInspect(false);
+    this.finales.forEach((a) => a.kill());
+    this.finales = [];
+    this.unlight();
     for (const run of this.runs) {
       this.reset(run);
       run.phase = WAIT;
       run.flushed = false;
+      run.recent = [];
+      run.took = 0;
       for (const t of run.m.tasks) {
         t.state = TASK_PENDING;
         t.agent = -1;
@@ -191,19 +245,36 @@ export class Director {
         }
       }
       run.m.el.removeAttribute("data-built");
+      run.m.el.querySelector("[data-deploy-target]")?.removeAttribute("data-deployed");
     }
     this.marks.forEach((m) => gsap.killTweensOf(m));
     this.marks.length = 0;
     this.fx.forEach((a) => a.kill());
     this.fx = [];
-    this.brains.forEach((b, i) => (b.mode === TRAVEL || b.mode === WORK) && this.release(i));
+    this.summaries = [];
+    this.brains.forEach((b, i) => b.mode !== OFF && b.mode !== EXIT && this.release(i));
     try {
       sessionStorage.removeItem(SESSION_KEY);
     } catch {}
     document.documentElement.dataset.build = "on";
     this.elapsed = 0;
     this.setBusy();
+    this.log.restore();
+    this.log.start();
     this.arm(false);
+    this.emitInspect();
+  }
+
+  /** Inspect mode: hovering/focusing built frames and images shows their real values. */
+  setInspect(on: boolean): void {
+    const next = on && this.canInspect && (!this.hero || this.hero.phase === DONE);
+    if (next === this.inspecting) return;
+    this.inspecting = next;
+    if (next) {
+      this.ensureTicking();
+      this.inspectAt(document.activeElement);
+    } else this.closeInspect();
+    this.emitInspect();
   }
 
   setStatsTarget(el: HTMLElement | null): void {
@@ -218,14 +289,19 @@ export class Director {
     cancelAnimationFrame(this.roFrame);
     this.ro?.disconnect();
     document.removeEventListener("focusin", this.onFocus);
+    document.removeEventListener("pointerover", this.onPointer);
+    document.removeEventListener("keydown", this.onKey);
     document.removeEventListener("visibilitychange", this.onVisibility);
     window.removeEventListener("resize", this.onResize);
     for (const run of this.runs) {
       this.reset(run);
       for (const t of run.m.tasks) [...t.slots, ...t.absorbed].forEach(clearInline);
     }
+    this.finales.forEach((a) => a.kill());
     this.marks.forEach((m) => gsap.killTweensOf(m));
     this.fx.forEach((a) => a.kill());
+    this.unlight();
+    this.log.restore();
     this.renderer.hide();
   }
 
@@ -240,6 +316,8 @@ export class Director {
     run.marks = [];
     run.nodes.forEach((n) => n.remove());
     run.nodes = [];
+    run.undo.forEach((f) => f());
+    run.undo = [];
     run.m.tasks.forEach(clearTint);
   }
 
@@ -248,20 +326,21 @@ export class Director {
     for (const run of this.runs) {
       if (run.phase !== WAIT) continue;
       const r = run.m.el.getBoundingClientRect();
-      if ((initial && run.m.onLoad) || (r.top < this.vh * 0.78 && r.bottom > 0)) this.request(run);
+      const boot = run === this.hero && run.m.onLoad;
+      if ((initial && run.m.onLoad) || (r.top < this.vh * 0.78 && r.bottom > 0)) this.request(run, boot);
       else if (r.bottom <= 0) this.finish(run, true);
       else {
         run.st = ScrollTrigger.create({
           trigger: run.m.el,
           start: "top 78%",
           once: true,
-          onEnter: () => this.request(run),
+          onEnter: () => this.request(run, false),
         });
       }
     }
   }
 
-  private request(run: Run): void {
+  private request(run: Run, boot: boolean): void {
     if (!this.alive || run.phase !== WAIT) return;
     run.st?.kill();
     run.st = null;
@@ -276,7 +355,7 @@ export class Director {
     run.t0 = this.clock;
     run.flushed = false;
     this.estimate(run, open);
-    this.spawn(run, open.length);
+    if (!(boot && this.boot(run))) this.spawn(run, open.length);
     this.ensureTicking();
     const p = this.brains[this.planner];
     const g = m.guides[0];
@@ -351,7 +430,7 @@ export class Director {
       [this.reviewer, vw + 30, edgeY(m.box.y + 40)],
     ] as const) {
       const b = this.brains[i];
-      if (b.mode === TRAVEL || b.mode === WORK) continue;
+      if (b.mode !== OFF && b.mode !== EXIT && b.mode !== IDLE) continue;
       if (b.mode === OFF || far(i)) s.place(i, x, y);
       s.on[i] = 1;
       if (b.mode === OFF || b.mode === EXIT) {
@@ -362,6 +441,68 @@ export class Director {
         s.speed[i] = this.o.profile.speed;
       }
     }
+  }
+
+  /**
+   * Boot from the hero's agent mesh: light [data-swarm-spawn] nodes one by one
+   * and pop each agent out of a node of its role. Desktop only; returns false
+   * (caller falls back to the edge spawn) when no node is visible.
+   */
+  private boot(run: Run): boolean {
+    if (this.o.profile.kind === "phone" || this.vw < 1024) return false;
+    const pts: { el: Element; role: string; x: number; y: number }[] = [];
+    for (const el of Array.from(document.querySelectorAll("[data-swarm-spawn]"))) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      pts.push({ el, role: el.getAttribute("data-swarm-spawn") ?? "", x: r.left + r.width / 2, y: r.top + r.height / 2 + this.sy });
+    }
+    if (!pts.length) return false;
+    pts.sort((a, b) => Number(b.role === "planner") - Number(a.role === "planner"));
+    const step = BOOT_LIGHT / pts.length;
+    const light = gsap.timeline();
+    pts.forEach((p, k) => light.call(() => p.el.setAttribute("data-lit", ""), undefined, k * step));
+    this.lit = pts.map((p) => p.el);
+    this.lightTl = this.anim(null, light);
+    const center = pts.find((p) => p.role === "planner") ?? pts[0];
+    const used = new Map<string, number>();
+    const s = this.sim;
+    this.roles.forEach((role, i) => {
+      const b = this.brains[i];
+      if (b.mode !== OFF && b.mode !== EXIT && b.mode !== IDLE) return;
+      const list = pts.filter((p) => p.role === role);
+      const n = used.get(role) ?? 0;
+      used.set(role, n + 1);
+      const p = list.length ? list[n % list.length] : center;
+      s.place(i, p.x, p.y);
+      s.on[i] = 0;
+      s.tool[i] = TOOL.arrow;
+      s.speed[i] = this.o.profile.speed * run.speedMul;
+      b.mode = SLEEP;
+      b.run = null;
+      b.hx = p.x;
+      b.hy = p.y;
+      b.until = this.clock + pts.indexOf(p) * step + 0.03 + Math.random() * 0.05;
+    });
+    this.wake(this.planner);
+    return true;
+  }
+
+  /** An agent pops out of its node: cursor scales in inside an expanding ring. */
+  private wake(i: number): void {
+    const b = this.brains[i];
+    const s = this.sim;
+    b.mode = IDLE;
+    s.on[i] = 1;
+    s.pop[i] = 0;
+    const ring = this.mark(null, MK.ripple, { x: s.x[i], y: s.y[i], s: 2.2, color: ROLE_COLOR[this.roles[i]] });
+    this.anim(null, gsap.to(ring, { p: 1, duration: 0.5, ease: "power2.out", onComplete: () => void (ring.dead = true) }));
+  }
+
+  private unlight(): void {
+    this.lightTl?.kill();
+    this.lightTl = null;
+    this.lit.forEach((el) => el.removeAttribute("data-lit"));
+    this.lit = [];
   }
 
   private plan(run: Run, i: number): void {
@@ -379,6 +520,7 @@ export class Director {
     guides.forEach((g, gi) => tl.to(g, { p: 1, duration: dur, ease: "power2.out" }, gi * gap));
     tl.to(tag, { a: 1, p: 1, duration: Math.min(0.2, 0.06 * B), ease: "back.out(2)" }, gap);
     tl.call(() => this.beginBuild(run), undefined, tl.duration() * 0.7);
+    this.say(run, i >= 0 ? i : this.planner, `planned ${m.tasks.length} tasks`);
     if (i >= 0) {
       const g = guides[0];
       this.sim.follow[i] = 18;
@@ -426,13 +568,13 @@ export class Director {
     const i = this.reviewer;
     const b = this.brains[i];
     const box = run.m.box;
-    if (b.mode === TRAVEL || b.mode === WORK) return this.inspect(run, -1);
+    if (b.mode !== OFF && b.mode !== IDLE && b.mode !== EXIT) return this.inspect(run, -1);
     const y = clamp(this.sy + 18, box.y + 4, box.y + box.h - 4);
     if (b.mode === OFF) this.sim.place(i, this.vw + 30, y);
     this.send(i, run, box.x + 4, y, Math.min(0.18, 0.04 * run.B), (ai) => this.inspect(run, ai), null);
   }
 
-  /** Reviewer: outline the section, tick a short checklist, then stamp. */
+  /** Reviewer: acks from the last workers, outline, a short checklist, then stamp. */
   private inspect(run: Run, i: number): void {
     if (run.phase !== REVIEW) return this.free(i, run, null);
     const B = run.B;
@@ -446,6 +588,7 @@ export class Director {
     if (i >= 0) {
       this.sim.follow[i] = 20;
       this.sim.tool[i] = TOOL.cross;
+      run.recent.slice(-3).forEach((w, k) => this.packet(run, w, i, k * 0.07, 0.3));
     }
     const n = CHECK.items.length;
     const rowY = () => cy + CHECK.head + Math.min(n - 1, Math.floor(list.u)) * CHECK.row + CHECK.row / 2;
@@ -483,6 +626,7 @@ export class Director {
     this.anim(null, gsap.timeline()
       .to(badge, { a: 1, s: 1, duration: 0.16, ease: "back.out(2.5)" })
       .to(badge, { a: 0, duration: 0.25, delay: 0.55, onComplete: () => void (badge.dead = true) }));
+    this.say(run, i >= 0 ? i : this.reviewer, `approved ${run.m.name}`);
     if (i >= 0 && this.brains[i].run === run) {
       this.release(i);
       this.brains[i].hx = x - 10;
@@ -494,6 +638,10 @@ export class Director {
   /** Completes a section: instantly (skip/focus/resize) or after review. */
   private finish(run: Run, instant: boolean): void {
     if (run.phase === DONE) return;
+    if (!instant) {
+      run.took = this.clock - run.t0;
+      this.summaries.push(run);
+    }
     run.phase = DONE;
     run.st?.kill();
     run.st = null;
@@ -508,14 +656,21 @@ export class Director {
     }
     run.nodes.forEach((n) => n.remove());
     run.nodes = [];
+    run.undo.forEach((f) => f());
+    run.undo = [];
     run.m.el.setAttribute("data-built", "");
     for (const m of run.marks) {
       gsap.killTweensOf(m);
-      if (instant || m.k === MK.ripple || m.k === MK.flash) m.dead = true;
+      if (instant || m.k === MK.ripple || m.k === MK.flash || m.k === MK.packet) m.dead = true;
       else this.anim(null, gsap.to(m, { a: 0, p: m.k === MK.check ? 0 : m.p, duration: 0.3, onComplete: () => void (m.dead = true) }));
     }
     run.marks = [];
     this.brains.forEach((b, i) => b.run === run && (b.mode === TRAVEL || b.mode === WORK) && this.release(i));
+    if (run === this.hero) {
+      this.unlight();
+      this.emitInspect();
+    }
+    if (run.m.finale) this.finale(run, instant);
     this.setBusy();
     if (this.runs.every((r) => r.phase === DONE)) {
       try {
@@ -563,7 +718,34 @@ export class Director {
       t.agent = i;
       const cap = clamp(0.28 * run.scale + 0.04, 0.1, 0.3);
       this.send(i, run, x, y, cap, (ai) => this.work(run, t, ai), t);
+      this.packet(run, this.planner, i, 0, 0.35);
     }
+  }
+
+  /** Handoff packet: a dot with a short trail on a dashed curve between two agents. */
+  private packet(run: Run, from: number, to: number, delay: number, dur: number): void {
+    const s = this.sim;
+    if (this.o.profile.kind === "phone" || from < 0 || to < 0 || !s.on[from] || !s.on[to]) return;
+    const fy = s.y[from] - this.sy;
+    if (fy < 0 || fy > this.vh || s.x[from] < 0 || s.x[from] > this.vw) return;
+    let live = 0;
+    for (const m of this.marks) if (m.k === MK.packet && !m.dead) live++;
+    if (live >= 4) return;
+    const m = this.mark(run, MK.packet, {
+      x: s.x[from], y: s.y[from], x2: s.x[to], y2: s.y[to], u: to % 2 ? 0.2 : -0.2,
+      color: ROLE_COLOR[this.roles[to]],
+    });
+    this.anim(run, gsap.to(m, {
+      p: 1,
+      delay,
+      duration: dur,
+      ease: "power1.inOut",
+      onUpdate: () => {
+        m.x2 = s.x[to];
+        m.y2 = s.y[to];
+      },
+      onComplete: () => void (m.dead = true),
+    }));
   }
 
   private startPoint(run: Run, t: Task): [number, number] {
@@ -590,6 +772,8 @@ export class Director {
       dragTime: this.o.profile.detail.dragTime, layer: this.o.layer,
       mark: (k, p) => this.mark(run, k, p),
       fx: (a) => void this.anim(run, a),
+      log: (what) => this.say(run, i, what),
+      quiet: (sec) => void (this.quietUntil = Math.max(this.quietUntil, this.clock + sec)),
     };
     const master = t.kind === "dup" && t.master >= 0 ? run.m.tasks[t.master].box : null;
     choreograph(ctx, master);
@@ -603,7 +787,174 @@ export class Director {
     t.slots.forEach(markBuilt);
     t.absorbed.forEach(markBuilt);
     clearTint(t);
+    if (i >= 0 && run.phase !== DONE) {
+      run.recent = run.recent.filter((r) => r !== i);
+      run.recent.push(i);
+      if (run.recent.length > 3) run.recent.shift();
+    }
     if (i >= 0 && this.brains[i].task === t) this.release(i);
+  }
+
+  // ----------------------------------------------------------- live log
+
+  /** One live-log line from agent i, timed from the section's start. */
+  private say(run: Run, i: number, what: string, force = false): void {
+    if (!this.log.live || (!force && run.phase === DONE)) return;
+    const who = i >= 0 ? this.o.profile.labels[i] : "swarm";
+    const color = i >= 0 ? ROLE_COLOR[this.roles[i]] : COLORS.accent;
+    const prefix = this.log.inside(run.m.el) ? "" : `${run.m.name} · `;
+    this.log.push(who, color, prefix + what, `${Math.max(0, this.clock - run.t0).toFixed(2)}s`);
+  }
+
+  /** Once everything in view is built: one summary line per finished section. */
+  private summarize(): void {
+    for (const r of this.summaries) {
+      const n = r.m.tasks.length;
+      this.log.push("✓", COLORS.accent, `${r.m.name} · ${n} task${n === 1 ? "" : "s"}`, `${r.took.toFixed(1)}s`);
+    }
+    this.summaries = [];
+  }
+
+  // --------------------------------------------------------- inspect mode
+
+  private emitInspect(): void {
+    this.o.onInspect?.({
+      available: this.canInspect && (!this.hero || this.hero.phase === DONE),
+      on: this.inspecting,
+    });
+  }
+
+  private pickInspector(): number {
+    const free = (k: number) => k >= 0 && [OFF, IDLE, EXIT].includes(this.brains[k].mode);
+    const designers = this.roles.flatMap((r, k) => (r === "designer" ? [k] : []));
+    return [...designers, this.reviewer].find(free) ?? -1;
+  }
+
+  /** Moves the inspect agent, outline and property sheet to a built frame/image. */
+  private inspectAt(target: EventTarget | null): void {
+    if (!this.inspecting || !(target instanceof Element)) return;
+    const el = target.closest<HTMLElement>("[data-build-item][data-built]");
+    if (!el || el === this.inspEl) return;
+    const t = this.taskByEl.get(el);
+    if (!t) return;
+    const i = this.inspAgent >= 0 ? this.inspAgent : this.pickInspector();
+    if (i < 0) return;
+    this.readView();
+    this.inspAgent = i;
+    this.inspEl = el;
+    const r = el.getBoundingClientRect();
+    const box = { x: r.left, y: r.top + this.sy, w: r.width, h: r.height };
+    const props = readProps(el, `${t.label} · ${el.tagName.toLowerCase()}`);
+    const img = this.renderer.propsSprite(props.title, props.rows, props.swatch);
+    let px = box.x + box.w + 14;
+    if (px + PROPS.w > this.vw - 8) px = box.x - 14 - PROPS.w;
+    if (px < 8) px = clamp(box.x + box.w - PROPS.w - 8, 8, this.vw - PROPS.w - 8);
+    const py = clamp(box.y, this.sy + 12, this.sy + this.vh - img.h - 12);
+    this.inspFrame ??= this.mark(null, MK.frame, { ...box, p: 1, a: 0, r: props.radius });
+    this.anim(null, gsap.to(this.inspFrame, { ...box, r: props.radius, a: 1, duration: 0.24, ease: "power2.out", overwrite: true }));
+    if (this.inspPanel) this.inspPanel.img = img;
+    else this.inspPanel = this.mark(null, MK.props, { x: px, y: py, p: 0, img });
+    this.anim(null, gsap.to(this.inspPanel, { x: px, y: py, p: 1, a: 1, duration: 0.24, ease: "power2.out", overwrite: true }));
+    const s = this.sim;
+    const b = this.brains[i];
+    if (b.mode === OFF) s.place(i, box.x + box.w < this.vw / 2 ? -30 : this.vw + 30, box.y);
+    s.on[i] = 1;
+    b.mode = INSPECT;
+    b.run = null;
+    b.task = null;
+    s.follow[i] = 0;
+    s.tool[i] = TOOL.arrow;
+    s.speed[i] = this.o.profile.speed * 0.9;
+    s.tx[i] = box.x + box.w;
+    s.ty[i] = box.y;
+    this.ensureTicking();
+  }
+
+  private closeInspect(): void {
+    for (const m of [this.inspFrame, this.inspPanel]) {
+      if (m) this.anim(null, gsap.to(m, { a: 0, duration: 0.2, overwrite: true, onComplete: () => void (m.dead = true) }));
+    }
+    if (this.inspAgent >= 0 && this.brains[this.inspAgent].mode === INSPECT) this.release(this.inspAgent);
+    this.inspFrame = this.inspPanel = this.inspEl = null;
+    this.inspAgent = -1;
+  }
+
+  // ------------------------------------------------------- deploy finale
+
+  /**
+   * After the finale section's approval: the deployer clicks the deploy target,
+   * a small panel runs build/upload/edge, then the target gets [data-deployed].
+   * Purely additive; instant finishes (and Skip) jump to the deployed state.
+   */
+  private finale(run: Run, instant: boolean): void {
+    const target = run.m.el.querySelector<HTMLElement>("[data-deploy-target]");
+    if (!target || target.hasAttribute("data-deployed")) return;
+    const free = (k: number) => k >= 0 && [OFF, IDLE, EXIT].includes(this.brains[k].mode);
+    let i = this.roles.indexOf("deployer");
+    if (!free(i)) i = this.workers.find(free) ?? -1;
+    if (instant || i < 0) {
+      target.setAttribute("data-deployed", "");
+      return;
+    }
+    this.readView();
+    const phone = this.o.profile.kind === "phone";
+    const text = target.dataset.deployText || "deployed";
+    const r = target.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2 + this.sy;
+    const px = clamp(r.left, 8, this.vw - DEPLOY.w - 8);
+    const py = r.bottom + this.sy + 10;
+    const s = this.sim;
+    const b = this.brains[i];
+    if (b.mode === OFF) s.place(i, clamp(cx + (Math.random() - 0.5) * 240, 20, this.vw - 20), this.sy + this.vh + 30);
+    s.on[i] = 1;
+    b.mode = DEPLOYING;
+    b.run = null;
+    b.task = null;
+    s.follow[i] = 0;
+    s.tool[i] = TOOL.arrow;
+    s.tx[i] = cx;
+    s.ty[i] = cy;
+    const travel = phone ? 0.25 : 0.35;
+    s.speed[i] = Math.max(this.o.profile.speed, (s.dist(i) / travel) * 1.3);
+    const sprites = this.renderer.deploySprites(text);
+    const panel = this.mark(null, MK.deploy, { x: px, y: py, p: 0, u: 0, v: 0, img: sprites[0] });
+    const ripple = this.mark(null, MK.ripple, { x: cx, y: cy, s: 1.4, a: 0 });
+    const tl: gsap.core.Timeline = gsap.timeline({
+      onComplete: () => {
+        this.finales = this.finales.filter((a) => a !== tl);
+        if (b.mode === DEPLOYING) this.release(i);
+      },
+    });
+    tl.to({}, { duration: travel })
+      .call(() => {
+        s.follow[i] = 14;
+        ripple.a = 1;
+      })
+      .to(ripple, { p: 1, duration: 0.35, ease: "power1.out", onComplete: () => void (ripple.dead = true) })
+      .to(panel, { p: 1, duration: 0.14, ease: "power2.out" }, "<")
+      .to(panel, {
+        u: 1,
+        duration: phone ? 0.7 : 1.05,
+        ease: "power1.inOut",
+        onUpdate: () => {
+          const k = Math.min(3, Math.floor(panel.u * 3 + 0.001));
+          if (k !== panel.v) {
+            panel.v = k;
+            panel.img = sprites[k];
+          }
+          s.tx[i] = px + 10 + (DEPLOY.w - 20) * panel.u;
+          s.ty[i] = py + DEPLOY.barY + 2;
+        },
+      })
+      .call(() => {
+        panel.img = sprites[4];
+        target.setAttribute("data-deployed", "");
+        this.say(run, i, `deployed → ${text}`, true);
+      })
+      .to(panel, { a: 0, duration: 0.3, delay: phone ? 0.35 : 0.6, onComplete: () => void (panel.dead = true) });
+    this.finales.push(tl);
+    this.ensureTicking();
   }
 
   // --------------------------------------------------------------- agents
@@ -629,6 +980,11 @@ export class Director {
     const b = this.brains[i];
     const s = this.sim;
     if (b.mode === OFF) return;
+    if (b.mode === SLEEP) {
+      b.mode = OFF;
+      s.on[i] = 0;
+      return;
+    }
     b.mode = IDLE;
     b.task = null;
     b.go = null;
@@ -683,15 +1039,18 @@ export class Director {
     this.clock += dt;
     if (this.busy) this.elapsed += dt;
     this.sy = this.o.getScroll();
-    this.update();
+    this.update(dt);
     const steps = Math.min(4, Math.ceil(dt * 60));
     for (let k = 0; k < steps; k++) this.sim.step(dt / steps);
     this.renderer.draw(this.sim, this.marks, this.sy, this.clock);
     this.writeStats(false);
-    if (!this.busy && !this.marks.length && this.brains.every((b) => b.mode === OFF)) this.stopTicking();
+    if (
+      !this.busy && !this.inspecting && !this.finales.length && !this.marks.length &&
+      this.brains.every((b) => b.mode === OFF)
+    ) this.stopTicking();
   };
 
-  private update(): void {
+  private update(dt: number): void {
     const s = this.sim;
     let oldest: Run | null = null;
     for (const run of this.runs) {
@@ -705,7 +1064,11 @@ export class Director {
     this.claim();
     for (let i = 0; i < s.n; i++) {
       const b = this.brains[i];
-      if (b.mode === TRAVEL) {
+      if (s.pop[i] < 1) s.pop[i] = Math.min(1, s.pop[i] + dt * 3.4);
+      if (b.mode === SLEEP) {
+        if (!this.busy) this.release(i);
+        else if (this.clock >= b.until) this.wake(i);
+      } else if (b.mode === TRAVEL) {
         if (s.dist(i) < 12 || this.clock >= b.until) {
           const go = b.go;
           b.mode = WORK;
@@ -754,6 +1117,7 @@ export class Director {
     if (busy === this.busy) return;
     this.busy = busy;
     if (busy) this.exitDown = null;
+    else this.summarize();
     this.o.onBusy(busy);
     this.writeStats(true);
   }
@@ -805,13 +1169,22 @@ export class Director {
       const run = this.byEl.get(el);
       if (run) this.finish(run, true);
     }
+    this.inspectAt(target);
+  };
+
+  private onPointer = (e: PointerEvent): void => {
+    if (this.inspecting) this.inspectAt(e.target);
+  };
+
+  private onKey = (e: KeyboardEvent): void => {
+    if (e.key === "Escape" && this.inspecting) this.setInspect(false);
   };
 
   private onVisibility = (): void => {
     const hidden = document.visibilityState === "hidden";
     if (hidden === this.hidden) return;
     this.hidden = hidden;
-    const all = this.runs.flatMap((r) => r.anims).concat(this.fx);
+    const all = this.runs.flatMap((r) => r.anims).concat(this.fx, this.finales);
     all.forEach((a) => (hidden ? a.pause() : a.resume()));
     if (!this.ticking) return;
     if (hidden) gsap.ticker.remove(this.tick);
@@ -832,7 +1205,10 @@ export class Director {
     if (!changed || this.roFrame) return;
     this.roFrame = requestAnimationFrame(() => {
       this.roFrame = 0;
-      for (const run of this.runs) if (run.phase >= PLAN && run.phase <= REVIEW) this.finish(run, true);
+      // A weight sweep reflows its own text; don't treat that as a layout change.
+      if (this.clock >= this.quietUntil) {
+        for (const run of this.runs) if (run.phase >= PLAN && run.phase <= REVIEW) this.finish(run, true);
+      }
       ScrollTrigger.refresh();
     });
   };

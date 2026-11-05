@@ -22,7 +22,7 @@ export function SectionHeader({
   id: string;
   index: string;
   label: string;
-  title: string;
+  title: ReactNode;
   children?: ReactNode;
 }) {
   return (

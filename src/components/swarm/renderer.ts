@@ -5,9 +5,9 @@ import { COLORS, monoFamily } from "./palette";
 import type { Sim } from "./sim";
 import { MK, type Mark, type Sprite } from "./types";
 import {
-  CARD_PAD, CHECK, DROP, GLYPH_HOT, GLYPH_SIZE, INSP, TOOLBAR, WHEEL,
-  CHECK_H, INSP_H, dropH, paintCard, paintChecklist, paintDropdown, paintGlyph,
-  paintInspector, paintToolbar, paintWheel, roundRect,
+  CARD_PAD, CHECK, DEPLOY, DROP, GLYPH_HOT, GLYPH_SIZE, INSP, PROPS, TOOLBAR, WHEEL,
+  CHECK_H, INSP_H, dropH, paintCard, paintChecklist, paintDeploy, paintDropdown, paintGlyph,
+  paintInspector, paintProps, paintToolbar, paintWheel, propsH, roundRect,
 } from "./widgets";
 
 type PillStyle = "tag" | "plan" | "badge";
@@ -20,6 +20,8 @@ const TAU = Math.PI * 2;
 const NUM = Array.from({ length: 256 }, (_, i) => String(i));
 const HUE = Array.from({ length: 360 }, (_, h) => `hsl(${h},100%,50%)`);
 const CARD_MAX = 420;
+/** Ease-out with a small overshoot, for the spawn pop. */
+const backOut = (t: number) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2;
 
 export class Renderer {
   private readonly canvas: HTMLCanvasElement;
@@ -89,7 +91,21 @@ export class Renderer {
     return { w: s.w, h: s.h };
   }
 
-  /** Font menu sprite: rows, with a check on the given row. */
+  /** Inspect-mode property sheet (cached per element signature). */
+  propsSprite(title: string, rows: [string, string][], swatch: string | null): Sprite {
+    const key = `props|${title}|${swatch}|${rows.map((r) => r.join(":")).join("|")}`;
+    return this.cached(key, PROPS.w, propsH(rows.length), (g) => paintProps(g, this.family, title, rows, swatch));
+  }
+
+  /** Deploy panel states: 0..3 steps done, then the final line. */
+  deploySprites(final: string): Sprite[] {
+    const out: Sprite[] = [];
+    for (let k = 0; k <= 3; k++) out.push(this.cached(`deploy|${k}`, DEPLOY.w, DEPLOY.h, (g) => paintDeploy(g, this.family, k, null)));
+    out.push(this.cached(`deploy|f|${final}`, DEPLOY.w, DEPLOY.h, (g) => paintDeploy(g, this.family, 3, final)));
+    return out;
+  }
+
+  /** Font menu sprite: rows, with checks on the rows in the bit mask. */
   dropSprite(rows: string[], checked: number): Sprite {
     return this.cached(`drop|${checked}|${rows.join("|")}`, DROP.w, dropH(rows.length), (g) =>
       paintDropdown(g, this.family, rows, checked),
@@ -140,8 +156,9 @@ export class Renderer {
       if (m.dead) continue;
       marks[keep++] = m;
       if (m.a <= 0.003) continue;
-      const alt = m.k === MK.guide || m.k === MK.ghost ? m.y2 : m.y;
-      const altB = m.k === MK.guide ? m.y2 : m.k === MK.ghost ? m.y2 + m.h2 : m.y;
+      const far = m.k === MK.guide || m.k === MK.ghost || m.k === MK.packet;
+      const alt = far ? m.y2 : m.y;
+      const altB = m.k === MK.ghost ? m.y2 + m.h2 : alt;
       if (Math.max(m.y + m.h + 130, altB) < top || Math.min(m.y - 130, alt) > bottom) continue;
       this.mark(m, top, bottom, now);
     }
@@ -156,9 +173,11 @@ export class Renderer {
       const tool = sim.tool[i];
       const hot = GLYPH_HOT[tool] ?? GLYPH_HOT[0];
       const gl = this.glyph(i, tool);
-      ctx.drawImage(gl.c, x - hot[0], y - hot[1], gl.w, gl.h);
       const nm = this.name(i);
-      ctx.drawImage(nm.c, x + 12, y + 14, nm.w, nm.h);
+      const k = sim.pop[i] < 1 ? backOut(sim.pop[i]) : 1;
+      if (k <= 0.01) continue;
+      ctx.drawImage(gl.c, x - hot[0] * k, y - hot[1] * k, gl.w * k, gl.h * k);
+      ctx.drawImage(nm.c, x + 12 * k, y + 14 * k, nm.w * k, nm.h * k);
       if (sim.flag[i] & 1) {
         // "copy" marker while alt-dragging a duplicate
         ctx.fillStyle = COLORS.accent;
@@ -394,9 +413,46 @@ export class Renderer {
         ctx.globalAlpha = m.a * (1 - m.p);
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(m.x, m.y, 3 + 13 * m.p, 0, TAU);
+        ctx.arc(m.x, m.y, (3 + 13 * m.p) * m.s, 0, TAU);
         ctx.stroke();
         break;
+      case MK.packet: {
+        // Dashed quadratic route, a dot travelling along it and a short fading trail.
+        const qx = (m.x + m.x2) / 2 + (m.y2 - m.y) * m.u;
+        const qy = (m.y + m.y2) / 2 - (m.x2 - m.x) * m.u;
+        ctx.globalAlpha = m.a * 0.4 * (1 - m.p * 0.7);
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.quadraticCurveTo(qx, qy, m.x2, m.y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        for (let k = 4; k >= 0; k--) {
+          const q = m.p - k * 0.05;
+          if (q < 0) continue;
+          const n = 1 - q;
+          ctx.globalAlpha = m.a * (1 - k / 5);
+          ctx.beginPath();
+          ctx.arc(n * n * m.x + 2 * n * q * qx + q * q * m.x2, n * n * m.y + 2 * n * q * qy + q * q * m.y2, k ? 2.4 - k * 0.35 : 3.2, 0, TAU);
+          ctx.fill();
+        }
+        break;
+      }
+      case MK.props: {
+        if (!m.img) break;
+        ctx.globalAlpha = m.a * m.p;
+        this.blit(m.img, m.x, m.y + (1 - m.p) * 6);
+        break;
+      }
+      case MK.deploy: {
+        if (!m.img) break;
+        const oy = m.y + (1 - m.p) * 6;
+        ctx.globalAlpha = m.a * m.p;
+        this.blit(m.img, m.x, oy);
+        ctx.fillStyle = COLORS.accent;
+        ctx.fillRect(m.x + 10, oy + DEPLOY.barY, (DEPLOY.w - 20) * m.u, 3);
+        break;
+      }
       case MK.flash:
         ctx.globalAlpha = m.a * 0.12;
         ctx.fillRect(m.x, m.y, m.w, m.h);

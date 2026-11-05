@@ -8,7 +8,11 @@ export function Contact() {
   return (
     <section id="contact" className="border-t border-[color:var(--bp-line)]">
       <WordBand />
-      <div data-build-section="contact" className="bp-container pb-24 pt-16 md:pb-32">
+      <div
+        data-build-section="contact"
+        data-build-finale
+        className="bp-container pb-24 pt-16 md:pb-32"
+      >
         <SectionNumeral value="05" />
         <p data-build-item data-build="type" className="bp-eyebrow">
           05 — contact
@@ -17,9 +21,11 @@ export function Contact() {
           data-build-item
           data-build="type"
           data-build-font
+          data-build-weight
           className="bp-h1 mt-6 max-w-4xl text-[clamp(2.2rem,6vw,4.5rem)]"
         >
-          Let&apos;s build the next system together.
+          Let&apos;s build the next <em className="bp-serif">system</em>{" "}
+          together.
         </h2>
         <p
           data-build-item
@@ -36,6 +42,8 @@ export function Contact() {
           data-build="frame"
           data-build-color="fill"
           data-build-label="a.email"
+          data-deploy-target
+          data-deploy-text="live at lamanhtruong.com"
           href={`mailto:${profile.email}`}
           className="bp-btn bp-btn-primary mt-8 h-12 px-5 text-base"
         >

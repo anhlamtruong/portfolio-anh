@@ -16,6 +16,10 @@ export const TOOLBAR = { w: 72, h: 24, icon: 22 } as const;
 export const WHEEL = { w: 96, h: 116, cx: 48, cy: 48, ro: 40, ri: 30, sq: 36 } as const;
 export const CHECK = { w: 112, head: 16, row: 16, pad: 6, items: ["layout", "type", "color", "a11y"] } as const;
 export const CHECK_H = CHECK.head + CHECK.items.length * CHECK.row + CHECK.pad;
+export const PROPS = { w: 196, head: 18, row: 16, pad: 6, valueX: 66 } as const;
+export const propsH = (rows: number) => PROPS.head + rows * PROPS.row + PROPS.pad;
+export const DEPLOY = { w: 220, h: 60, barY: 46 } as const;
+export const DEPLOY_STEPS = ["build", "upload", "edge"] as const;
 /** Shadow margin baked around dragged image cards. */
 export const CARD_PAD = 18;
 /** Hotspot of each cursor glyph inside its 26 px sprite. */
@@ -161,13 +165,54 @@ export function paintGlyph(g: G, tool: number, color: string): void {
   }
 }
 
+/** Font menu; `checked` is a bit mask of checked rows. */
 export function paintDropdown(g: G, family: string, rows: string[], checked: number): void {
   panel(g, DROP.w, dropH(rows.length));
   rows.forEach((s, k) => {
     const y = DROP.pad + k * DROP.row + DROP.row / 2 + 0.5;
-    text(g, family, 10, k === checked ? COLORS.text : COLORS.muted, s, 10, y);
-    if (k === checked) text(g, family, 10, COLORS.accent, "✓", DROP.w - 18, y);
+    const on = (checked >> k) & 1;
+    text(g, family, 10, on ? COLORS.text : COLORS.muted, s, 10, y);
+    if (on) text(g, family, 10, COLORS.accent, "✓", DROP.w - 18, y);
   });
+}
+
+/** Inspect-mode property sheet: rows of [label, value]; optional fill swatch. */
+export function paintProps(g: G, family: string, title: string, rows: [string, string][], swatch: string | null): void {
+  const h = propsH(rows.length);
+  panel(g, PROPS.w, h);
+  text(g, family, 9, COLORS.dim, title, 10, PROPS.head / 2 + 1);
+  g.fillStyle = COLORS.line;
+  g.fillRect(1, PROPS.head, PROPS.w - 2, 1);
+  rows.forEach(([k, v], i) => {
+    const y = PROPS.head + i * PROPS.row + PROPS.row / 2 + 0.5;
+    text(g, family, 10, COLORS.dim, k, 10, y);
+    let x = PROPS.valueX;
+    if (k === "fill" && swatch) {
+      g.fillStyle = swatch;
+      g.fillRect(x, y - 4.5, 9, 9);
+      g.strokeStyle = COLORS.lineStrong;
+      g.strokeRect(x + 0.5, y - 4, 8, 8);
+      x += 14;
+    }
+    text(g, family, 10, COLORS.text, v, x, y);
+  });
+}
+
+/** Deploy panel: steps checked so far (0..3), or the final line. */
+export function paintDeploy(g: G, family: string, done: number, final: string | null): void {
+  panel(g, DEPLOY.w, DEPLOY.h);
+  text(g, family, 9, COLORS.dim, "deploy · production", 10, 11);
+  if (final) text(g, family, 10, COLORS.accent, `✓ ${final}`, 10, 29);
+  else {
+    let x = 10;
+    DEPLOY_STEPS.forEach((s, k) => {
+      const ok = k < done;
+      text(g, family, 10, ok ? COLORS.text : COLORS.dim, `${s} ${ok ? "✓" : "·"}`, x, 29);
+      x += g.measureText(`${s} ✓`).width + 12;
+    });
+  }
+  g.fillStyle = COLORS.lineStrong;
+  g.fillRect(10, DEPLOY.barY, DEPLOY.w - 20, 3);
 }
 
 export function paintInspector(g: G, family: string, title: string): void {
