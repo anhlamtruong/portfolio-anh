@@ -2,8 +2,8 @@
 // An agent with follow > 0 is "gripping" something (a frame corner, a caret)
 // and tracks its target with exponential smoothing instead of steering.
 
-const GAIN = 9; // how fast velocity converges on the desired velocity (1/s)
-const MAX_ACC = 16000; // px/s^2
+const GAIN = 9; // how fast velocity converges on the desired velocity (1/s), at accel 1
+const MAX_ACC = 16000; // px/s^2, at accel 1
 const SEP = 30; // personal space radius, px
 const SEP_K = 260; // separation strength, (px/s^2) per px of overlap
 
@@ -26,8 +26,13 @@ export class Sim {
   /** Spawn pop 0..1 (cursor scales in); 1 when settled. */
   readonly pop: Float32Array;
 
-  constructor(n: number) {
+  private readonly gain: number;
+  private readonly maxAcc: number;
+
+  constructor(n: number, accel = 1) {
     this.n = n;
+    this.gain = GAIN * accel;
+    this.maxAcc = MAX_ACC * accel;
     const f = () => new Float32Array(n);
     this.x = f();
     this.y = f();
@@ -73,8 +78,8 @@ export class Sim {
       const dy = ty[i] - y[i];
       const d = Math.hypot(dx, dy);
       const want = d > 0.5 ? (d < slow ? (max * d) / slow : max) / d : 0;
-      let ax = (dx * want - vx[i]) * GAIN;
-      let ay = (dy * want - vy[i]) * GAIN;
+      let ax = (dx * want - vx[i]) * this.gain;
+      let ay = (dy * want - vy[i]) * this.gain;
       for (let j = 0; j < n; j++) {
         if (j === i || !on[j]) continue;
         const sx = x[i] - x[j];
@@ -87,9 +92,9 @@ export class Sim {
         ay += sy * push;
       }
       const a = Math.hypot(ax, ay);
-      if (a > MAX_ACC) {
-        ax *= MAX_ACC / a;
-        ay *= MAX_ACC / a;
+      if (a > this.maxAcc) {
+        ax *= this.maxAcc / a;
+        ay *= this.maxAcc / a;
       }
       vx[i] += ax * dt;
       vy[i] += ay * dt;

@@ -18,6 +18,7 @@ export class LiveLog {
   private readonly max: number;
   private fallback: Node[] | null = null;
   private aria: string | null = null;
+  private contain = "";
   private queue: Line[] = [];
   private timer = 0;
   live = false;
@@ -39,15 +40,19 @@ export class LiveLog {
     if (!this.fallback) {
       this.fallback = Array.from(el.childNodes);
       this.aria = el.getAttribute("aria-hidden");
+      this.contain = el.style.getPropertyValue("contain");
     }
     el.replaceChildren();
     el.setAttribute("aria-hidden", "true");
+    // Live lines must never widen the layout (a grid track sized by a long
+    // line would reflow the hero and every section below it).
+    el.style.setProperty("contain", "inline-size");
     this.live = true;
   }
 
   push(who: string, color: string, what: string, t: string): void {
     if (!this.live) return;
-    this.queue.push([who, color, what, t]);
+    this.queue.push([who, color, what.length > 56 ? what.slice(0, 55) + "…" : what, t]);
     if (this.queue.length > this.max) this.queue.splice(0, this.queue.length - this.max);
     if (!this.timer) this.timer = window.setTimeout(this.flush, 100);
   }
@@ -80,6 +85,9 @@ export class LiveLog {
     el.replaceChildren(...(this.fallback ?? []));
     if (this.aria === null) el.removeAttribute("aria-hidden");
     else el.setAttribute("aria-hidden", this.aria);
+    if (this.contain) el.style.setProperty("contain", this.contain);
+    else el.style.removeProperty("contain");
+    if (el.getAttribute("style") === "") el.removeAttribute("style");
     this.live = false;
   }
 }

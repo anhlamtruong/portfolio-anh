@@ -63,6 +63,14 @@ export interface Task {
   fontName2: string;
   /** Name used in the live log (data-build-label, image file name, or tag). */
   logName: string;
+  /** Other tasks wait for this one (keeps its choreography short). */
+  lead: boolean;
+  /** The running timeline (for pacing). */
+  tl: gsap.core.Timeline | null;
+  /** Visible and ready for the items nested in it (may precede the end of its timeline). */
+  ready: boolean;
+  /** Planned seconds at the section's scale (longest-first claiming). */
+  est: number;
   tune: boolean;
   inspect: boolean;
   drag: boolean;
@@ -208,6 +216,8 @@ export interface Profile {
   labels: string[];
   /** Base cruise speed in px/s. */
   speed: number;
+  /** Steering acceleration multiplier. */
+  accel: number;
   detail: Detail;
 }
 
@@ -226,13 +236,18 @@ export interface Run {
   speedMul: number;
   joinGate: number;
   stagger: number;
-  flushed: boolean;
+  /** Catch-up speed (1 = planned pace), ramped smoothly when running late. */
+  catchUp: number;
+  /** Target of the current catch-up ramp, its tween, and the factor applied to running work. */
+  cuTarget: number;
+  cuTween: Anim | null;
+  cuApplied: number;
+  /** Task timelines and their effects: these follow catchUp. */
+  work: Anim[];
   marks: Mark[];
   anims: Anim[];
   /** Temporary DOM (draft-font clones) to remove when the section ends. */
   nodes: HTMLElement[];
-  /** Restores temporary inline styles (e.g. a weight sweep) if cut short. */
-  undo: (() => void)[];
   /** Agents that finished tasks most recently (for the review acks). */
   recent: number[];
   /** Seconds from start to approval (0 if finished instantly). */

@@ -2,6 +2,11 @@
 // marks, the agent's aim and cursor tool, and the element's temporary inline
 // styles (opacity, clip-path, filter, neutral tint). No React, no layout writes
 // beyond the draft-font overlay, which lives outside the page flow.
+//
+// Every duration comes from the T table through D(), which enforces a floor
+// so that even at the maximum catch-up speed nothing pops: tweens stay
+// >= ~120 ms and typing steps >= 16 ms. taskTime() mirrors the timelines for
+// the planner's estimate.
 import { gsap } from "gsap";
 import { COLORS } from "./palette";
 import type { Renderer } from "./renderer";
@@ -14,8 +19,29 @@ export const EMPTY_CLIP = "polygon(0 0, 0 0, 0 0)";
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const DRAFT_COPY = [
   "font-size", "font-weight", "font-style", "letter-spacing", "word-spacing", "text-transform",
-  "text-align", "text-indent", "font-kerning", "font-feature-settings", "white-space",
+  "text-align", "text-indent", "font-kerning", "font-feature-settings", "font-variation-settings",
+  "font-optical-sizing", "white-space", "text-wrap",
 ];
+
+/** Highest catch-up speed a section may ramp to. */
+export const CU_MAX = 1.7;
+/** Shortest base tween, so it stays >= 120 ms even at CU_MAX. */
+export const MIN_T = 0.12 * CU_MAX;
+/** Shortest base time per typed character (>= 16 ms at CU_MAX). */
+export const MIN_CHAR = 0.016 * CU_MAX;
+
+/** Base durations (s) at scale 1, shared by the timelines and taskTime(). */
+export const T = {
+  frameDraw: 0.42, frameFade: 0.24, dim: 0.15,
+  panelOpen: 0.14, knobReach: 0.15, knobDrag: 0.32, barOpen: 0.1, barReach: 0.16, barHold: 0.1, panelClose: 0.12,
+  boxFade: 0.12, pause: 0.22, menuOpen: 0.14, menuHover: 0.2, menuClose: 0.12, menuHold: 0.1,
+  morph: 0.36, toFace: 0.3, sweep: 0.55, toReal: 0.22,
+  scanOutline: 0.28, scanPass: 0.4, scanFade: 0.12,
+  grab: 0.1, drag: 0.6, over: 0.09, settle: 0.14, cardFade: 0.24,
+  ghost: 0.36, ghostGap: 0.06, slotFade: 0.16, ghostFade: 0.14,
+  wheelOpen: 0.14, ring: 0.42, square: 0.26, readout: 0.12, tint: 0.34,
+  wheelClose: 0.12, wheelHold: 0.08,
+} as const;
 
 /** Everything a task timeline needs, bound to one run, task and agent. */
 export interface Ctx {
@@ -38,11 +64,13 @@ export interface Ctx {
   fx(a: Anim): void;
   /** Live-log line from this agent, timed from the section start. */
   log(what: string): void;
-  /** Ignore section resizes for a while (a weight sweep reflows text). */
-  quiet(seconds: number): void;
 }
 
 // ------------------------------------------------------------------ helpers
+
+const D = (c: Ctx, x: number) => Math.max(MIN_T, x * c.s);
+const typeDur = (n: number, s: number) => Math.max(MIN_T, n * MIN_CHAR, clamp(n * 0.032, 0.2, 0.8) * s);
+const revealDur = (n: number, s: number) => Math.max(MIN_T, clamp(n * 0.09, 0.28, 0.7) * s);
 
 function aim(c: Ctx, x: number, y: number): void {
   c.sim.tx[c.i] = x;
@@ -55,7 +83,7 @@ function tool(c: Ctx, t: number, follow: number): void {
 }
 
 function wait(c: Ctx, d: number): void {
-  c.tl.to({}, { duration: d });
+  c.tl.to({}, { duration: D(c, d) });
 }
 
 /** Moves the agent to (x, y) as one step of the timeline. */
@@ -131,6 +159,55 @@ export function edgePoint(t: Task, sy: number, vw: number, vh: number): [number,
   return e === "left" ? [10, y] : e === "right" ? [vw - 10, y] : e === "top" ? [x, sy + 10] : [x, sy + vh - 10];
 }
 
+/** Knobs the inspector drags: radius and/or padding (one on cards others wait for). */
+function knobs(t: Task): { r: boolean; p: boolean } {
+  const r = t.radius >= 1;
+  const p = Math.max(...t.pad) >= 1 && !(t.lead && r);
+  return { r, p };
+}
+
+const hasBar = (t: Task, phone: boolean) => t.align >= 0 && t.box.w >= 560 && !phone && !t.lead;
+
+/** Expected seconds for a task at duration scale s (mirrors the timelines below). */
+export function taskTime(t: Task, s: number, dragTime: number): number {
+  const d = (x: number) => Math.max(MIN_T, x * s);
+  switch (t.kind) {
+    case "frame": {
+      let v = d(T.frameDraw) + d(T.frameFade) * 0.6;
+      if (t.inspect) {
+        const k = knobs(t);
+        const n = Number(k.r) + Number(k.p) || 1;
+        v += d(T.panelOpen) + n * d(T.knobDrag) + (n - 1) * d(T.knobReach) + d(T.panelClose) + d(T.frameFade) * 0.4;
+        if (hasBar(t, false)) v += d(T.barOpen) + d(T.barReach) + d(T.barHold);
+      }
+      return v;
+    }
+    case "image": {
+      if (!t.drag) return d(T.scanOutline) + d(T.scanPass) + d(T.scanFade);
+      const e = (x: number) => Math.max(MIN_T, x * s * dragTime);
+      return e(T.grab) + e(T.drag) + e(T.over) + e(T.settle) + e(T.cardFade);
+    }
+    case "type": {
+      let v = typeDur(t.chars.length, s);
+      if (t.font) {
+        v += d(T.pause) + d(T.menuOpen) + d(T.menuHover) + T.menuHold * s;
+        if (t.fontName2) v += d(T.menuHover);
+        v += t.sweep ? d(T.toFace) + Math.max(MIN_T, T.sweep * Math.max(0.7, s)) + d(T.toReal) : d(T.morph);
+      }
+      return v;
+    }
+    case "reveal":
+      return revealDur(t.lines.length, s);
+    case "color":
+      return d(T.wheelOpen) + d(T.ring) + d(T.square) + Math.max(d(T.readout), d(T.tint)) + d(T.wheelClose) +
+        T.wheelHold * s;
+    default: {
+      const n = t.slots.length;
+      return Math.min(T.ghostGap, 0.3 / n) * s * (n - 1) + d(T.ghost);
+    }
+  }
+}
+
 /** Typing/reveal driver: advances a staircase clip on `target` behind a caret. */
 function typer(c: Ctx, target: HTMLElement | null, lines: LineBox[], chars: CharBox[], typing: boolean, b: Box, caret: Mark): void {
   const n = typing ? chars.length : lines.length;
@@ -163,87 +240,99 @@ function typer(c: Ctx, target: HTMLElement | null, lines: LineBox[], chars: Char
   paint();
   c.tl.to(st, {
     v: typing ? n : 1,
-    duration: (typing ? clamp(n * 0.032, 0.2, 0.8) : clamp(n * 0.09, 0.28, 0.7)) * c.s,
+    duration: typing ? typeDur(n, c.s) : revealDur(n, c.s),
     ease: typing ? "none" : "power1.inOut",
     onUpdate: paint,
+    data: typing ? n : 0,
   });
 }
 
 // -------------------------------------------------------------------- tasks
 
 function frame(c: Ctx): void {
-  const { t, tl, s } = c;
+  const { t, tl } = c;
   const b = t.box;
   const f = c.mark(MK.frame, {
     x: b.x, y: b.y, w: b.w, h: b.h, label: t.label, r: t.inspect ? 0 : t.radius,
     x2: t.pad[0], y2: t.pad[1], w2: t.pad[2], h2: t.pad[3],
   });
   tool(c, TOOL.cross, 30);
-  tl.to(f, { p: 1, duration: 0.42 * s, ease: "power2.inOut", onUpdate: () => aim(c, b.x + b.w * f.p, b.y + b.h * f.p) });
-  if (t.inspect) inspector(c, f);
-  if (!t.keep) tl.fromTo(t.el, { opacity: 0 }, { opacity: 1, duration: 0.24 * s, ease: "power1.out" }, t.inspect ? ">" : `-=${0.1 * s}`);
-  tl.to(f, { a: 0.35, duration: 0.15 * s }, "<");
+  tl.to(f, { p: 1, duration: D(c, T.frameDraw), ease: "power2.inOut", onUpdate: () => aim(c, b.x + b.w * f.p, b.y + b.h * f.p) });
+  const fade = D(c, T.frameFade);
+  // A tuned card others wait for appears first and is tuned while visible,
+  // so the items inside it can start; other tuned cards appear after tuning.
+  const early = t.inspect && t.lead;
+  if (t.inspect && !early) inspector(c, f);
+  if (!t.keep) tl.fromTo(t.el, { opacity: 0 }, { opacity: 1, duration: fade, ease: "power1.out" }, t.inspect && !early ? ">" : `-=${fade * 0.4}`);
+  if (early) {
+    tl.call(() => void (t.ready = true));
+    inspector(c, f);
+  }
+  tl.to(f, { a: 0.35, duration: D(c, T.dim) }, early ? ">" : "<");
 }
 
 /** Inspector panel: drag radius/padding knobs; the outline follows. */
 function inspector(c: Ctx, f: Mark): void {
-  const { t, tl, s } = c;
+  const { t, tl } = c;
   const b = t.box;
   const [px, py] = dock(c, b, INSP.w, INSP_H);
   const padMax = Math.max(...t.pad);
-  const hasR = t.radius >= 1;
-  const hasP = padMax >= 1;
+  const k = knobs(t);
   const rMax = Math.max(16, Math.ceil((t.radius * 1.6) / 4) * 4);
   const pMax = Math.max(24, Math.ceil((padMax * 1.6) / 4) * 4);
   const panel = c.mark(MK.inspector, {
-    x: px, y: py, p: 0, u: 0, v: 0, s: hasR || hasP ? 1 : 0, w2: rMax, h2: pMax, label: t.label,
+    x: px, y: py, p: 0, u: 0, v: k.p ? 0 : padMax / pMax, s: k.r || k.p ? 1 : 0, w2: rMax, h2: pMax, label: t.label,
     img: c.r.inspectorSprite(t.label),
   });
-  tl.to(panel, { p: 1, duration: 0.14 * s, ease: "power2.out" });
-  const rowY = (k: number) => py + INSP.head + k * INSP.row + INSP.row / 2;
+  tl.to(panel, { p: 1, duration: D(c, T.panelOpen), ease: "power2.out" });
+  const rowY = (row: number) => py + INSP.head + row * INSP.row + INSP.row / 2;
   const knobX = (q: number) => px + INSP.trackX + q * INSP.trackW;
-  const slide = (k: number, key: "u" | "v" | "s", to: number, apply: (q: number) => void) => {
-    step(c, knobX(panel[key]), rowY(k), 0.15 * s);
+  let first = true;
+  const slide = (row: number, key: "u" | "v" | "s", to: number, apply: (q: number) => void) => {
+    // The first knob is reached while the panel opens; later ones need a move.
+    if (first) tl.call(() => aim(c, knobX(panel[key]), rowY(row)), undefined, "<");
+    else step(c, knobX(panel[key]), rowY(row), T.knobReach);
+    first = false;
     tl.call(() => {
       tool(c, TOOL.slide, 34);
-      click(c, knobX(panel[key]), rowY(k));
+      click(c, knobX(panel[key]), rowY(row));
     });
     tl.to(panel, {
       [key]: to,
-      duration: 0.34 * s,
+      duration: D(c, T.knobDrag),
       ease: "power2.inOut",
       onUpdate: () => {
-        aim(c, knobX(panel[key]), rowY(k));
+        aim(c, knobX(panel[key]), rowY(row));
         apply(to > 0 ? panel[key] / to : 1);
       },
     });
   };
-  if (hasR) slide(0, "u", t.radius / rMax, (q) => (f.r = t.radius * q));
-  if (hasP) slide(1, "v", padMax / pMax, (q) => (f.u = q));
-  if (!hasR && !hasP) slide(2, "s", 1, () => undefined);
+  if (k.r) slide(0, "u", t.radius / rMax, (q) => (f.r = t.radius * q));
+  if (k.p) slide(1, "v", padMax / pMax, (q) => (f.u = q));
+  if (!k.r && !k.p) slide(2, "s", 1, () => undefined);
   let bar: Mark | null = null;
-  if (t.align >= 0 && b.w >= 560 && !c.phone) {
-    // Wide frames: a tiny alignment toolbar under (or above) the panel.
+  if (hasBar(t, c.phone)) {
+    // Wide leaf frames: a tiny alignment toolbar under (or above) the panel.
     const below = py + INSP_H + 6;
     const ty = below + TOOLBAR.h < c.sy + c.vh - 8 ? below : py - TOOLBAR.h - 6;
     bar = c.mark(MK.toolbar, { x: px, y: ty, p: 0, u: -1, img: c.r.toolbarSprite() });
     const ix = px + 3 + t.align * TOOLBAR.icon + TOOLBAR.icon / 2;
     const iy = ty + TOOLBAR.h / 2;
-    tl.to(bar, { p: 1, duration: 0.1 * s });
-    step(c, ix, iy, 0.16 * s);
+    tl.to(bar, { p: 1, duration: D(c, T.barOpen) });
+    step(c, ix, iy, T.barReach);
     const tb = bar;
     tl.call(() => {
       click(c, ix, iy);
       tb.u = t.align;
     });
-    wait(c, 0.1 * s);
+    wait(c, T.barHold);
   }
   tl.call(() => tool(c, TOOL.arrow, 18));
-  tl.to(bar ? [panel, bar] : panel, { p: 0, duration: 0.12 * s, ease: "power1.in" });
+  tl.to(bar ? [panel, bar] : panel, { p: 0, duration: D(c, T.panelClose), ease: "power1.in" });
 }
 
 function typeText(c: Ctx): void {
-  const { t, tl, s } = c;
+  const { t, tl } = c;
   const typing = t.kind === "type";
   const caret = c.mark(MK.caret, { color: c.color });
   const box = typing ? c.mark(MK.box, { ...textBox(t.box, t.lines), label: t.label, a: 0.5, p: 1 }) : null;
@@ -255,11 +344,21 @@ function typeText(c: Ctx): void {
   }
   tool(c, TOOL.beam, typing ? 28 : 14);
   typer(c, target, t.lines, t.chars, typing, t.box, caret);
-  tl.to(box ? [caret, box] : caret, { a: 0, duration: 0.12 * s });
+  // The caret and box fade on their own, so the agent is free as soon as the text is in.
+  tl.call(() => fade(c, box ? [caret, box] : [caret], D(c, T.boxFade)));
 }
 
-/** Clone of the element's text in the draft face, laid over its box (outside the flow). */
-function makeDraft(c: Ctx): { node: HTMLElement; chars: CharBox[]; lines: LineBox[] } | null {
+/** Fire-and-forget fade of canvas marks (follows catch-up; never holds the agent). */
+function fade(c: Ctx, marks: Mark[], d: number): void {
+  c.fx(gsap.to(marks, { a: 0, duration: d, ease: "power1.out" }));
+}
+
+/**
+ * Clone of the element's text laid over its box, outside the page flow.
+ * Draft: mono, muted, shrunk to fit. Face: the real family and color, with
+ * nested elements keeping their own faces (used for the weight sweep).
+ */
+function makeClone(c: Ctx, face: boolean): { node: HTMLElement; chars: CharBox[]; lines: LineBox[] } | null {
   const { t, layer } = c;
   if (!layer) return null;
   const el = t.el;
@@ -267,7 +366,7 @@ function makeDraft(c: Ctx): { node: HTMLElement; chars: CharBox[]; lines: LineBo
   const cs = getComputedStyle(el);
   const lr = layer.getBoundingClientRect();
   const node = document.createElement("div");
-  node.className = "swarm-draft";
+  node.className = face ? "swarm-draft swarm-draft--face" : "swarm-draft";
   node.setAttribute("aria-hidden", "true");
   node.setAttribute("inert", "");
   const st = node.style;
@@ -282,10 +381,16 @@ function makeDraft(c: Ctx): { node: HTMLElement; chars: CharBox[]; lines: LineBo
   for (const side of ["Top", "Right", "Bottom", "Left"] as const) {
     st.setProperty(`padding-${side.toLowerCase()}`, `${px(cs[`padding${side}`]) + px(cs[`border${side}Width`])}px`);
   }
-  st.color = cs.getPropertyValue("--bp-muted").trim() || COLORS.muted;
+  if (face) {
+    st.fontFamily = cs.fontFamily;
+    st.color = cs.color;
+    st.fontWeight = "250";
+    st.opacity = "0";
+  } else st.color = cs.getPropertyValue("--bp-muted").trim() || COLORS.muted;
   for (const child of Array.from(el.childNodes)) node.appendChild(child.cloneNode(true));
   node.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
   layer.appendChild(node);
+  if (face) return { node, chars: [], lines: [] };
   // Mono runs wider than the real face: shrink until the draft fits the box.
   let size = fs;
   for (let k = 0; k < 4 && (node.scrollHeight > b.h + 1 || node.scrollWidth > b.w + 1); k++) {
@@ -301,10 +406,15 @@ function makeDraft(c: Ctx): { node: HTMLElement; chars: CharBox[]; lines: LineBo
   return { node, ...text };
 }
 
-/** Type in a mono draft, pick the real font from a menu, cross-fade into the real text. */
+/**
+ * Type in a mono draft, pick the real font from a menu, then cross-fade into
+ * the real text. With data-build-weight the sweep runs on a face clone (out
+ * of flow), so the page never reflows and the real element's weight is never
+ * animated.
+ */
 function typeFont(c: Ctx): boolean {
   const { t, tl, s } = c;
-  const draft = makeDraft(c);
+  const draft = makeClone(c, false);
   if (!draft) return false;
   c.run.nodes.push(draft.node);
   const b = t.box;
@@ -318,7 +428,7 @@ function typeFont(c: Ctx): boolean {
     tool(c, TOOL.arrow, 14);
     c.log(`typed ${t.logName}`);
   });
-  wait(c, 0.22 * s);
+  wait(c, T.pause);
 
   // Menu: the draft face, the real family and either a second family found in
   // the text (picked too) or a decoy.
@@ -334,83 +444,83 @@ function typeFont(c: Ctx): boolean {
   const both = c.r.dropSprite(rows, 0b110);
   const rx = mx + DROP.w - 34;
   const ry = (k: number) => my + DROP.pad + k * DROP.row + DROP.row / 2;
-  step(c, rx, ry(0), 0.16 * s);
+  // The cursor heads for the menu during the pause (the caret keeps blinking).
+  tl.call(() => aim(c, rx, ry(0)), undefined, `-=${D(c, T.pause) * 0.6}`);
   tl.call(() => click(c, rx, ry(0)));
-  tl.to(menu, { p: 1, duration: 0.14 * s, ease: "power2.out" });
+  tl.to(menu, { p: 1, duration: D(c, T.menuOpen), ease: "power2.out" });
   tl.call(() => aim(c, rx, ry(1)));
-  tl.to(menu, { u: 1, duration: 0.2 * s, ease: "power2.inOut" });
+  tl.to(menu, { u: 1, duration: D(c, T.menuHover), ease: "power2.inOut" });
   tl.call(() => {
     click(c, rx, ry(1));
     menu.img = picked;
   });
   if (two) {
     tl.call(() => aim(c, rx, ry(2)));
-    tl.to(menu, { u: 2, duration: 0.16 * s, ease: "power2.inOut" });
+    tl.to(menu, { u: 2, duration: D(c, T.menuHover), ease: "power2.inOut" });
     tl.call(() => {
       click(c, rx, ry(2));
       menu.img = both;
     });
   }
   tl.call(() => c.log(`swapped font → ${t.fontName}${two ? ` + ${t.fontName2}` : ""}`));
-  tl.to(menu, { p: 0, duration: 0.12 * s, delay: 0.1 * s, ease: "power1.in" });
+  tl.to(menu, { p: 0, duration: D(c, T.menuClose), delay: T.menuHold * s, ease: "power1.in" });
+  tl.call(() => void (caret.a = 0), undefined, "<");
 
-  // Weight sweep (data-build-weight): the real text arrives light and gains
-  // weight. Resizes are ignored meanwhile; the author's inline value returns.
-  const el = t.el;
-  const prev = el.style.fontWeight;
-  const restore = () => {
-    if (prev) el.style.fontWeight = prev;
-    else el.style.removeProperty("font-weight");
-  };
+  if (!t.sweep) {
+    // Morph: the draft blurs out while the real text (real font and color) blurs in.
+    const d = D(c, T.morph);
+    tl.to(draft.node, { opacity: 0, filter: "blur(4px)", duration: d, ease: "power1.inOut" }, "<");
+    tl.fromTo(t.el, { opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", duration: d, ease: "power1.inOut" }, "<");
+    tl.to(box, { a: 0, duration: D(c, T.boxFade) }, "<");
+    tl.call(() => draft.node.remove());
+    return true;
+  }
+
+  // Sweep: draft -> face clone at weight 250, sweep the clone to the real
+  // weight, then hand over to the real element (already at its weight).
+  const face = makeClone(c, true);
+  if (!face) return true;
+  c.run.nodes.push(face.node);
+  const d1 = D(c, T.toFace);
+  tl.to(draft.node, { opacity: 0, filter: "blur(4px)", duration: d1, ease: "power1.inOut" }, "<");
+  tl.fromTo(face.node, { opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", duration: d1, ease: "power1.inOut" }, "<");
+  tl.to(box, { a: 0, duration: D(c, T.boxFade) }, "<");
   const sweep = { w: 250 };
-  const sweepDur = 0.55 * Math.max(0.7, s);
-  if (t.sweep) {
-    c.run.undo.push(restore);
-    tl.call(() => {
-      c.quiet(0.36 * s + sweepDur + 0.25);
-      el.style.fontWeight = "250";
-    });
-  }
-
-  // Morph: the draft blurs out while the real text (real font and color) blurs in.
-  tl.call(() => void (caret.a = 0));
-  tl.to(draft.node, { opacity: 0, filter: "blur(4px)", duration: 0.36 * s, ease: "power1.inOut" });
-  tl.fromTo(t.el, { opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.36 * s, ease: "power1.inOut" }, "<");
-  tl.to(box, { a: 0, duration: 0.2 * s }, "<");
-  tl.call(() => draft.node.remove());
-  if (t.sweep) {
-    tl.to(sweep, {
-      w: t.weight,
-      duration: sweepDur,
-      ease: "power2.out",
-      onUpdate: () => void (el.style.fontWeight = String(Math.round(sweep.w))),
-    });
-    tl.call(() => {
-      restore();
-      c.log(`weight 250 → ${t.weight}`);
-    });
-  }
+  tl.to(sweep, {
+    w: t.weight,
+    duration: Math.max(MIN_T, T.sweep * Math.max(0.7, s)),
+    ease: "power2.out",
+    onUpdate: () => void (face.node.style.fontWeight = String(Math.round(sweep.w))),
+  });
+  const d2 = D(c, T.toReal);
+  tl.fromTo(t.el, { opacity: 0 }, { opacity: 1, duration: d2, ease: "power1.inOut" });
+  tl.to(face.node, { opacity: 0, duration: d2, ease: "power1.inOut" }, "<");
+  tl.call(() => {
+    draft.node.remove();
+    face.node.remove();
+    c.log(`weight 250 → ${t.weight}`);
+  });
   return true;
 }
 
-/** Legacy reveal for images that must stay visible: outline, then a scan line. */
+/** Outline + scan for images that must stay visible. */
 function scanImage(c: Ctx): void {
-  const { t, tl, s } = c;
+  const { t, tl } = c;
   const b = t.box;
   const f = c.mark(MK.frame, { x: b.x, y: b.y, w: b.w, h: b.h, label: t.label, r: t.radius });
   const scan = c.mark(MK.scan, { x: b.x, y: b.y, w: b.w, h: b.h, a: 0 });
   tool(c, TOOL.cross, 30);
-  tl.to(f, { p: 1, duration: 0.28 * s, ease: "power2.inOut", onUpdate: () => aim(c, b.x + b.w * f.p, b.y + b.h * f.p) });
+  tl.to(f, { p: 1, duration: D(c, T.scanOutline), ease: "power2.inOut", onUpdate: () => aim(c, b.x + b.w * f.p, b.y + b.h * f.p) });
   tl.call(() => void (scan.a = 1));
-  tl.to(scan, { p: 1, duration: 0.4 * s, ease: "power1.inOut", onUpdate: () => aim(c, b.x + b.w + 3, b.y + b.h * scan.p) });
-  tl.to(scan, { a: 0, duration: 0.12 * s });
-  tl.to(f, { a: 0.35, duration: 0.15 * s }, "<");
+  tl.to(scan, { p: 1, duration: D(c, T.scanPass), ease: "power1.inOut", onUpdate: () => aim(c, b.x + b.w + 3, b.y + b.h * scan.p) });
+  tl.to(scan, { a: 0, duration: D(c, T.scanFade) });
+  tl.to(f, { a: 0.35, duration: D(c, T.dim) }, "<");
 }
 
 /** Grab a card at the viewport edge, drag it in on a curve, drop it on the slot. */
 function dragIn(c: Ctx): void {
   const { t, tl, sim, i } = c;
-  const s = c.s * c.dragTime;
+  const e = (x: number) => Math.max(MIN_T, x * c.s * c.dragTime);
   const b = t.box;
   const x0 = sim.x[i];
   const y0 = sim.y[i];
@@ -431,10 +541,10 @@ function dragIn(c: Ctx): void {
   const st = { q: 0 };
   tool(c, TOOL.hand, 40);
   tl.call(() => click(c, x0, y0));
-  tl.to(card, { a: 1, s: s0, duration: 0.1 * s, ease: "power2.out" });
+  tl.to(card, { a: 1, s: s0, duration: e(T.grab), ease: "power2.out" });
   tl.to(st, {
     q: 1,
-    duration: 0.6 * s,
+    duration: e(T.drag),
     ease: "power2.inOut",
     onUpdate: () => {
       const q = st.q;
@@ -446,23 +556,24 @@ function dragIn(c: Ctx): void {
       aim(c, card.x, card.y);
     },
   });
-  tl.to(card, { s: 1.035, duration: 0.09 * s, ease: "power1.out" });
-  tl.to(card, { s: 1, duration: 0.14 * s, ease: "power2.inOut" });
+  tl.to(card, { s: 1.035, duration: e(T.over), ease: "power1.out" });
+  tl.to(card, { s: 1, duration: e(T.settle), ease: "power2.inOut" });
   tl.call(() => {
     click(c, cx, cy);
     tool(c, TOOL.arrow, 18);
   });
-  if (!t.keep) tl.fromTo(t.el, { opacity: 0 }, { opacity: 1, duration: 0.22 * s }, "<");
-  tl.to(card, { a: 0, duration: 0.24 * s }, "<");
+  if (!t.keep) tl.fromTo(t.el, { opacity: 0 }, { opacity: 1, duration: e(T.cardFade) }, "<");
+  tl.to(card, { a: 0, duration: e(T.cardFade) }, "<");
 }
 
-/** Alt-drag ghost copies from the list master into each slot of the batch. */
+/** Alt-drag ghost copies from the list master into each slot of the batch, in one sweep. */
 function dup(c: Ctx, master: Box): void {
   const { t, tl, s, sim, i } = c;
   const mb = master;
   const n = t.slots.length;
-  const per = 0.36 * s;
-  const gap = Math.min(0.06, 0.3 / n) * s;
+  const per = D(c, T.ghost);
+  const gap = Math.min(T.ghostGap, 0.3 / n) * s;
+  const appear = D(c, T.slotFade);
   tool(c, TOOL.hand, 26);
   sim.flag[i] = 1;
   t.slotBoxes.forEach((sb, gi) => {
@@ -480,10 +591,8 @@ function dup(c: Ctx, master: Box): void {
       onUpdate: lead ? () => aim(c, ax + (bx - ax) * g.p, ay + (by - ay) * g.p) : undefined,
     }, at);
     const slot = t.slots[gi];
-    if (!keeps(slot, c.phone)) {
-      tl.fromTo(slot, { opacity: 0 }, { opacity: 1, duration: 0.16 * s }, at + per * 0.8);
-    }
-    tl.to(g, { a: 0, duration: 0.14 * s }, at + per);
+    if (!keeps(slot, c.phone)) tl.fromTo(slot, { opacity: 0 }, { opacity: 1, duration: appear }, at + per - appear * 0.5);
+    tl.call(() => fade(c, [g], D(c, T.ghostFade)), undefined, at + per);
   });
 }
 
@@ -504,29 +613,32 @@ function colorPick(c: Ctx): void {
   const ringY = () => cy + Math.sin(((wheel.u - 90) * Math.PI) / 180) * rm;
   const sqX = () => cx - WHEEL.sq / 2 + wheel.x2 * WHEEL.sq;
   const sqY = () => cy - WHEEL.sq / 2 + (1 - wheel.y2) * WHEEL.sq;
-  tool(c, TOOL.picker, 22);
-  tl.call(() => flash(c, b));
-  tl.to(wheel, { p: 1, duration: 0.14 * s, ease: "power2.out" });
-  step(c, ringX(), ringY(), 0.14 * s, TOOL.picker);
+  tool(c, TOOL.picker, 16);
+  tl.call(() => {
+    flash(c, b);
+    aim(c, ringX(), ringY());
+  });
+  tl.to(wheel, { p: 1, duration: D(c, T.wheelOpen), ease: "power2.out" });
   tl.call(() => {
     tool(c, TOOL.picker, 30);
     click(c, ringX(), ringY());
   });
-  tl.to(wheel, { u: hue, duration: 0.42 * s, ease: "power2.inOut", onUpdate: () => aim(c, ringX(), ringY()) });
-  tl.call(() => aim(c, sqX(), sqY()));
-  wait(c, 0.12 * s);
-  tl.to(wheel, { x2: sat, y2: val, duration: 0.26 * s, ease: "power2.inOut", onUpdate: () => aim(c, sqX(), sqY()) });
+  tl.to(wheel, { u: hue, duration: D(c, T.ring), ease: "power2.inOut", onUpdate: () => aim(c, ringX(), ringY()) });
+  // Straight from the ring into the square: the handle travels, the cursor follows.
+  // Phones: the square handle moves together with the ring (one step fewer).
+  if (c.phone) tl.to(wheel, { x2: sat, y2: val, duration: D(c, T.ring), ease: "power2.inOut" }, "<");
+  else tl.to(wheel, { x2: sat, y2: val, duration: D(c, T.square), ease: "power2.inOut", onUpdate: () => aim(c, sqX(), sqY()) });
   tl.call(() => click(c, sqX(), sqY()));
-  tl.to(wheel, { h2: 1, duration: 0.12 * s });
   const st = { q: 0 };
   const el = t.el;
+  tl.to(wheel, { h2: 1, duration: D(c, T.readout) });
   tl.to(st, {
     q: 1,
-    duration: 0.34 * s,
+    duration: D(c, T.tint),
     ease: "power1.inOut",
     onUpdate: () => el.style.setProperty(t.prop, rgbaCss(t.from4, t.to4, st.q)),
-  });
-  tl.to(wheel, { p: 0, duration: 0.12 * s, delay: 0.08 * s, ease: "power1.in" });
+  }, "<");
+  tl.to(wheel, { p: 0, duration: D(c, T.wheelClose), delay: T.wheelHold * s, ease: "power1.in" });
 }
 
 const plural = (s: string) => (/^[a-z]+$/i.test(s) && !s.endsWith("s") ? s + "s" : s);
@@ -545,7 +657,7 @@ export function choreograph(c: Ctx, master: Box | null): void {
     what = `${t.drag ? "dragged" : "scanned"} ${t.logName}`;
   } else if (t.kind === "dup") {
     dup(c, master ?? t.slotBoxes[0]);
-    what = `dup ×${t.slots.length} ${t.slots.length === 1 ? t.label : plural(t.label)}`;
+    what = `dup ×${t.slots.length} ${plural(t.label)}`;
   } else if (t.kind === "color") {
     colorPick(c);
     what = `picked ${t.hex}`;
