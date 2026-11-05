@@ -42,19 +42,21 @@ export function Hero() {
             shipping agents at {profile.company}
           </p>
 
-          {/* Typed first (order -1) in a draft font, then switched to Geist
-              on desktop. Phones keep it visible from the first paint (LCP). */}
+          {/* Typed first (order -1) in a mono draft, then switched to Geist +
+              the serif accent, then its weight sweeps up. Desktop only;
+              phones keep it visible from the first paint (LCP). */}
           <h1
             data-build-item
             data-build="type"
             data-build-font
+            data-build-weight
             data-build-keep="mobile"
             data-build-order="-1"
             data-build-role="coder"
             data-build-label="h1.name"
             className="bp-h1 mt-6"
           >
-            Alan <span className="bp-dim">(Lam Anh)</span>
+            Alan <span className="bp-serif bp-muted">(Lam Anh)</span>
             <br />
             Truong
           </h1>
@@ -135,7 +137,7 @@ export function Hero() {
             data-build-tune
             data-build-label="run.log"
             className="bp-card bp-terminal overflow-hidden"
-            aria-label="Example orchestration run log"
+            aria-label="Orchestration run log"
           >
             <div className="flex items-center justify-between border-b border-[color:var(--bp-line)] px-4 py-2.5">
               <span className="bp-dim">orchestrate://portfolio</span>
@@ -150,20 +152,18 @@ export function Hero() {
                 <span className="bp-accent">$</span> orchestrate build portfolio
                 --agents 14
               </p>
-              {RUN_LOG.map((line) => (
-                <p
-                  key={line.who}
-                  data-build-item
-                  data-build="type"
-                  className="flex gap-3"
-                >
-                  <span className="bp-dim">→</span>
-                  <span className="w-24 shrink-0" style={{ color: line.color }}>
-                    {line.who}
-                  </span>
-                  <span className="bp-muted">{line.text}</span>
-                </p>
-              ))}
+              {/* Live log: the engine replaces these fallback lines with real
+                  build events (fixed height, so nothing shifts). */}
+              <div data-swarm-log data-swarm-log-lines="6" className="bp-log">
+                {RUN_LOG.map((line) => (
+                  <p key={line.who} className="swarm-log__line">
+                    <span className="swarm-log__who" style={{ color: line.color }}>
+                      {line.who}
+                    </span>
+                    <span className="swarm-log__what">{line.text}</span>
+                  </p>
+                ))}
+              </div>
               <p data-build-item data-build="type" className="pt-1">
                 <span className="bp-accent">✓</span>{" "}
                 <span className="text-[color:var(--bp-text)]">

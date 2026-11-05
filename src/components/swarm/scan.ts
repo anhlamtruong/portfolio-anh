@@ -61,7 +61,8 @@ function makeTask(id: number, el: HTMLElement, kind: TaskKind, phone: boolean): 
     label: labelOf(el, kind),
     order: Number.isFinite(order) ? order : null,
     rank: id, deps: [], slots: [el], absorbed: [], master: -1, tints: [],
-    font: false, tune: false, inspect: false, drag: false,
+    font: false, sweep: false, weight: 0, fontName2: "", logName: el.dataset.buildLabel ?? "",
+    tune: false, inspect: false, drag: false,
     from: EDGES.includes(from) ? from : null, tint: null,
     box: { x: 0, y: 0, w: 0, h: 0 }, lines: [], chars: [], slotBoxes: [],
     radius: 0, pad: [0, 0, 0, 0], align: -1, fontName: "", img: null, alt: "", fit: "fill", pos: [0.5, 0.5],
@@ -141,6 +142,7 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
   });
 
   nestedInDup.forEach((slot, el) => taskOf.get(slot)?.absorbed.push(el));
+  for (const t of tasks) t.logName ||= t.label;
 
   // Items nested inside another item wait for it.
   for (const t of tasks) {
@@ -149,6 +151,7 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
     if (dep && dep !== t && !t.deps.includes(dep.id)) t.deps.push(dep.id);
     const el = t.el;
     t.font = t.kind === "type" && el.hasAttribute("data-build-font");
+    t.sweep = t.font && el.hasAttribute("data-build-weight");
     t.tune = t.kind === "frame" && o.detail.panels && el.hasAttribute("data-build-tune");
     t.drag = t.kind === "image" && !t.keep;
   }
@@ -173,6 +176,7 @@ function scanSection(section: HTMLElement, o: ScanOpts): SectionModel {
     el: section,
     name: section.dataset.buildSection || "section",
     onLoad: section.dataset.buildStart === "load",
+    finale: section.hasAttribute("data-build-finale"),
     planLabel: section.dataset.buildPlan ?? null,
     tasks,
     box: { x: 0, y: 0, w: 0, h: 0 },
@@ -194,6 +198,7 @@ export function scanPage(o: ScanOpts): { sections: SectionModel[]; orphans: HTML
       if (seen && o.detail.fontFirstOnly) t.font = false;
       seen = true;
       if (t.keep) t.font = false;
+      t.sweep &&= t.font;
     }
   }
   const orphans = Array.from(document.querySelectorAll<HTMLElement>("[data-build-item]")).filter(
@@ -310,6 +315,20 @@ function hsv([r, g, b]: number[]): number[] {
 }
 
 const px = (v: string) => Number.parseFloat(v) || 0;
+
+/** "ava.jpg" from a plain or next/image URL (build hashes stripped). */
+function fileName(img: HTMLImageElement): string {
+  try {
+    let url = new URL(img.currentSrc || img.src, location.href);
+    const inner = url.searchParams.get("url");
+    if (url.pathname.includes("/_next/image") && inner) url = new URL(inner, location.href);
+    const base = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+    return base.replace(/^(.+?)\.[0-9a-f]{6,}\.(\w+)$/i, "$1.$2");
+  } catch {
+    return "";
+  }
+}
+
 const frac = (v: string | undefined, fallback: number) => {
   if (!v) return fallback;
   if (v.endsWith("%")) return px(v) / 100;
@@ -327,10 +346,22 @@ function measureStyle(t: Task, cs: CSSStyleDeclaration): void {
     t.align = a === "center" ? 1 : a === "right" || a === "end" ? 2 : 0;
   } else if (t.kind === "type" && t.font) {
     t.fontName = fontLabel(cs.fontFamily);
-    if (/mono/i.test(t.fontName)) t.font = false; // already in the draft face
+    t.weight = px(cs.fontWeight) || 400;
+    if (/mono/i.test(t.fontName)) [t.font, t.sweep] = [false, false]; // already in the draft face
+    // A child in another family (e.g. a serif italic span) gets its own menu row.
+    t.fontName2 = "";
+    for (const child of Array.from(t.el.querySelectorAll<HTMLElement>("*"))) {
+      if (!child.textContent?.trim()) continue;
+      const name = fontLabel(getComputedStyle(child).fontFamily);
+      if (name !== t.fontName && !/mono/i.test(name)) {
+        t.fontName2 = name;
+        break;
+      }
+    }
   } else if (t.kind === "image") {
     const img = t.el instanceof HTMLImageElement ? t.el : t.el.querySelector("img");
     t.img = img;
+    if (!t.el.dataset.buildLabel && img) t.logName = fileName(img) || t.label;
     t.alt = img?.alt || t.el.getAttribute("aria-label") || t.el.querySelector("[aria-label]")?.getAttribute("aria-label") || t.label;
     if (img) {
       const ics = getComputedStyle(img);

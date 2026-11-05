@@ -61,6 +61,13 @@ export const metadata: Metadata = {
     siteName: "Alan Truong",
     type: "website",
   },
+  // The image itself comes from app/opengraph-image.tsx.
+  twitter: {
+    card: "summary_large_image",
+    title: "Alan (Lam Anh) Truong — AI Software Engineer",
+    description:
+      "Multi-agent orchestration, LLM routing and AWS serverless platforms.",
+  },
 };
 
 export const viewport: Viewport = {

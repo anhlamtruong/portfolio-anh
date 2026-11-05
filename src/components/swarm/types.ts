@@ -56,6 +56,13 @@ export interface Task {
   tints: Task[];
   // Detail flags (resolved by scan + measure for the current profile).
   font: boolean;
+  /** data-build-weight: after the font swap, sweep font-weight 250 -> weight. */
+  sweep: boolean;
+  weight: number;
+  /** A second family inside the text (e.g. a serif span), shown in the font menu. */
+  fontName2: string;
+  /** Name used in the live log (data-build-label, image file name, or tag). */
+  logName: string;
   tune: boolean;
   inspect: boolean;
   drag: boolean;
@@ -100,6 +107,8 @@ export interface SectionModel {
   el: HTMLElement;
   name: string;
   onLoad: boolean;
+  /** data-build-finale: run the deploy finale after approval. */
+  finale: boolean;
   planLabel: string | null;
   tasks: Task[];
   box: Box;
@@ -132,6 +141,9 @@ export const MK = {
   toolbar: 14,
   wheel: 15,
   check: 16,
+  packet: 17,
+  props: 18,
+  deploy: 19,
 } as const;
 export type MarkKind = (typeof MK)[keyof typeof MK];
 
@@ -219,5 +231,11 @@ export interface Run {
   anims: Anim[];
   /** Temporary DOM (draft-font clones) to remove when the section ends. */
   nodes: HTMLElement[];
+  /** Restores temporary inline styles (e.g. a weight sweep) if cut short. */
+  undo: (() => void)[];
+  /** Agents that finished tasks most recently (for the review acks). */
+  recent: number[];
+  /** Seconds from start to approval (0 if finished instantly). */
+  took: number;
   st: ScrollTrigger | null;
 }

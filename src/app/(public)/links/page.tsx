@@ -7,6 +7,7 @@ import { ArrowUpRight, AtSign, FileText, Github, Globe, Linkedin, Mail, ScrollTe
 import { SwarmRoot } from "@/components/swarm/swarm-root";
 import { RESUME_URL, profile } from "@/content/profile";
 import avatar from "../../../../public/assets/img/ava.jpg";
+import { displaySerif } from "../../(homepage)/_sections/fonts";
 
 export const metadata: Metadata = {
   title: "Links",
@@ -30,7 +31,7 @@ const LINKS = [
 
 export default function LinksPage() {
   return (
-    <div className="bp-root">
+    <div className={`bp-root ${displaySerif.variable}`}>
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-16">
         <section data-build-section="links" data-build-start="load" className="flex flex-col items-center text-center">
           <div
@@ -58,7 +59,7 @@ export default function LinksPage() {
             data-build-label="h1.name"
             className="bp-h2 mt-6 text-3xl"
           >
-            {profile.name}
+            Alan <span className="bp-serif bp-muted">(Lam Anh)</span> Truong
           </h1>
           <p data-build-item data-build="type" className="bp-muted mt-2 text-sm">
             {profile.role} @ {profile.company} · Founder of Chuchube

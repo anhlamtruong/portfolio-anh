@@ -5,12 +5,21 @@ import { useEffect, useRef } from "react";
 export interface HudControls {
   skip(): void;
   replay(): void;
+  setInspect(on: boolean): void;
   /** The engine writes the counter text into this node (<= 10x/s). */
   setStatsTarget(el: HTMLElement | null): void;
 }
 
 /** Fixed bottom-left build controls. Collapses to one button when idle. */
-export function Hud({ controls, building }: { controls: HudControls; building: boolean }) {
+export function Hud({
+  controls,
+  building,
+  inspect,
+}: {
+  controls: HudControls;
+  building: boolean;
+  inspect: { available: boolean; on: boolean };
+}) {
   const statsRef = useRef<HTMLSpanElement>(null);
   const replayRef = useRef<HTMLButtonElement>(null);
 
@@ -42,6 +51,17 @@ export function Hud({ controls, building }: { controls: HudControls; building: b
             Skip
           </button>
         </>
+      ) : null}
+      {inspect.available ? (
+        <button
+          type="button"
+          className="swarm-hud__btn"
+          aria-pressed={inspect.on}
+          aria-label="Inspect mode: hover or focus a card to see its properties"
+          onClick={() => controls.setInspect(!inspect.on)}
+        >
+          inspect
+        </button>
       ) : null}
       <button
         ref={replayRef}

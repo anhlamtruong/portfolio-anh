@@ -11,7 +11,11 @@ export function Credentials() {
           id="credentials"
           index="04"
           label="credentials"
-          title="Education & certifications"
+          title={
+            <>
+              Education &amp; <em className="bp-serif">certifications</em>
+            </>
+          }
         />
 
         <div data-build-section="education" className="mt-14 grid gap-4 md:grid-cols-2">

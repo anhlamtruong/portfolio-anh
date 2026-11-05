@@ -132,7 +132,11 @@ export function Projects() {
           id="projects"
           index="02"
           label="projects"
-          title="Selected builds"
+          title={
+            <>
+              Selected <em className="bp-serif">builds</em>
+            </>
+          }
         >
           Hackathon winners, a product that got acquired, and the small
           projects where I learned the craft.
